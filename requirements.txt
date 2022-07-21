@@ -1,0 +1,5 @@
+tensorflow==2.9.1
+uproot==4.3.3
+awkward==1.8.0
+tensorflow-addons==0.17.1
+pandas==1.4.3
