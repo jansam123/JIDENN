@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from unittest.mock import PropertyMock
 import uproot
 import tensorflow as tf
 from typing import Generator, Iterator, Optional
