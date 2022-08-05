@@ -3,3 +3,6 @@ uproot==4.3.3
 awkward==1.8.0
 tensorflow-addons==0.17.1
 pandas==1.4.3
+tensorboard_plugin_profile==2.8.0
+typed-argument-parser==1.7.2
+tensorflow_decision_forests==0.2.7

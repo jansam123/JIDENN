@@ -1,87 +1,91 @@
+from gc import callbacks
 from jidenn_dataset import JIDENNDataset
 from models import BasicFCModel, TransformerModel
 import numpy as np
 import tensorflow as tf
-import argparse
 import os
+import datetime
+from ArgumentParser import ArgumentParser
 # import tensorflow_decision_forests as tfdf
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--seed", default=42, type=int, help="Random seed.")
-parser.add_argument("--threads", default=6, type=int, help="Maximum number of threads to use.")
-parser.add_argument("--debug", default=False, type=bool, help="Debug mode.")
-
-#Dataset args
-parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
-parser.add_argument("--epochs", default=1, type=int, help="Number of epochs.")
-parser.add_argument("--take", default=None, type=int, help="Length of data to use.")
-parser.add_argument("--shuffle", default=5000, type=int, help="Size of shuffling batch.")
-parser.add_argument("--dev_size", default=0.2, type=float, help="Size of dev dataset.")
-
-#BasicFCModel args
-parser.add_argument("--hidden_layers", default=[16], nargs="*", type=int, help="Hidden layer sizes.")
-parser.add_argument("--dropout", default=0.5, type=float, help="Dropout after FC layers.")
-
-#TransformerModel args
-parser.add_argument("--transformer_dropout", default=0., type=float, help="Transformer dropout.")
-parser.add_argument("--transformer_expansion", default=4, type=float, help="Transformer FFN expansion factor.")
-parser.add_argument("--transformer_heads", default=4, type=int, help="Transformer heads.")
-parser.add_argument("--transformer_layers", default=2, type=int, help="Transformer layers.")
-# parser.add_argument("--we_dim", default=64, type=int, help="Word embedding dimension.")
-
-#RNN part args
-parser.add_argument("--rnn_cell", default="LSTM", type=str, help="RNN cell type.")
-parser.add_argument("--rnn_cell_dim", default=128, type=int, help="RNN cell dimension.")
-
-
-parser.add_argument("--label_smoothing", default=0., type=float, help="Smoothing of labels.")
-
-
-
-def create_dataset(jidenn: JIDENNDataset,args:argparse.Namespace) -> tuple[tf.data.Dataset, tf.data.Dataset]:
-    def prep_dataset(data, label):
-        label = tf.one_hot(tf.cast(label, tf.int32), len(JIDENNDataset.target_mapping.keys()))
-        return data, label
-    dataset = jidenn.train.dataset
+def create_dataset(jidenn: JIDENNDataset, args:ArgumentParser, dataset_type:str) -> tuple[tf.data.Dataset, tf.data.Dataset]:
+    
+    def prep_dataset(data, label, weight):
+        label = tf.one_hot(tf.cast(label, tf.int32), JIDENNDataset.LABELS)
+        return data, label, weight
+    dataset = getattr(jidenn, dataset_type).dataset
     dataset = dataset.map(prep_dataset)
-    size = dataset.cardinality()
-    dataset = dataset.shuffle(args.shuffle if args.shuffle != 0 else size)
-    dev = dataset.take(int(args.dev_size * tf.cast(size, tf.float64)))
-    train = dataset.skip(int(args.dev_size * tf.cast(size, tf.float64)))
-    train = train.batch(args.batch_size)
-    dev = dev.batch(args.batch_size)
-    train = train.prefetch(tf.data.AUTOTUNE)
-    dev = dev.prefetch(tf.data.AUTOTUNE)
-    return train, dev
+    
+    if args.take is not None:
+        if dataset_type == 'dev':
+            take = int(args.take * args.dev_size)
+        elif dataset_type == 'test':
+            take = int(args.take * args.test_size)
+        else:
+            take = args.take
+        dataset = dataset.take(take)
+        dataset = dataset.apply(tf.data.experimental.assert_cardinality(take))
+        
+    dataset = dataset.batch(args.batch_size)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
+    return dataset
 
 
-def main(args: argparse.Namespace) -> None:
+def main(args: ArgumentParser) -> None:
+    
+    #debug mode for tensorflow
     if args.debug:
         tf.config.run_functions_eagerly(True)
         tf.data.experimental.enable_debug_mode()
 
+    #fixing seed for reproducibility
     np.random.seed(args.seed)
     tf.random.set_seed(args.seed)
+    
+    # managing threads
     tf.config.threading.set_inter_op_parallelism_threads(args.threads)
     tf.config.threading.set_intra_op_parallelism_threads(args.threads)
-
-    filename = "data/user.pleskot.27852802.ANALYSIS._001685.root:NOMINAL"
-    jidenn = JIDENNDataset([filename], load='tf_records/jidenn.tfrecord')
-
-
-    train, dev = create_dataset(jidenn,args)
-
-
-    model = BasicFCModel(args, len(jidenn.variables), jidenn.LABELS)
-
-    model.summary()
-    model.fit(train, validation_data=dev, epochs=args.epochs)
     
-    print([np.argmax(prediction) for prediction in model.predict(dev.take(1))])
+    #setting up logs
+    args.logdir = os.path.join(args.logdir, "{}-{}".format(
+        os.path.basename(globals().get("__file__", "notebook")),
+        datetime.datetime.now().strftime("%Y-%m-%d__%H_%M_%S"),
+    ))
+    os.makedirs(args.logdir, exist_ok=True)
+    args.save(os.path.join(args.logdir, "args.json"))
+    
+    #dataset preparation
+    datafiles = [os.path.join(args.data_path, folder, file) for folder in os.listdir(args.data_path) for file in os.listdir(os.path.join(args.data_path, folder)) if '.root' in file]
+    np.random.shuffle(datafiles)
+    
+    jidenn = JIDENNDataset(datafiles, dev_size=args.dev_size, test_size=args.test_size, reading_size=args.reading_size, num_workers=args.num_workers)
+    train, dev, test = [create_dataset(jidenn,args, dataset_type) for dataset_type in ["train", "dev", "test"]]
+
+    
+    # creating model
+    if args.model == "basic_fc":
+        model = BasicFCModel(args,len(jidenn.variables), jidenn.LABELS)
+    elif args.model == "transformer":
+        model = TransformerModel(args,len(jidenn.variables), jidenn.LABELS)
+    else:
+        assert False, "Model not implemented"
+    model.summary()
+    
+    #callbacks
+    callbacks = []
+    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=args.logdir, update_freq=args.tb_update_freq)
+    callbacks += [tb_callback]
+    
+    #running training
+    model.fit(train, validation_data=dev, epochs=args.epochs, callbacks=callbacks, validation_steps=args.validation_batches if args.take is None else None)
+        
+    
+    # print([np.argmax(prediction) for prediction in model.predict(dev.take(1))])
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser()
     args = parser.parse_args([] if "__file__" not in globals() else None)
     main(args)

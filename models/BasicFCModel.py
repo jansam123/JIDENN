@@ -1,9 +1,9 @@
 import tensorflow as tf
-import argparse
+from ArgumentParser import ArgumentParser
 
 
 class BasicFCModel(tf.keras.Model):
-    def __init__(self, args: argparse.Namespace, input_size: int, output_layer: int) -> None:
+    def __init__(self, args: ArgumentParser, input_size: int, output_layer: int) -> None:
         
         inputs = tf.keras.layers.Input(shape=(input_size,))
         hidden = self._hidden_layers(inputs, args.hidden_layers)
@@ -14,7 +14,7 @@ class BasicFCModel(tf.keras.Model):
         self.compile(
             optimizer=tf.optimizers.Adam(),
             loss=tf.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing),
-            metrics=[tf.metrics.CategoricalAccuracy("accuracy")],
+            weighted_metrics=[tf.metrics.CategoricalAccuracy("accuracy")],
         )
 
     def _hidden_layers(self, inputs: tf.Tensor, layers:list[int]) -> tf.Tensor:

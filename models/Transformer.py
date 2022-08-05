@@ -1,5 +1,5 @@
 import tensorflow as tf
-import argparse
+from ArgumentParser import ArgumentParser
 
 class TransformerModel(tf.keras.Model):
     class FFN(tf.keras.layers.Layer):
@@ -9,7 +9,7 @@ class TransformerModel(tf.keras.Model):
             # TODO: Create the required layers -- first a ReLU-activated dense
             # layer with `dim * expansion` units, followed by a dense layer
             # with `dim` units without an activation.
-            self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=tf.nn.relu)
+            self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=tf.nn.gelu)
             self.dense = tf.keras.layers.Dense(dim, activation=None)
 
         def get_config(self):
@@ -116,16 +116,33 @@ class TransformerModel(tf.keras.Model):
 
             return encoded
         
-    def __init__(self, args:argparse.Namespace, input_size:int, output_size:int):
+    def __init__(self, args: ArgumentParser, input_size:int, output_size:int):
         # Implement a transformer encoder network. The input `words` is
         # a RaggedTensor of strings, each batch example being a list of words.
         input = tf.keras.layers.Input(shape=[input_size])
-        layer_dict = {"LSTM": tf.keras.layers.LSTM, "GRU": tf.keras.layers.GRU}
+    
+        if args.embeding == 'rnn':
+            hidden = tf.keras.layers.Embedding(input_dim=input_size, output_dim=args.embed_dim)(input)
+            layer_dict = {"LSTM": tf.keras.layers.LSTM, "GRU": tf.keras.layers.GRU}
+            for dim in args.rnn_cell_dim:
+                rnn_cells = layer_dict[args.rnn_cell](dim, return_sequences=True)
+                rnned = tf.keras.layers.Bidirectional(rnn_cells, merge_mode="sum")(hidden)
+                hidden = tf.keras.layers.LayerNormalization()(hidden)
+                hidden = tf.keras.layers.Add()([hidden, rnned])
+                
+            if len(args.rnn_cell_dim) == 0:
+                dim = args.embed_dim
 
-        
-        rnn_cells = layer_dict[args.rnn_cell](args.rnn_cell_dim, return_sequences=True)
-        hidden = tf.keras.layers.Bidirectional(rnn_cells, merge_mode="sum")(input[:,:,tf.newaxis])
-        embed = tf.keras.layers.LayerNormalization()(hidden)
+        elif args.embeding == 'cnn':
+            hidden = input[:, :, tf.newaxis]
+            for dim in args.conv_filters:
+                hidden = tf.keras.layers.Conv1D(filters=dim, kernel_size=args.conv_kernel_size, padding="same")(hidden)
+                hidden = tf.keras.layers.LayerNormalization()(hidden)
+                hidden = tf.keras.layers.Activation("relu")(hidden)
+            
+                        
+        else:
+            assert False, "embeding type not supported"
 
         # TODO: Call the Transformer layer:
         # - create a `Model.Transformer` layer, using suitable options from `args`
@@ -134,19 +151,30 @@ class TransformerModel(tf.keras.Model):
         #   to a dense one, and also pass the following argument as a mask:
         #     `mask=tf.sequence_mask(ragged_tensor_with_input_words_embeddings.row_lengths())`
         # - finally, convert the result back to a ragged tensor.
-        transformed = TransformerModel.Transformer(args.transformer_layers, args.rnn_cell_dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout)(embed)
+        transformed = TransformerModel.Transformer(args.transformer_layers, dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout)(hidden)
 
         # TODO(tagger_we): Add a softmax classification layer into as many classes as there are unique
         # tags in the `word_mapping` of `train.tags`. Note that the Dense layer can process
         # a `RaggedTensor` without any problem.
         transformed = tf.keras.layers.Flatten()(transformed)
-        transformed = tf.keras.layers.Dense(args.rnn_cell_dim*output_size)(transformed)
+        transformed = tf.keras.layers.Dense(args.rnn_cell_dim[-1]*input_size, activation=tf.nn.gelu)(transformed)
         outputs = tf.keras.layers.Dense(output_size, activation=tf.nn.softmax)(transformed)
 
-        # Check that the created predictions are a 3D tensor.
+        
+        class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
+            def __init__(self, warmup_steps, following_schedule):
+                self._warmup_steps = warmup_steps
+                self._warmup = tf.optimizers.schedules.PolynomialDecay(0., warmup_steps, following_schedule(0))
+                self._following = following_schedule
+
+            def __call__(self, step):
+                return tf.cond(step < self._warmup_steps,
+                            lambda: self._warmup(step),
+                            lambda: self._following(step - self._warmup_steps))
+                
         super().__init__(inputs=input, outputs=outputs)
-        self.compile(optimizer=tf.optimizers.Adam(),
+        self.compile(optimizer=tf.optimizers.Adam(learning_rate=LinearWarmup(args.warmup_steps, lambda step: args.learning_rate)),  # type: ignore
                     loss=tf.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing),
-                    metrics=[tf.metrics.CategoricalAccuracy(name="accuracy")])
+                    weighted_metrics=[tf.metrics.CategoricalAccuracy(name="accuracy")])
 
         
