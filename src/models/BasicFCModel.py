@@ -1,26 +1,22 @@
+from __future__ import annotations
 import tensorflow as tf
-from ..config.ArgumentParser import ArgumentParser
-from typing import Optional, Callable
+from typing import Callable
 
 
 class BasicFCModel(tf.keras.Model):
-    def __init__(self, args: ArgumentParser, input_size: int, output_layer: int, preprocess: Optional[Callable[[tf.Tensor], tf.Tensor]]=None) -> None:
+    def __init__(self, 
+                 hidden_layers: list[int], 
+                 input_layer: tf.keras.layers.Layer,
+                 output_layer: tf.keras.layers.Layer,
+                 activation: Callable,
+                 loss: tf.keras.losses.Loss,
+                 metrics=list[tf.keras.metrics.Metric],
+                 preprocess: tf.keras.layers.Layer | None = None) -> None:
         
-        inputs = tf.keras.layers.Input(shape=(input_size,))
-        if preprocess is not None:
-            hidden = preprocess(inputs)
-        else:
-            hidden = inputs
-        hidden = self._hidden_layers(hidden, args.hidden_layers)
-        if output_layer == 2:
-            output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)(hidden)
-            loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=args.label_smoothing)
-            metrics = [tf.keras.metrics.BinaryAccuracy()]
-                                                
-        else:
-            output = tf.keras.layers.Dense(output_layer, activation=tf.nn.softmax)(hidden)
-            loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing)
-            metrics = [tf.keras.metrics.CategoricalAccuracy()]
+        self._activation = activation
+        inputs = input_layer
+        hidden = self._hidden_layers(preprocess(inputs) if preprocess else inputs, hidden_layers)
+        output = output_layer(hidden)
             
         super().__init__(inputs=inputs, outputs=output)
         
@@ -33,6 +29,8 @@ class BasicFCModel(tf.keras.Model):
     def _hidden_layers(self, inputs: tf.Tensor, layers:list[int]) -> tf.Tensor:
         hidden =  tf.keras.layers.Flatten()(inputs)
         for hidden_layer in layers:
-            hidden = tf.keras.layers.Dense(hidden_layer, activation=tf.nn.relu)(hidden)
+            hidden = tf.keras.layers.Dense(hidden_layer, activation=self._activation)(hidden)
         return hidden
+    
+    
     

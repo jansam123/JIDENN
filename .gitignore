@@ -3,6 +3,7 @@ __pycache__
 tf_dataset
 tf_records
 .DS_Store
-data*
+data?
+data
 logs
 !src/data

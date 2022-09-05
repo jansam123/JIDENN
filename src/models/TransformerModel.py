@@ -11,7 +11,7 @@ class TransformerModel(tf.keras.Model):
             # TODO: Create the required layers -- first a ReLU-activated dense
             # layer with `dim * expansion` units, followed by a dense layer
             # with `dim` units without an activation.
-            self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=tf.nn.gelu)
+            self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=tf.nn.relu)
             self.dense = tf.keras.layers.Dense(dim, activation=None)
 
         def get_config(self):
@@ -118,10 +118,16 @@ class TransformerModel(tf.keras.Model):
 
             return encoded
         
-    def __init__(self, args: ArgumentParser, input_size:int, output_size:int,  preprocess: Optional[Callable[[tf.Tensor], tf.Tensor]]=None):
+    def __init__(self, 
+                 args: ArgumentParser, 
+                 input_layer: tf.keras.layers.Layer,
+                 output_layer: tf.keras.layers.Layer, 
+                 metrics: list[tf.keras.metrics.Metric],
+                 loss: tf.keras.losses.Loss,
+                 preprocess: tf.keras.layers.Layer | None = None):
         # Implement a transformer encoder network. The input `words` is
         # a RaggedTensor of strings, each batch example being a list of words.
-        input = tf.keras.layers.Input(shape=[input_size])
+        input = input_layer
         if preprocess is not None:
             hidden = preprocess(input)
         else:
@@ -164,15 +170,8 @@ class TransformerModel(tf.keras.Model):
         # a `RaggedTensor` without any problem.
         transformed = tf.keras.layers.Flatten()(transformed)
         transformed = tf.keras.layers.Dense(args.last_fc_size, activation=tf.nn.relu)(transformed)
-        if output_size == 2:
-            output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)(transformed)
-            loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=args.label_smoothing)
-            metrics = [tf.keras.metrics.BinaryAccuracy()]
-                                                
-        else:
-            output = tf.keras.layers.Dense(output_size, activation=tf.nn.softmax)(transformed)
-            loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing)
-            metrics = [tf.keras.metrics.CategoricalAccuracy()]
+        output = output_layer(transformed)
+    
 
         
         class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
