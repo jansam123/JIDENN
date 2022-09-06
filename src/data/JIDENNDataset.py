@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import uproot
 import tensorflow as tf
-from typing import Callable, Iterator, Optional
+from typing import Iterator, Optional
 
 # /work/sched3am/exTau/jets1tau-v01/nom/user.scheiric.mc16_13TeV.41047*
 
@@ -30,7 +30,6 @@ class JIDENNDataset:
                                  file_handler=uproot.MultithreadedFileSource, 
                                  library='pd'):  # type: ignore
             
-
             
             sample_data = df[self.variables]
             sample_data = tf.convert_to_tensor(sample_data, dtype=tf.float64)
@@ -50,25 +49,7 @@ class JIDENNDataset:
                 sample_weight = tf.reshape(sample_weight, [-1,])
                 
                 yield sample_data, sample_labels, sample_weight
-                 
     
-    # def _data_iterator(self, label) -> Iterator[tuple[tf.Tensor, tf.Tensor]]:
-    #     target =[self.target] if self.target is not None else []
-    #     weight =[self.weight] if self.weight is not None else []
-    #     expressions = self.variables + target + weight
-        
-    #     # cut = self.cut + '&&' + f'{self.target}=={label}' if self.cut is not None else f'{self.target}=={label}'
-    #     cut = 'jets_truth_partonPDG==21'
-    #     # cut = None
-    #     for arr in uproot.iterate(files=self.files, expressions=expressions,  step_size=self.reading_size, library='np', cut=cut, num_workers=self.num_workers, file_handler=uproot.MultithreadedFileSource):  # type: ignore
-    #         print(arr)
-    #         sample_labels = tf.ragged.constant(arr[self.target], dtype=tf.int64)
-    #         print(sample_labels)
-    #         sample_labels = tf.map_fn(target_mapping, sample_labels)
-    #         sample_data = tf.stack([tf.ragged.constant(arr[var]).merge_dims(0, -1) for var in self.variables], axis=1)
-    #         if self.weight is None:
-    #             sample_weight = tf.ragged.constant(arr[self.weight], dtype=tf.int64).merge_dims(0, -1)
-    #         yield sample_data, sample_labels, sample_weight
             
 
     @property

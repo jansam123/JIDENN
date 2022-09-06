@@ -1,14 +1,13 @@
-from src.data import Dataset
-from src.models import basicFC_model 
-from src.models.TransformerModel import TransformerModel
-from src.models import BDT_model 
 import numpy as np
 import tensorflow as tf
 import os
 import datetime
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
+
+from src.data import Dataset
+from src.models import basicFC_model, transformer_model, BDT_model
 from src.config.ArgumentParser import ArgumentParser
 from src.postprocess.pipeline import postprocess_pipe
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 
 
 
@@ -30,7 +29,7 @@ def main(args: ArgumentParser) -> None:
     
     #setting up logs
     args.logdir = os.path.join(args.logdir, "{}-{}".format(
-        os.path.basename(globals().get("__file__", "notebook")),
+        args.model,
         datetime.datetime.now().strftime("%Y-%m-%d__%H_%M_%S"),
     ))
     os.makedirs(args.logdir, exist_ok=True)
@@ -40,16 +39,21 @@ def main(args: ArgumentParser) -> None:
     datafiles = [os.path.join(args.data_path, folder, file+':NOMINAL') for folder in os.listdir(args.data_path) for file in os.listdir(os.path.join(args.data_path, folder)) if '.root' in file]
     np.random.shuffle(datafiles)
     
-    
-    
     num_files = len(datafiles)
     num_dev_files = int(num_files * args.dev_size)
     num_test_files = int(num_files * args.test_size)
     dev_files = datafiles[:num_dev_files]
     test_files = datafiles[num_dev_files:num_dev_files+num_test_files]
     train_files = datafiles[num_dev_files+num_test_files:]
+    dev_size = int(args.take*args.dev_size) if args.take is not None else None
+    test_size = int(args.take*args.test_size) if args.take is not None else None
+    sizes = [args.take, dev_size, test_size]
+    dataset_files = [train_files, dev_files, test_files]
+    
+    if args.model == 'BDT':
+        args.cut = f'({args.cut})&({args.weight}>0)' if args.cut is not None else f"{args.weight}>0"
 
-    train, dev, test = [Dataset.get_qg_dataset(files, batch_size=args.batch_size, cut=args.cut, take=args.take, shuffle_buffer=args.shuffle_buffer) for files in [train_files, dev_files, test_files]]
+    train, dev, test = [Dataset.get_qg_dataset(files, batch_size=args.batch_size, cut=args.cut, take=size, shuffle_buffer=args.shuffle_buffer) for files, size in zip(dataset_files, sizes)]
     
     
     if args.normalize and args.model != 'BDT':
@@ -64,7 +68,7 @@ def main(args: ArgumentParser) -> None:
         model = basicFC_model.create(args, preprocess=normalizer)
         model.summary()   
     elif args.model == "transformer":
-        model = TransformerModel(args,len(jidenn.variables), jidenn.LABELS,  preprocess=normalizer)
+        model = transformer_model.create(args, preprocess=normalizer)
         model.summary()   
     elif args.model=='BDT':
         model = BDT_model.create(args)
@@ -79,7 +83,6 @@ def main(args: ArgumentParser) -> None:
     #running training
     model.fit(train, validation_data=dev, epochs=args.epochs, callbacks=callbacks, validation_steps=args.validation_batches if args.take is None else None)
         
-    # model.evaluate(test)
     
     test_dataset = test.unbatch().map(lambda d, l, w: d).batch(args.batch_size)
     test_dataset_labels = test.unbatch().map(lambda x,y,z: y)

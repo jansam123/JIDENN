@@ -133,28 +133,7 @@ class TransformerModel(tf.keras.Model):
         else:
             hidden = input
     
-        if args.embeding == 'rnn':
-            hidden = tf.keras.layers.Embedding(input_dim=input_size, output_dim=args.embed_dim)(hidden)
-            layer_dict = {"LSTM": tf.keras.layers.LSTM, "GRU": tf.keras.layers.GRU}
-            for dim in args.rnn_cell_dim:
-                rnn_cells = layer_dict[args.rnn_cell](dim, return_sequences=True)
-                rnned = tf.keras.layers.Bidirectional(rnn_cells, merge_mode="sum")(hidden)
-                hidden = tf.keras.layers.LayerNormalization()(hidden)
-                hidden = tf.keras.layers.Add()([hidden, rnned])
-                
-            if len(args.rnn_cell_dim) == 0:
-                dim = args.embed_dim
-
-        elif args.embeding == 'cnn':
-            hidden = input[:, :, tf.newaxis]
-            for dim in args.conv_filters:
-                hidden = tf.keras.layers.Conv1D(filters=dim, kernel_size=args.conv_kernel_size, padding="same")(hidden)
-                hidden = tf.keras.layers.LayerNormalization()(hidden)
-                hidden = tf.keras.layers.Activation("relu")(hidden)
-            
-                        
-        else:
-            assert False, "embeding type not supported"
+        hidden = tf.keras.layers.Embedding(input_dim=args.input_size, output_dim=args.embed_dim)(hidden)
 
         # TODO: Call the Transformer layer:
         # - create a `Model.Transformer` layer, using suitable options from `args`
@@ -163,7 +142,7 @@ class TransformerModel(tf.keras.Model):
         #   to a dense one, and also pass the following argument as a mask:
         #     `mask=tf.sequence_mask(ragged_tensor_with_input_words_embeddings.row_lengths())`
         # - finally, convert the result back to a ragged tensor.
-        transformed = TransformerModel.Transformer(args.transformer_layers, dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout)(hidden)
+        transformed = TransformerModel.Transformer(args.transformer_layers, args.embed_dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout)(hidden)
 
         # TODO(tagger_we): Add a softmax classification layer into as many classes as there are unique
         # tags in the `word_mapping` of `train.tags`. Note that the Dense layer can process

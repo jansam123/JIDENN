@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  tensorflow:
+    build: .
+    container_name: jidenn
+    command: python runMe.py
+    volumes:
+      - /home/home-pc/bakalarka/JIDENN/data:/JIDENN/data
+      - /home/home-pc/bakalarka/JIDENN/logs:/JIDENN/logs

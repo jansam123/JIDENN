@@ -24,7 +24,7 @@ def get_quark_dataset(schema:DataSchema,
                       cut:Optional[str]=None) -> JIDENNDataset:
     
     cut = f"({cut})" if cut is not None else ''
-    cut = f'({"".join([f"({schema.target}=={q})|" for q in schema.raw_quarks])[:-1]})'
+    cut += f'&({"".join([f"({schema.target}=={q})|" for q in schema.raw_quarks])[:-1]})'
     
     cut = cut[1:] if cut[0] == '&' or cut[0] == '|' else cut
 

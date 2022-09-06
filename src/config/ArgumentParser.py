@@ -6,8 +6,8 @@ class ArgumentParser(Tap):
     seed: int = 42   # Random seed.
     threads: int = 1   # Maximum number of threads to use.
     debug: bool = False   # Debug mode.
-    data_path: str = 'data'   # Path to data folder containing folder of *.root files.
-    logdir: str = 'logs'   # Path to log directory.
+    data_path: str = '/JIDENN/data'   # Path to data folder containing folder of *.root files.
+    logdir: str = '/JIDENN/logs'   # Path to log directory.
     tb_update_freq: int = 100   # Frequency of TensorBoard updates.
     
     # data options
@@ -25,7 +25,7 @@ class ArgumentParser(Tap):
     # tf.data.Dataset options
     batch_size: int = 2048  # Batch size.
     validation_step: int = 200  # Validation every n batches.
-    reading_size: int = 10_000_000  # Number of events to load at a time.
+    reading_size: int = 1_000  # Number of events to load at a time.
     num_workers: int = 6  # Number of workers to use when loading data.
     take: Optional[int] = 20_000  # Length of data to use.
     validation_batches: int = 100  # Size of validation dataset.
@@ -35,7 +35,7 @@ class ArgumentParser(Tap):
     
     model: str = 'basic_fc' # Model to use, options: 'basic_fc', 'transformer'.
     normalize: bool = True # Normalize data.
-    normalization_size: int = 10_000 # Size of normalization dataset. 
+    normalization_size: int = 1_000 # Size of normalization dataset. 
 
     # basic_fc_model
     if model == 'basic_fc':
@@ -49,17 +49,9 @@ class ArgumentParser(Tap):
         transformer_expansion: float = 4
         transformer_heads: int = 4
         transformer_layers: int = 4
-        embeding: str = 'rnn' # Embedding to use, options: 'cnn', 'rnn'.
         last_fc_size: int = 512 # Size of last fully connected layer.
+        embed_dim: int = 128
         
-        if embeding == 'rnn':
-            embed_dim: int = 128
-            rnn_cell: str = 'LSTM'
-            rnn_cell_dim: list[int] = []
-            
-        elif embeding == 'cnn':
-            conv_filters: list[int] = [4, 16, 64, 128]
-            conv_kernel_size: int = 3
             
     if model == 'BDT':
             num_trees:int = 10
@@ -69,7 +61,7 @@ class ArgumentParser(Tap):
             categorical_algorithm:str="CART"
             
     #training 
-    epochs: int = 2 # Number of epochs.
+    epochs: int = 5 # Number of epochs.
     label_smoothing: float = 0.1 # Label smoothing.
     learning_rate: float = 0.001
     decay_steps: int = 31266*epochs # Number of steps to decay for.
