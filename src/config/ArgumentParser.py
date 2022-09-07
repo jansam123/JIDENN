@@ -6,8 +6,8 @@ class ArgumentParser(Tap):
     seed: int = 42   # Random seed.
     threads: int = 1   # Maximum number of threads to use.
     debug: bool = False   # Debug mode.
-    data_path: str = '/JIDENN/data'   # Path to data folder containing folder of *.root files.
-    logdir: str = '/JIDENN/logs'   # Path to log directory.
+    data_path: str = 'data'   # Path to data folder containing folder of *.root files.
+    logdir: str = 'logs'   # Path to log directory.
     tb_update_freq: int = 100   # Frequency of TensorBoard updates.
     
     # data options
@@ -27,15 +27,17 @@ class ArgumentParser(Tap):
     validation_step: int = 200  # Validation every n batches.
     reading_size: int = 1_000  # Number of events to load at a time.
     num_workers: int = 6  # Number of workers to use when loading data.
-    take: Optional[int] = 2_000_000  # Length of data to use.
+    take: Optional[int] = 80_000_000  # Length of data to use.
     validation_batches: int = 100  # Size of validation dataset.
     dev_size: float = 0.1   # Size of dev dataset.
     test_size: float = 0.01  # Size of test dataset.
     shuffle_buffer: Optional[int] = None  # Size of shuffler buffer.
     
-    model: str = 'basic_fc' # Model to use, options: 'basic_fc', 'transformer'.
+    #preprocess options
     normalize: bool = True # Normalize data.
     normalization_size: int = 1_000 # Size of normalization dataset. 
+    
+    model: str = 'transformer' # Model to use, options: 'basic_fc', 'transformer'.
 
     # basic_fc_model
     if model == 'basic_fc':
@@ -46,11 +48,11 @@ class ArgumentParser(Tap):
     if model == 'transformer':
         warmup_steps: int = 100 # Number of steps to warmup for
         transformer_dropout: float = 0.2
-        transformer_expansion: float = 4
-        transformer_heads: int = 4
-        transformer_layers: int = 4
+        transformer_expansion: float = 4 #4,  number of hidden units in FFN is transformer_expansion * embed_dim
+        transformer_heads: int = 8 #12, must divide embed_dim
+        transformer_layers: int = 6 #6,12
         last_fc_size: int = 512 # Size of last fully connected layer.
-        embed_dim: int = 128
+        embed_dim: int = 256  #512
         
             
     if model == 'BDT':
@@ -61,7 +63,7 @@ class ArgumentParser(Tap):
             categorical_algorithm:str="CART"
             
     #training 
-    epochs: int = 5 # Number of epochs.
+    epochs: int = 2 # Number of epochs.
     label_smoothing: float = 0.1 # Label smoothing.
     learning_rate: float = 0.001
     decay_steps: int = 31266*epochs # Number of steps to decay for.

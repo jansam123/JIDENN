@@ -5,13 +5,13 @@ from typing import Optional, List, Callable
 
 class TransformerModel(tf.keras.Model):
     class FFN(tf.keras.layers.Layer):
-        def __init__(self, dim, expansion, *args, **kwargs):
+        def __init__(self, dim, expansion, activation, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.dim, self.expansion = dim, expansion
             # TODO: Create the required layers -- first a ReLU-activated dense
             # layer with `dim * expansion` units, followed by a dense layer
             # with `dim` units without an activation.
-            self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=tf.nn.relu)
+            self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
             self.dense = tf.keras.layers.Dense(dim, activation=None)
 
         def get_config(self):
@@ -30,10 +30,10 @@ class TransformerModel(tf.keras.Model):
             # TODO: Create weight matrices W_Q, W_K, W_V and W_O using `self.add_weight`,
             # each with shape `[dim, dim]`; for other arguments, keep the default values
             # (which mean trainable float32 matrices initialized with `"glorot_uniform"`).
-            self.W_Q = self.add_weight(shape=(dim, dim))
-            self.W_K = self.add_weight(shape=(dim, dim))
-            self.W_V = self.add_weight(shape=(dim, dim))
-            self.W_O = self.add_weight(shape=(dim, dim))
+            self.W_Q = self.add_weight(shape=(dim, dim), name="W_Q")
+            self.W_K = self.add_weight(shape=(dim, dim), name="W_K")
+            self.W_V = self.add_weight(shape=(dim, dim), name="W_V")
+            self.W_O = self.add_weight(shape=(dim, dim), name="W_O")
 
         def get_config(self):
             return {"dim": self.dim, "heads": self.heads}
@@ -80,7 +80,7 @@ class TransformerModel(tf.keras.Model):
             return output
 
     class Transformer(tf.keras.layers.Layer):
-        def __init__(self, layers, dim, expansion, heads, dropout, *args, **kwargs):
+        def __init__(self, layers, dim, expansion, heads, dropout, activation, *args, **kwargs):
             # Make sure `dim` is even.
             assert dim % 2 == 0
 
@@ -89,7 +89,7 @@ class TransformerModel(tf.keras.Model):
             # TODO: Create the required number of transformer layers, each consisting of
             # - a layer normalization and a self-attention layer followed by a dropout layer,
             # - a layer normalization and a FFN layer followed by a dropout layer.
-            self.FFN = [TransformerModel.FFN(dim, expansion) for _ in range(layers)]
+            self.FFN = [TransformerModel.FFN(dim, expansion, activation) for _ in range(layers)]
             self.self_attention = [TransformerModel.SelfAttention(dim, heads) for _ in range(layers)]
             self.dropout = tf.keras.layers.Dropout(dropout)
             self.layer_norms_fnn = [tf.keras.layers.LayerNormalization() for _ in range(layers)]
@@ -124,7 +124,9 @@ class TransformerModel(tf.keras.Model):
                  output_layer: tf.keras.layers.Layer, 
                  metrics: List[tf.keras.metrics.Metric],
                  loss: tf.keras.losses.Loss,
-                 preprocess:Optional[tf.keras.layers.Layer]= None):
+                 optimizer:tf.keras.optimizers.Optimizer,
+                 activation:Callable[[tf.Tensor], tf.Tensor],
+                 preprocess:Optional[tf.keras.layers.Layer] = None):
         # Implement a transformer encoder network. The input `words` is
         # a RaggedTensor of strings, each batch example being a list of words.
         input = input_layer
@@ -142,32 +144,18 @@ class TransformerModel(tf.keras.Model):
         #   to a dense one, and also pass the following argument as a mask:
         #     `mask=tf.sequence_mask(ragged_tensor_with_input_words_embeddings.row_lengths())`
         # - finally, convert the result back to a ragged tensor.
-        transformed = TransformerModel.Transformer(args.transformer_layers, args.embed_dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout)(hidden)
+        transformed = TransformerModel.Transformer(args.transformer_layers, args.embed_dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout, activation)(hidden)
 
         # TODO(tagger_we): Add a softmax classification layer into as many classes as there are unique
         # tags in the `word_mapping` of `train.tags`. Note that the Dense layer can process
         # a `RaggedTensor` without any problem.
         transformed = tf.keras.layers.Flatten()(transformed)
-        transformed = tf.keras.layers.Dense(args.last_fc_size, activation=tf.nn.relu)(transformed)
+        transformed = tf.keras.layers.Dense(args.last_fc_size, activation=activation)(transformed)
         output = output_layer(transformed)
-    
-
-        
-        class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
-            def __init__(self, warmup_steps, following_schedule):
-                self._warmup_steps = warmup_steps
-                self._warmup = tf.optimizers.schedules.PolynomialDecay(0., warmup_steps, following_schedule(0))
-                self._following = following_schedule
-
-            def __call__(self, step):
-                return tf.cond(step < self._warmup_steps,
-                            lambda: self._warmup(step),
-                            lambda: self._following(step - self._warmup_steps))
                 
         super().__init__(inputs=input, outputs=output)
-        l_r = LinearWarmup(args.warmup_steps, tf.optimizers.schedules.CosineDecay(args.learning_rate, args.decay_steps))
-        l_r = 0.001
-        self.compile(optimizer=tf.optimizers.Adam(learning_rate=l_r),  # type: ignore
+        
+        self.compile(optimizer=optimizer,  # type: ignore
                                 loss=loss,
                                 weighted_metrics=metrics,)
 

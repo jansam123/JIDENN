@@ -11,6 +11,7 @@ class BasicFCModel(tf.keras.Model):
                  activation: Callable,
                  loss: tf.keras.losses.Loss,
                  metrics=List[tf.keras.metrics.Metric],
+                 optimizer=tf.optimizers.Optimizer,
                  preprocess: tf.keras.layers.Layer | None = None) -> None:
         
         self._activation = activation
@@ -21,7 +22,7 @@ class BasicFCModel(tf.keras.Model):
         super().__init__(inputs=inputs, outputs=output)
         
         self.compile(
-            optimizer=tf.optimizers.Adam(),
+            optimizer=optimizer,
             loss=loss,
             weighted_metrics=metrics,
         )
