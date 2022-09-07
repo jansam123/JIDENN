@@ -68,7 +68,7 @@ def plot_to_image(figure):
 
 
 class ConfusionMatrix(tf.keras.callbacks.Callback):
-    def __init__(self, args, data:tf.data.Dataset, class_names:list[str], labels:list):
+    def __init__(self, args, data:tf.data.Dataset, class_names:List[str], labels:list):
         super().__init__()
         self.args = args
         self._data = data

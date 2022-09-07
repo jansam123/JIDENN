@@ -1,11 +1,12 @@
 import tensorflow as tf
+from typing import Optional
 
 from ..config.ArgumentParser import ArgumentParser
 from .BasicFCModel import BasicFCModel
 
 
 
-def create(args: ArgumentParser, preprocess: tf.keras.layers.Layer | None = None) -> BasicFCModel:
+def create(args: ArgumentParser, preprocess: Optional[tf.keras.layers.Layer]  = None) -> BasicFCModel:
     activation = tf.nn.relu
     
     inputs = tf.keras.layers.Input(shape=(args.input_size))

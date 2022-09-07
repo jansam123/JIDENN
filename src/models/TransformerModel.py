@@ -1,6 +1,6 @@
 import tensorflow as tf
 from src.config.ArgumentParser import ArgumentParser
-from typing import Optional, Callable
+from typing import Optional, List, Callable
 
 
 class TransformerModel(tf.keras.Model):
@@ -122,9 +122,9 @@ class TransformerModel(tf.keras.Model):
                  args: ArgumentParser, 
                  input_layer: tf.keras.layers.Layer,
                  output_layer: tf.keras.layers.Layer, 
-                 metrics: list[tf.keras.metrics.Metric],
+                 metrics: List[tf.keras.metrics.Metric],
                  loss: tf.keras.losses.Loss,
-                 preprocess: tf.keras.layers.Layer | None = None):
+                 preprocess:Optional[tf.keras.layers.Layer]= None):
         # Implement a transformer encoder network. The input `words` is
         # a RaggedTensor of strings, each batch example being a list of words.
         input = input_layer

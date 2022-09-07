@@ -1,5 +1,5 @@
 # FROM tensorflow/tensorflow:nightly-gpu
-FROM tensorflow/tensorflow:latest-gpu
+FROM tensorflow/tensorflow:2.9.1-gpu
 
 
 # COPY install-packages.sh .

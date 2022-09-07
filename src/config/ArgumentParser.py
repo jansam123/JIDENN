@@ -1,5 +1,5 @@
 from tap import Tap
-from typing import Optional
+from typing import Optional, List
 
 class ArgumentParser(Tap):
     # basic
@@ -11,11 +11,11 @@ class ArgumentParser(Tap):
     tb_update_freq: int = 100   # Frequency of TensorBoard updates.
     
     # data options
-    labels: list[str] = ["gluon", "quark"]   # List of labels to use.
+    labels: List[str] = ["gluon", "quark"]   # List of labels to use.
     num_labels: int = len(labels)  # Number of labels to use.
     input_size: int = 9   # Number of input features.
     target: str = 'jets_truth_partonPDG'  #'taus_truth_matchJetPdgId' 
-    variables: list[str] = ['jets_Jvt', 'jets_Timing', 'jets_chf', 'jets_eta', 'jets_fmax',
+    variables: List[str] = ['jets_Jvt', 'jets_Timing', 'jets_chf', 'jets_eta', 'jets_fmax',
                             'jets_m', 'jets_phi', 'jets_pt', 'jets_sumPtTrk']
                         # [ 'taus_seedJetE', 'taus_seedJetEta', 'taus_seedJetPhi',
                         # 'taus_seedJetPt',  'taus_dRminToJet', 'taus_TrackWidthPt500TV', 'taus_seedJetWidth']
@@ -27,7 +27,7 @@ class ArgumentParser(Tap):
     validation_step: int = 200  # Validation every n batches.
     reading_size: int = 1_000  # Number of events to load at a time.
     num_workers: int = 6  # Number of workers to use when loading data.
-    take: Optional[int] = 20_000  # Length of data to use.
+    take: Optional[int] = 2_000_000  # Length of data to use.
     validation_batches: int = 100  # Size of validation dataset.
     dev_size: float = 0.1   # Size of dev dataset.
     test_size: float = 0.01  # Size of test dataset.
@@ -39,7 +39,7 @@ class ArgumentParser(Tap):
 
     # basic_fc_model
     if model == 'basic_fc':
-        hidden_layers: list[int] = [2*1024,2*1024]   # Hidden layer sizes.
+        hidden_layers: List[int] = [2*1024,2*1024]   # Hidden layer sizes.
         dropout: float = 0.5   # Dropout after FC layers.
     
     # transformer_model

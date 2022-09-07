@@ -1,15 +1,15 @@
 from dataclasses import dataclass
 import uproot
 import tensorflow as tf
-from typing import Iterator, Optional
+from typing import Iterator, Optional, List, Tuple
 
 # /work/sched3am/exTau/jets1tau-v01/nom/user.scheiric.mc16_13TeV.41047*
 
     
 @dataclass
 class JIDENNDataset:
-    files: list[str]
-    variables: list[str]
+    files: List[str]
+    variables: List[str]
     reading_size : int = 2_048
     target: Optional[str] = None
     weight : Optional[str] = None
@@ -17,7 +17,7 @@ class JIDENNDataset:
     cut: Optional[str] = None # 40 < tau_pt < 60
     
     
-    def _data_iterator_pd(self) -> Iterator[tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
+    def _data_iterator_pd(self) -> Iterator[Tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
         target =[self.target] if self.target is not None else []
         weight =[self.weight] if self.weight is not None else []
         expressions = self.variables + target + weight

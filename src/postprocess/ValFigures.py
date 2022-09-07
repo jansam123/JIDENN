@@ -5,14 +5,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from  sklearn.metrics import roc_curve,confusion_matrix, auc
 from itertools import product
-from typing import Optional
+from typing import Optional, List
 from io import BytesIO
 
 
 
 class ValFigures:
         
-    def __init__(self, predictions:np.ndarray, labels:np.ndarray, argmax_predictions:np.ndarray, class_names:list[str]):
+    def __init__(self, predictions:np.ndarray, labels:np.ndarray, argmax_predictions:np.ndarray, class_names:List[str]):
         self._class_names = class_names
         self._predictions = predictions
         self._labels = labels
@@ -76,7 +76,7 @@ class ValFigures:
         plt.ylabel('Count')
         return fig
     
-    def _violin(self, predictions:list[np.ndarray] = [], x_labels:Optional[list[str]] = None):
+    def _violin(self, predictions:List[np.ndarray] = [], x_labels:Optional[List[str]] = None):
         fig = plt.figure(figsize=(8, 8))
         sns.violinplot(data=predictions)
         if x_labels is not None:

@@ -8,3 +8,10 @@ services:
     volumes:
       - /home/home-pc/bakalarka/JIDENN/data:/JIDENN/data
       - /home/home-pc/bakalarka/JIDENN/logs:/JIDENN/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

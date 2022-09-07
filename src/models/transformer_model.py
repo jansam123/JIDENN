@@ -1,9 +1,11 @@
 import tensorflow as tf
+from typing import Optional
+
 from src.config.ArgumentParser import ArgumentParser
 from src.models.TransformerModel import TransformerModel
 
 
-def create(args: ArgumentParser, preprocess: tf.keras.layers.Layer | None = None) -> TransformerModel:
+def create(args: ArgumentParser, preprocess: Optional[tf.keras.layers.Layer] = None) -> TransformerModel:
     inputs = tf.keras.layers.Input(shape=(args.input_size))
     
     if args.num_labels == 2:

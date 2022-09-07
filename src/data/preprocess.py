@@ -1,10 +1,10 @@
 import tensorflow as tf
-from typing import Optional, Callable
+from typing import Optional, List, Callable
 
 
 
-def pipe(datasets: list[tf.data.Dataset],
-                             dataset_weights: list[float],
+def pipe(datasets: List[tf.data.Dataset],
+                             dataset_weights: List[float],
                              batch_size:int, 
                              take:Optional[int]=None, 
                              shuffle_buffer:Optional[int]=None,
