@@ -6,8 +6,8 @@ class ArgumentParser(Tap):
     seed: int = 42   # Random seed.
     threads: int = 1   # Maximum number of threads to use.
     debug: bool = False   # Debug mode.
-    data_path: str = '/JIDENN/data'   # Path to data folder containing folder of *.root files.
-    logdir: str = '/JIDENN/logs'   # Path to log directory.
+    data_path: str = 'data'   # Path to data folder containing folder of *.root files.
+    logdir: str = 'logs'   # Path to log directory.
     tb_update_freq: int = 100   # Frequency of TensorBoard updates.
     
     # data options
