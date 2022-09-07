@@ -59,6 +59,8 @@ def main(args: ArgumentParser) -> None:
     if args.normalize and args.model != 'BDT':
         prep_ds = train.take(args.normalization_size).map(lambda x,y,z:x)
         normalizer = tf.keras.layers.Normalization(axis=-1)
+        print("Getting std and mean of the dataset...")
+        print(f"Subsample size: {args.normalization_size}")
         normalizer.adapt(prep_ds)
     else:
         normalizer = None
