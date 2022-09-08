@@ -1,5 +1,5 @@
 from tap import Tap
-from typing import Optional, List
+
 
 class ArgumentParser(Tap):
     # basic
@@ -11,37 +11,37 @@ class ArgumentParser(Tap):
     tb_update_freq: int = 100   # Frequency of TensorBoard updates.
     
     # data options
-    labels: List[str] = ["gluon", "quark"]   # List of labels to use.
+    labels: list[str] = ["gluon", "quark"]   # list of labels to use.
     num_labels: int = len(labels)  # Number of labels to use.
     input_size: int = 9   # Number of input features.
     target: str = 'jets_truth_partonPDG'  #'taus_truth_matchJetPdgId' 
-    variables: List[str] = ['jets_Jvt', 'jets_Timing', 'jets_chf', 'jets_eta', 'jets_fmax',
+    variables: list[str] = ['jets_Jvt', 'jets_Timing', 'jets_chf', 'jets_eta', 'jets_fmax',
                             'jets_m', 'jets_phi', 'jets_pt', 'jets_sumPtTrk']
                         # [ 'taus_seedJetE', 'taus_seedJetEta', 'taus_seedJetPhi',
                         # 'taus_seedJetPt',  'taus_dRminToJet', 'taus_TrackWidthPt500TV', 'taus_seedJetWidth']
-    weight: Optional[str] = 'weight_mc[:,0]'
-    cut: Optional[str] = None
+    weight: str | None = 'weight_mc[:,0]'
+    cut: str | None = None
     
     # tf.data.Dataset options
     batch_size: int = 2048  # Batch size.
     validation_step: int = 200  # Validation every n batches.
     reading_size: int = 1_000  # Number of events to load at a time.
     num_workers: int = 6  # Number of workers to use when loading data.
-    take: Optional[int] = 80_000_000  # Length of data to use.
+    take: int | None = 8_000  # Length of data to use.
     validation_batches: int = 100  # Size of validation dataset.
     dev_size: float = 0.1   # Size of dev dataset.
     test_size: float = 0.01  # Size of test dataset.
-    shuffle_buffer: Optional[int] = None  # Size of shuffler buffer.
+    shuffle_buffer: int | None = None  # Size of shuffler buffer.
     
     #preprocess options
     normalize: bool = True # Normalize data.
-    normalization_size: int = 1_000 # Size of normalization dataset. 
+    normalization_size: int = 100 # Size of normalization dataset. 
     
-    model: str = 'transformer' # Model to use, options: 'basic_fc', 'transformer'.
+    model: str = 'BDT' # Model to use, options: 'basic_fc', 'transformer'.
 
     # basic_fc_model
     if model == 'basic_fc':
-        hidden_layers: List[int] = [2*1024,2*1024]   # Hidden layer sizes.
+        hidden_layers: list[int] = [2*1024,2*1024]   # Hidden layer sizes.
         dropout: float = 0.5   # Dropout after FC layers.
     
     # transformer_model
@@ -63,7 +63,7 @@ class ArgumentParser(Tap):
             categorical_algorithm:str="CART"
             
     #training 
-    epochs: int = 2 # Number of epochs.
+    epochs: int = 1 # Number of epochs.
     label_smoothing: float = 0.1 # Label smoothing.
     learning_rate: float = 0.001
     decay_steps: int = 31266*epochs # Number of steps to decay for.

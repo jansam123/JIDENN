@@ -1,12 +1,11 @@
 import tensorflow as tf
-from typing import Optional
 
 from ..config.ArgumentParser import ArgumentParser
 from .BasicFCModel import BasicFCModel
 
 
 
-def create(args: ArgumentParser, preprocess: Optional[tf.keras.layers.Layer]  = None) -> BasicFCModel:
+def create(args: ArgumentParser, preprocess: tf.keras.layers.Layer | None  = None) -> BasicFCModel:
     activation = tf.nn.relu
     inputs = tf.keras.layers.Input(shape=(args.input_size))
     
@@ -21,7 +20,7 @@ def create(args: ArgumentParser, preprocess: Optional[tf.keras.layers.Layer]  = 
         metrics = [tf.keras.metrics.CategoricalAccuracy(), tf.keras.metrics.AUC()]
     
     optimizer = tf.optimizers.Adam(learning_rate=args.learning_rate)
-    
+
     return BasicFCModel(
         hidden_layers=args.hidden_layers,
         input_layer=inputs,

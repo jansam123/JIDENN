@@ -1,10 +1,9 @@
 from .JIDENNDataset import JIDENNDataset
-from .DataSchema import DataSchema      
-from typing import Optional, List  
+from .DataSchema import DataSchema        
         
 def get_gluon_dataset(schema:DataSchema, 
-                      files:List[str], 
-                      cut:Optional[str]=None) -> JIDENNDataset:
+                      files:list[str], 
+                      cut: str| None = None) -> JIDENNDataset:
     
     cut = f"({cut})" if cut is not None else ''
     cut += f"&({schema.target}=={schema.raw_qluon})"
@@ -20,8 +19,8 @@ def get_gluon_dataset(schema:DataSchema,
                          
                          
 def get_quark_dataset(schema:DataSchema, 
-                      files:List[str], 
-                      cut:Optional[str]=None) -> JIDENNDataset:
+                      files:list[str], 
+                      cut:str| None=None) -> JIDENNDataset:
     
     cut = f"({cut})" if cut is not None else ''
     cut += f'&({"".join([f"({schema.target}=={q})|" for q in schema.raw_quarks])[:-1]})'
@@ -37,8 +36,8 @@ def get_quark_dataset(schema:DataSchema,
                          cut=cut,)
 
 def get_mixed_dataset(schema:DataSchema, 
-                      files:List[str], 
-                      cut:Optional[str]=None) -> JIDENNDataset:
+                      files:list[str], 
+                      cut:str| None = None) -> JIDENNDataset:
     
     cut = f"({cut})" if cut is not None else ''
     cut += f"&({schema.target}=={schema.raw_qluon})"

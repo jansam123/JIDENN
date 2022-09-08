@@ -1,5 +1,4 @@
 import tensorflow as tf
-from typing import Optional
 
 from src.config.ArgumentParser import ArgumentParser
 from src.models.TransformerModel import TransformerModel
@@ -16,7 +15,7 @@ class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
                             lambda: self._warmup(step),
                             lambda: self._following(step - self._warmup_steps))
 
-def create(args: ArgumentParser, preprocess: Optional[tf.keras.layers.Layer] = None) -> TransformerModel:
+def create(args: ArgumentParser, preprocess: tf.keras.layers.Layer | None = None) -> TransformerModel:
      
     activation = tf.nn.relu
     inputs = tf.keras.layers.Input(shape=(args.input_size))

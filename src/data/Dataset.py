@@ -1,13 +1,12 @@
 from .get_dataset import get_gluon_dataset, get_quark_dataset
 from .DataSchema import DataSchema
 from .preprocess import pipe
-from typing import Optional, List
 
-def get_qg_dataset(files: List[str],
+def get_qg_dataset(files: list[str],
                    batch_size:int, 
-                   cut: Optional[str],
-                   take:Optional[int], 
-                   shuffle_buffer:Optional[int]):
+                   cut: str | None,
+                   take:int | None, 
+                   shuffle_buffer:int | None):
     
     data_schema = DataSchema()
     gluon_dataset = get_gluon_dataset(data_schema, files, cut).dataset

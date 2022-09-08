@@ -1,16 +1,16 @@
 # from __future__ import annotations
 import tensorflow as tf
-from typing import Callable, List
+from typing import Callable
 
 
 class BasicFCModel(tf.keras.Model):
     def __init__(self, 
-                 hidden_layers: List[int], 
+                 hidden_layers: list[int], 
                  input_layer: tf.keras.layers.Layer,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable,
                  loss: tf.keras.losses.Loss,
-                 metrics=List[tf.keras.metrics.Metric],
+                 metrics=list[tf.keras.metrics.Metric],
                  optimizer=tf.optimizers.Optimizer,
                  preprocess: tf.keras.layers.Layer | None = None) -> None:
         

@@ -1,15 +1,14 @@
 import tensorflow as tf
-from typing import Optional, List, Callable
+from typing import Callable
 
 
-
-def pipe(datasets: List[tf.data.Dataset],
-                             dataset_weights: List[float],
+def pipe(datasets: list[tf.data.Dataset],
+                             dataset_weights: list[float],
                              batch_size:int, 
-                             take:Optional[int]=None, 
-                             shuffle_buffer:Optional[int]=None,
-                             num_labels: Optional[int]=None,
-                             label_mapping: Optional[Callable]=None) -> tf.data.Dataset:
+                             take: int | None = None, 
+                             shuffle_buffer: int | None = None,
+                             num_labels:  int | None = None,
+                             label_mapping:  Callable | None = None) -> tf.data.Dataset:
     
     assert len(datasets) == len(dataset_weights), "Number of datasets and weights must be equal."
 
