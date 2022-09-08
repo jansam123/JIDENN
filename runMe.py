@@ -5,7 +5,7 @@ import datetime
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 
 from src.data import Dataset
-from src.models import basicFC_model, transformer_model, BDT_model
+from src.models import BDT, basicFC, transformer
 from src.config.ArgumentParser import ArgumentParser
 from src.postprocess.pipeline import postprocess_pipe
 
@@ -67,13 +67,13 @@ def main(args: ArgumentParser) -> None:
 
     # creating model
     if args.model == "basic_fc":
-        model = basicFC_model.create(args, preprocess=normalizer)
+        model = basicFC.create(args, preprocess=normalizer)
         model.summary()   
     elif args.model == "transformer":
-        model = transformer_model.create(args, preprocess=normalizer)
+        model = transformer.create(args, preprocess=normalizer)
         model.summary()   
     elif args.model=='BDT':
-        model = BDT_model.create(args)
+        model = BDT.create(args)
     else:
         assert False, "Model not implemented"
     
