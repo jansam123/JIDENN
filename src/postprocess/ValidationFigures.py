@@ -12,7 +12,7 @@ sns.set_theme(style="dark")
 
 
 
-class ValFigures:
+class ValidationFigures:
         
     def __init__(self, predictions:np.ndarray, labels:np.ndarray, argmax_predictions:np.ndarray, class_names:list[str]):
         self._class_names = class_names

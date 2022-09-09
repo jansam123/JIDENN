@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from src.config import config_subclasses as cfg
-print(cfg.Params)
 from .BasicFCModel import BasicFCModel
 
 
