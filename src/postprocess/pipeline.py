@@ -2,7 +2,7 @@ from logging import Logger
 import tensorflow as tf
 import numpy as np
 import os
-from .ValidationFigures import ValFigures
+from .ValidationFigures import ValidationFigures
 
     
     
@@ -23,7 +23,7 @@ def postprocess_pipe(model, data:tf.data.Dataset, labels:tf.data.Dataset, logdir
     os.makedirs(base_path, exist_ok=True)
     
     log.info("Generating validation figures...")
-    val_figs = ValFigures(res, np_labels, pred, ['gluon', 'quark'])
+    val_figs = ValidationFigures(res, np_labels, pred, ['gluon', 'quark'])
     
     log.info("Saving to tensorboard...")
     val_figs.to_tensorboard(tb_base_path)

@@ -1,4 +1,3 @@
-from ast import arg
 import numpy as np
 import tensorflow as tf
 import os
@@ -7,7 +6,6 @@ import logging
 import hydra
 from hydra.core.config_store import ConfigStore
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
-
 
 from src.data import Dataset
 from src.models import BDT, basicFC, transformer
@@ -95,7 +93,7 @@ def main(args: config.JIDENNConfig) -> None:
         def on_epoch_begin(self, epoch, logs=None):
             self.__epoch_start = datetime.utcnow()
             
-        def on_epoch_end(self, epoch, logs=None):
+        def on_epoch_end(self, epoch, logs):
             eta = datetime.utcnow() - self.__epoch_start if self.__epoch_start is not None else '-:--:--'
             eta = str(eta).split('.')[0]
             log_str = f"Epoch {epoch+1}/{args.params.epochs}: "
@@ -104,8 +102,6 @@ def main(args: config.JIDENNConfig) -> None:
             log.info(log_str)
             
     callbacks += [LogCallback()]
-
-    
     
     #running training
     model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks, validation_steps=args.dataset.validation_batches if args.dataset.take is None else None)
