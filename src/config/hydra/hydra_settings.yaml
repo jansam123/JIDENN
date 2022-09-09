@@ -1,0 +1,6 @@
+run:
+  dir: ${logdir}
+job_logging:
+  formatters:
+    simple:
+      format: '[${now:%Y-%m-%d}  ${now:%H:%M:%S}][%(levelname)s] - %(message)s'

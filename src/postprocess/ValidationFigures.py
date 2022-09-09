@@ -7,6 +7,9 @@ from  sklearn.metrics import roc_curve,confusion_matrix, auc
 from itertools import product
 from io import BytesIO
 
+sns.set_theme(style="dark")
+
+
 
 
 class ValFigures:
@@ -70,7 +73,7 @@ class ValFigures:
     
     def _hist(self, predictions):
         fig = plt.figure(figsize=(8, 8))
-        plt.hist(predictions, label='predictions', alpha=0.5)
+        sns.histplot(predictions, label='predictions', alpha=0.5)
         plt.xlabel('Prediction probability')
         plt.ylabel('Count')
         return fig
@@ -89,7 +92,7 @@ class ValFigures:
         auc_score = auc(fp, tp)
         
         fig = plt.figure(figsize=(8, 8))
-        plt.plot(100*fp, 100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
+        sns.lineplot(x=100*fp, y=100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
         plt.grid(True)

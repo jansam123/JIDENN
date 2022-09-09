@@ -1,15 +1,20 @@
 from .get_dataset import get_gluon_dataset, get_quark_dataset
-from .DataSchema import DataSchema
+from src.config import config_subclasses as cfg        
 from .preprocess import pipe
 
 def get_qg_dataset(files: list[str],
-                   batch_size:int, 
-                   cut: str | None,
-                   take:int | None, 
-                   shuffle_buffer:int | None):
+                   args_data: cfg.Data,
+                   args_dataset: cfg.Dataset,
+                   size: int | None = None):
     
-    data_schema = DataSchema()
-    gluon_dataset = get_gluon_dataset(data_schema, files, cut).dataset
-    quark_dataset = get_quark_dataset(data_schema, files, cut).dataset
+    gluon_dataset = get_gluon_dataset(args_data, files).dataset
+    quark_dataset = get_quark_dataset(args_data, files).dataset
     
-    return pipe([gluon_dataset, quark_dataset], [0.5, 0.5], batch_size, take, shuffle_buffer, label_mapping=data_schema.label_mapping)
+
+    def label_mapping(x):
+        if x == args_data.raw_gluon:
+            return args_data.gluon
+        else:
+            return args_data.quark
+
+    return pipe([gluon_dataset, quark_dataset], [0.5, 0.5], args_dataset, label_mapping=label_mapping, take=size)

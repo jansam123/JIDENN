@@ -1,4 +1,4 @@
-from src.config.ArgumentParser import ArgumentParser
+from src.config.config import ArgumentParser
 from dataclasses import dataclass, field
 from typing import Callable
 
@@ -8,6 +8,7 @@ class DataSchema:
     target:str = ArgumentParser().target
     weight:str | None = ArgumentParser().weight
     num_labels: int = ArgumentParser().num_labels
+    
     gluon: int = 0
     quark: int = 1
     raw_qluon: int = 21

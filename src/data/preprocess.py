@@ -1,14 +1,13 @@
 import tensorflow as tf
 from typing import Callable
+from src.config import config_subclasses as cfg        
 
 
 def pipe(datasets: list[tf.data.Dataset],
                              dataset_weights: list[float],
-                             batch_size:int, 
-                             take: int | None = None, 
-                             shuffle_buffer: int | None = None,
-                             num_labels:  int | None = None,
-                             label_mapping:  Callable | None = None) -> tf.data.Dataset:
+                             args_dataset: cfg.Dataset,
+                             label_mapping: Callable,
+                             take: int | None) -> tf.data.Dataset:
     
     assert len(datasets) == len(dataset_weights), "Number of datasets and weights must be equal."
 
@@ -19,19 +18,13 @@ def pipe(datasets: list[tf.data.Dataset],
     if label_mapping is not None:
         dataset = dataset.map(lambda x,y,z: (x, label_mapping(y),z))
     
-    if num_labels is not None:
-        def one_hot_dataset(data, label, weight):
-            label = tf.one_hot(tf.cast(label, tf.int32), num_labels)
-            return data, label, weight
-        dataset = dataset.map(one_hot_dataset)
         
     if take is not None:
         dataset = dataset.take(take)
         dataset = dataset.apply(tf.data.experimental.assert_cardinality(take)) 
-        
 
         
-    dataset = dataset.shuffle(buffer_size=shuffle_buffer) if shuffle_buffer is not None else dataset
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.shuffle(buffer_size=args_dataset.shuffle_buffer) if args_dataset.shuffle_buffer is not None else dataset
+    dataset = dataset.batch(args_dataset.batch_size)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
     return dataset

@@ -1,21 +1,18 @@
 import tensorflow as tf
-from ..config.ArgumentParser import ArgumentParser
+from src.config import config_subclasses as cfg
 import tensorflow_decision_forests as tfdf
 
 
 
-def create(args: ArgumentParser)->tfdf.keras.RandomForestModel:
+def create(args_model: cfg.BDT)->tfdf.keras.RandomForestModel:
     
-    if args.epochs != 1:
-        print("WARNING: BDTModel only supports 1 epoch. Setting epochs to 1")
-        args.epochs = 1
     
     model = tfdf.keras.GradientBoostedTreesModel(
-        num_trees=args.num_trees,
-        growing_strategy=args.growing_strategy,
-        max_depth=args.max_depth,
-        split_axis=args.split_axis,
-        categorical_algorithm=args.categorical_algorithm,
+        num_trees=args_model.num_trees,
+        growing_strategy=args_model.growing_strategy,
+        max_depth=args_model.max_depth,
+        split_axis=args_model.split_axis,
+        categorical_algorithm=args_model.categorical_algorithm,
         early_stopping='NONE',
         verbose=2
         )

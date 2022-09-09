@@ -12,11 +12,13 @@ class BasicFCModel(tf.keras.Model):
                  loss: tf.keras.losses.Loss,
                  metrics=list[tf.keras.metrics.Metric],
                  optimizer=tf.optimizers.Optimizer,
+                 dropout: float | None = None,
                  preprocess: tf.keras.layers.Layer | None = None) -> None:
         
         self._activation = activation
         inputs = input_layer
-        hidden = self._hidden_layers(preprocess(inputs) if preprocess else inputs, hidden_layers)
+        dropout_layer = tf.keras.layers.Dropout(dropout) if dropout is not None else None
+        hidden = self._hidden_layers(preprocess(inputs) if preprocess else inputs, hidden_layers, dropout_layer)
         output = output_layer(hidden)
             
         super().__init__(inputs=inputs, outputs=output)
@@ -27,10 +29,12 @@ class BasicFCModel(tf.keras.Model):
             weighted_metrics=metrics,
         )
 
-    def _hidden_layers(self, inputs: tf.Tensor, layers:list[int]) -> tf.Tensor:
+    def _hidden_layers(self, inputs: tf.Tensor, layers:list[int], dropout: tf.keras.layers.Dropout | None = None) -> tf.Tensor:
         hidden =  tf.keras.layers.Flatten()(inputs)
         for hidden_layer in layers:
             hidden = tf.keras.layers.Dense(hidden_layer, activation=self._activation)(hidden)
+            if dropout is not None:
+                hidden = dropout(hidden)
         return hidden
     
     
