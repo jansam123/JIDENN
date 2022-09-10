@@ -79,21 +79,22 @@ def main(args: config.JIDENNConfig) -> None:
         normalizer = None
 
     # creating model
-
-    if args.params.model == "basic_fc":
-        model = basicFC.create(args.params, args.basic_fc, args.data, preprocess=normalizer)
-        model.summary(print_fn=log.info)   
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+    with mirrored_strategy.scope():
+        if args.params.model == "basic_fc":
+            model = basicFC.create(args.params, args.basic_fc, args.data, preprocess=normalizer)
+            model.summary(print_fn=log.info)   
+            
+        elif args.params.model == "transformer":
+            model = transformer.create(args.params, args.transformer, args.data, preprocess=normalizer)
+            model.summary(print_fn=log.info)   
+            
+        elif args.params.model=='BDT':
+            model = BDT.create(args.bdt)
+            
+        else:
+            assert False, "Model not implemented"
         
-    elif args.params.model == "transformer":
-        model = transformer.create(args.params, args.transformer, args.data, preprocess=normalizer)
-        model.summary(print_fn=log.info)   
-        
-    elif args.params.model=='BDT':
-        model = BDT.create(args.bdt)
-        
-    else:
-        assert False, "Model not implemented"
-    
     #callbacks
     callbacks = get_callbacks(args.params, log)
     
