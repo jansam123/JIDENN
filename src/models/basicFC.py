@@ -21,7 +21,8 @@ def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, prepr
     
     optimizer = tf.optimizers.Adam(learning_rate=args.learning_rate)
 
-    return BasicFCModel(
+
+    model = BasicFCModel(
         hidden_layers=args_model.hidden_layers,
         dropout=args_model.dropout,
         input_layer=inputs,
@@ -31,3 +32,4 @@ def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, prepr
         metrics=metrics,
         preprocess=preprocess,
         optimizer=optimizer)
+    return model

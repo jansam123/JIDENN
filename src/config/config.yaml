@@ -13,7 +13,7 @@ hydra:
 params:
   base_logdir: logs # Base log directory for all runs.
   model: basic_fc # Model to use, options:  transformer, basics_fc, BDT.
-  epochs: 10 # Number of epochs.
+  epochs: 1 # Number of epochs.
   label_smoothing: 0.1 # Label smoothing.
   learning_rate: 0.001
   seed: 42 # Random seed.

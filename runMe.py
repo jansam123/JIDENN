@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import os
-from datetime import datetime
 import logging
 import hydra
 from hydra.core.config_store import ConfigStore
@@ -11,6 +10,7 @@ from src.data import Dataset
 from src.models import BDT, basicFC, transformer
 from src.postprocess.pipeline import postprocess_pipe
 from src.config import config
+from src.callbacks.get_callbacks import get_callbacks
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
@@ -32,6 +32,15 @@ def main(args: config.JIDENNConfig) -> None:
     # managing threads
     tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
     tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
+    
+    # GPU logging
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        log.warning("No GPU found, using CPU")
+    for i, gpu in enumerate(gpus):
+        gpu_info = tf.config.experimental.get_device_details(gpu)
+        memory = tf.config.experimental.get_memory_info(':'.join(gpu.name.split(":")[1:]))
+        log.info(f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]} and memory {memory}")
     
     
     #dataset preparation
@@ -70,43 +79,28 @@ def main(args: config.JIDENNConfig) -> None:
         normalizer = None
 
     # creating model
+
     if args.params.model == "basic_fc":
         model = basicFC.create(args.params, args.basic_fc, args.data, preprocess=normalizer)
         model.summary(print_fn=log.info)   
+        
     elif args.params.model == "transformer":
         model = transformer.create(args.params, args.transformer, args.data, preprocess=normalizer)
         model.summary(print_fn=log.info)   
+        
     elif args.params.model=='BDT':
         model = BDT.create(args.bdt)
+        
     else:
         assert False, "Model not implemented"
     
     #callbacks
-    callbacks = []
-    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=args.params.logdir, histogram_freq=1, embeddings_freq=1)
-    callbacks += [tb_callback]
-    
-    class LogCallback(tf.keras.callbacks.Callback):
-        def __init__(self):
-            self.__epoch_start = None
-        
-        def on_epoch_begin(self, epoch, logs=None):
-            self.__epoch_start = datetime.utcnow()
-            
-        def on_epoch_end(self, epoch, logs):
-            eta = datetime.utcnow() - self.__epoch_start if self.__epoch_start is not None else '-:--:--'
-            eta = str(eta).split('.')[0]
-            log_str = f"Epoch {epoch+1}/{args.params.epochs}: "
-            log_str += f"ETA: {eta} - "
-            log_str +=  " - ".join([f"{k}: {v:.4}" for k,v in logs.items()])
-            log.info(log_str)
-            
-    callbacks += [LogCallback()]
+    callbacks = get_callbacks(args.params, log)
     
     #running training
     model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks, validation_steps=args.dataset.validation_batches if args.dataset.take is None else None)
         
-    
+    #split train into labels and features
     test_dataset = test.unbatch().map(lambda d, l, w: d).batch(args.dataset.batch_size)
     test_dataset_labels = test.unbatch().map(lambda x,y,z: y)
     
