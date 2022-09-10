@@ -39,8 +39,7 @@ def main(args: config.JIDENNConfig) -> None:
         log.warning("No GPU found, using CPU")
     for i, gpu in enumerate(gpus):
         gpu_info = tf.config.experimental.get_device_details(gpu)
-        memory = tf.config.experimental.get_memory_info(':'.join(gpu.name.split(":")[1:]))
-        log.info(f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]} and memory {memory}")
+        log.info(f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
     
     
     #dataset preparation
@@ -66,21 +65,18 @@ def main(args: config.JIDENNConfig) -> None:
         args.data.cut = f'({args.data.cut})&({args.data.weight}>0)' if args.data.cut is not None else f"{args.data.weight}>0"
 
     train, dev, test = [Dataset.get_qg_dataset(files, args_data=args.data, args_dataset=args.dataset, size=size) for files, size in zip(dataset_files, sizes)]
-    
-    
-    if args.preprocess.normalize and args.params.model != 'BDT':
-        prep_ds = train.take(args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
-        prep_ds=prep_ds.map(lambda x,y,z:x)
-        normalizer = tf.keras.layers.Normalization(axis=-1)
-        log.info("Getting std and mean of the dataset...")
-        log.info(f"Subsample size: {args.preprocess.normalization_size}")
-        normalizer.adapt(prep_ds)
-    else:
-        normalizer = None
 
-    # creating model
-    mirrored_strategy = tf.distribute.MirroredStrategy()
-    with mirrored_strategy.scope():
+    def choose_model():
+        if args.preprocess.normalize and args.params.model != 'BDT':
+            prep_ds = train.take(args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
+            prep_ds=prep_ds.map(lambda x,y,z:x)
+            normalizer = tf.keras.layers.Normalization(axis=-1)
+            log.info("Getting std and mean of the dataset...")
+            log.info(f"Subsample size: {args.preprocess.normalization_size}")
+            normalizer.adapt(prep_ds)
+        else:
+            normalizer = None
+            
         if args.params.model == "basic_fc":
             model = basicFC.create(args.params, args.basic_fc, args.data, preprocess=normalizer)
             model.summary(print_fn=log.info)   
@@ -94,6 +90,17 @@ def main(args: config.JIDENNConfig) -> None:
             
         else:
             assert False, "Model not implemented"
+            
+        return model
+    
+    # creating model
+    if len(gpus) < 2:
+        model = choose_model()
+    else:
+        mirrored_strategy = tf.distribute.MirroredStrategy()
+        with mirrored_strategy.scope():
+            model = choose_model()
+        
         
     #callbacks
     callbacks = get_callbacks(args.params, log)
