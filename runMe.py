@@ -97,7 +97,8 @@ def main(args: config.JIDENNConfig) -> None:
     if len(gpus) < 2:
         model = choose_model()
     else:
-        mirrored_strategy = tf.distribute.MirroredStrategy()
+        # mirrored_strategy = tf.distribute.MirroredStrategy()
+        mirrored_strategy = tf.distribute.MultiWorkerMirroredStrategy()
         with mirrored_strategy.scope():
             model = choose_model()
         
