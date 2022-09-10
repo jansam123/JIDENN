@@ -1,23 +1,24 @@
 from dataclasses import dataclass
 import uproot
+# import pandas as pd
 import tensorflow as tf
-from typing import Iterator, Optional, List, Tuple
+from typing import Iterator
 
 # /work/sched3am/exTau/jets1tau-v01/nom/user.scheiric.mc16_13TeV.41047*
 
     
 @dataclass
 class JIDENNDataset:
-    files: List[str]
-    variables: List[str]
+    files: list[str]
+    variables: list[str]
     reading_size : int = 2_048
-    target: Optional[str] = None
-    weight : Optional[str] = None
-    num_workers: Optional[int] = 1
-    cut: Optional[str] = None # 40 < tau_pt < 60
+    target: str | None = None
+    weight : str | None = None
+    num_workers: int | None = 1
+    cut: str | None = None # 40 < tau_pt < 60
     
     
-    def _data_iterator_pd(self) -> Iterator[Tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
+    def _data_iterator_pd(self) -> Iterator[tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
         target =[self.target] if self.target is not None else []
         weight =[self.weight] if self.weight is not None else []
         expressions = self.variables + target + weight
@@ -29,7 +30,6 @@ class JIDENNDataset:
                                  num_workers=self.num_workers, 
                                  file_handler=uproot.MultithreadedFileSource, 
                                  library='pd'):  # type: ignore
-            
             
             sample_data = df[self.variables]
             sample_data = tf.convert_to_tensor(sample_data, dtype=tf.float64)

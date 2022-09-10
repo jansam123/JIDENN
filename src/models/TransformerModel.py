@@ -1,6 +1,6 @@
 import tensorflow as tf
-from src.config.ArgumentParser import ArgumentParser
-from typing import Optional, List, Callable
+
+from typing import Callable
 
 
 class TransformerModel(tf.keras.Model):
@@ -119,23 +119,28 @@ class TransformerModel(tf.keras.Model):
             return encoded
         
     def __init__(self, 
-                 args: ArgumentParser, 
-                 input_layer: tf.keras.layers.Layer,
+                 input_size: int,
+                 embedding_dim: int,
+                 transformer_layers: int,
+                 transformer_expansion: int, 
+                 transformer_heads: int, 
+                 transformer_dropout: float,
+                 last_hidden_layer: int,
                  output_layer: tf.keras.layers.Layer, 
-                 metrics: List[tf.keras.metrics.Metric],
+                 metrics: list[tf.keras.metrics.Metric],
                  loss: tf.keras.losses.Loss,
                  optimizer:tf.keras.optimizers.Optimizer,
                  activation:Callable[[tf.Tensor], tf.Tensor],
-                 preprocess:Optional[tf.keras.layers.Layer] = None):
+                 preprocess: tf.keras.layers.Layer | None = None):
         # Implement a transformer encoder network. The input `words` is
         # a RaggedTensor of strings, each batch example being a list of words.
-        input = input_layer
+        input = tf.keras.layers.Input(shape=(input_size))
         if preprocess is not None:
             hidden = preprocess(input)
         else:
             hidden = input
     
-        hidden = tf.keras.layers.Embedding(input_dim=args.input_size, output_dim=args.embed_dim)(hidden)
+        hidden = tf.keras.layers.Embedding(input_dim=input_size, output_dim=embedding_dim)(hidden)
 
         # TODO: Call the Transformer layer:
         # - create a `Model.Transformer` layer, using suitable options from `args`
@@ -144,13 +149,13 @@ class TransformerModel(tf.keras.Model):
         #   to a dense one, and also pass the following argument as a mask:
         #     `mask=tf.sequence_mask(ragged_tensor_with_input_words_embeddings.row_lengths())`
         # - finally, convert the result back to a ragged tensor.
-        transformed = TransformerModel.Transformer(args.transformer_layers, args.embed_dim, args.transformer_expansion, args.transformer_heads, args.transformer_dropout, activation)(hidden)
+        transformed = TransformerModel.Transformer(transformer_layers, embedding_dim, transformer_expansion, transformer_heads, transformer_dropout, activation)(hidden)
 
         # TODO(tagger_we): Add a softmax classification layer into as many classes as there are unique
         # tags in the `word_mapping` of `train.tags`. Note that the Dense layer can process
         # a `RaggedTensor` without any problem.
         transformed = tf.keras.layers.Flatten()(transformed)
-        transformed = tf.keras.layers.Dense(args.last_fc_size, activation=activation)(transformed)
+        transformed = tf.keras.layers.Dense(last_hidden_layer, activation=activation)(transformed)
         output = output_layer(transformed)
                 
         super().__init__(inputs=input, outputs=output)

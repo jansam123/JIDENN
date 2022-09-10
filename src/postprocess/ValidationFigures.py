@@ -5,14 +5,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from  sklearn.metrics import roc_curve,confusion_matrix, auc
 from itertools import product
-from typing import Optional, List
 from io import BytesIO
 
+sns.set_theme(style="dark")
 
 
-class ValFigures:
+
+
+class ValidationFigures:
         
-    def __init__(self, predictions:np.ndarray, labels:np.ndarray, argmax_predictions:np.ndarray, class_names:List[str]):
+    def __init__(self, predictions:np.ndarray, labels:np.ndarray, argmax_predictions:np.ndarray, class_names:list[str]):
         self._class_names = class_names
         self._predictions = predictions
         self._labels = labels
@@ -71,12 +73,12 @@ class ValFigures:
     
     def _hist(self, predictions):
         fig = plt.figure(figsize=(8, 8))
-        plt.hist(predictions, label='predictions', alpha=0.5)
+        sns.histplot(predictions, label='predictions', alpha=0.5)
         plt.xlabel('Prediction probability')
         plt.ylabel('Count')
         return fig
     
-    def _violin(self, predictions:List[np.ndarray] = [], x_labels:Optional[List[str]] = None):
+    def _violin(self, predictions:list[np.ndarray] = [], x_labels: list[str] | None = None):
         fig = plt.figure(figsize=(8, 8))
         sns.violinplot(data=predictions)
         if x_labels is not None:
@@ -90,7 +92,7 @@ class ValFigures:
         auc_score = auc(fp, tp)
         
         fig = plt.figure(figsize=(8, 8))
-        plt.plot(100*fp, 100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
+        sns.lineplot(x=100*fp, y=100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
         plt.grid(True)

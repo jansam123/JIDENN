@@ -1,0 +1,89 @@
+hydra:
+  run:
+    dir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H_%M_%S}
+  sweep:
+    dir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  job_logging:
+    formatters:
+      simple:
+        format: "[${now:%Y-%m-%d}  ${now:%H:%M:%S}][%(levelname)s] - %(message)s"
+  output_subdir: config
+
+params:
+  base_logdir: logs # Base log directory for all runs.
+  model: basic_fc # Model to use, options:  transformer, basics_fc, BDT.
+  epochs: 1 # Number of epochs.
+  label_smoothing: 0.1 # Label smoothing.
+  learning_rate: 0.001
+  seed: 42 # Random seed.
+  threads: 0 # Maximum number of threads to use. 0 means all available.
+  debug: False # Debug mode.
+  data_path: ./data # Path to data folder containing folder of *.root files.
+  logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
+  # TODO
+  decay_steps: 10
+  weight_decay: 0.0
+
+data:
+  labels: # list of labels to use.
+    - gluon
+    - quark
+  num_labels: 2 # Number of labels to use.
+  input_size: 9 # Number of input features.
+  target: jets_truth_partonPDG #taus_truth_matchJetPdgId
+  variables:
+    - jets_Jvt
+    - jets_Timing
+    - jets_chf
+    - jets_eta
+    - jets_fmax
+    - jets_m
+    - jets_phi
+    - jets_pt
+    - jets_sumPtTrk
+  # [ taus_seedJetE, taus_seedJetEta, taus_seedJetPhi,
+  # taus_seedJetPt,  taus_dRminToJet, taus_TrackWidthPt500TV, taus_seedJetWidth]
+  weight: weight_mc[:,0]
+  cut:
+  tttree_name: NOMINAL # Name of the TTree in the root file.
+  gluon: 0
+  quark: 1
+  raw_gluon: 21
+  raw_quarks: [1, 2, 3, 4, 5]
+  raw_unknown: [-1, -999]
+
+dataset:
+  batch_size: 2048 # Batch size.
+  validation_step: 200 # Validation every n batches.
+  reading_size: 1_000 # Number of events to load at a time.
+  num_workers: 6 # Number of workers to use when loading data.
+  take: 10_000 # Length of data to use.
+  validation_batches: 1_000 # Size of validation dataset.
+  dev_size: 0.1 # Size of dev dataset.
+  test_size: 0.01 # Size of test dataset.
+  shuffle_buffer: # Size of shuffler buffer.
+
+preprocess:
+  normalize: True # Normalize data.
+  normalization_size: 100 # Size of normalization dataset.
+
+basic_fc:
+  hidden_layers: [2048, 2048] # Hidden layer sizes.
+  dropout: 0.5 # Dropout after FC layers.
+
+transformer:
+  warmup_steps: 100 # Number of steps to warmup for
+  transformer_dropout: 0.2
+  transformer_expansion: 4 #4,  number of hidden units in FFN is transformer_expansion * embed_dim
+  transformer_heads: 8 #12, must divide embed_dim
+  transformer_layers: 6 #6,12
+  last_hidden_layer: 512 # Size of last fully connected layer.
+  embed_dim: 256 #512
+
+bdt:
+  num_trees: 10
+  growing_strategy: LOCAL
+  max_depth: 3
+  split_axis: SPARSE_OBLIQUE
+  categorical_algorithm: CART
