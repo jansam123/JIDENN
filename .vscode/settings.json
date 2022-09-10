@@ -1,6 +1,10 @@
 {
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
+<<<<<<< HEAD
     "editor.formatOnType": true,
     "python.analysis.typeCheckingMode": "basic"
+=======
+    "[python]": { "editor.formatOnSave": true }
+>>>>>>> 7d708d5e5ff32ce1ce134a299a0625188a58fce8
 }
