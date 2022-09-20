@@ -20,6 +20,16 @@ cs.store(name="args", node=config.JIDENNConfig)
 def main(args: config.JIDENNConfig) -> None:
     log = logging.getLogger(__name__)
     
+    # GPU logging
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        log.warning("No GPU found, using CPU")
+    for i, gpu in enumerate(gpus):
+        gpu_info = tf.config.experimental.get_device_details(gpu)
+        log.info(f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+
+
+    
     #debug mode for tensorflow
     if args.params.debug:
         tf.config.run_functions_eagerly(True)
@@ -30,16 +40,10 @@ def main(args: config.JIDENNConfig) -> None:
     tf.random.set_seed(args.params.seed)
     
     # managing threads
-    tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
-    tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
+    # tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
+    # tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
     
-    # GPU logging
-    gpus = tf.config.list_physical_devices("GPU")
-    if len(gpus) == 0:
-        log.warning("No GPU found, using CPU")
-    for i, gpu in enumerate(gpus):
-        gpu_info = tf.config.experimental.get_device_details(gpu)
-        log.info(f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+    mirrored_strategy = tf.distribute.MirroredStrategy() if len(gpus) > 1 else None
     
     
     #dataset preparation
