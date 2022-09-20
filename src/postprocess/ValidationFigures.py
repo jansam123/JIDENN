@@ -93,6 +93,7 @@ class ValidationFigures:
         
         fig = plt.figure(figsize=(8, 8))
         sns.lineplot(x=100*fp, y=100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
+        sns.lineplot(x=100*fp, y=100*fp, label=f'AUC = 0.5', linewidth=1, linestyle='--', color='gray')
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
         plt.grid(True)

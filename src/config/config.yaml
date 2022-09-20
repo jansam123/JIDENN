@@ -1,3 +1,7 @@
+defaults:
+  - data: data0
+  - _self_
+
 hydra:
   run:
     dir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H_%M_%S}
@@ -12,14 +16,13 @@ hydra:
 
 params:
   base_logdir: logs # Base log directory for all runs.
-  model: transformer # Model to use, options:  transformer, basics_fc, BDT.
-  epochs: 1 # Number of epochs.
+  model: basic_fc # Model to use, options:  transformer, basics_fc, BDT.
+  epochs: 10 # Number of epochs.
   label_smoothing: 0.1 # Label smoothing.
   learning_rate: 0.001
   seed: 42 # Random seed.
   threads: 0 # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
-  data_path: ./data # Path to data folder containing folder of *.root files.
   logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
   # TODO
   decay_steps: 10
@@ -30,20 +33,7 @@ data:
     - gluon
     - quark
   num_labels: 2 # Number of labels to use.
-  input_size: 9 # Number of input features.
   target: jets_truth_partonPDG #taus_truth_matchJetPdgId
-  variables:
-    - jets_Jvt
-    - jets_Timing
-    - jets_chf
-    - jets_eta
-    - jets_fmax
-    - jets_m
-    - jets_phi
-    - jets_pt
-    - jets_sumPtTrk
-  # [ taus_seedJetE, taus_seedJetEta, taus_seedJetPhi,
-  # taus_seedJetPt,  taus_dRminToJet, taus_TrackWidthPt500TV, taus_seedJetWidth]
   weight: weight_mc[:,0]
   cut:
   tttree_name: NOMINAL # Name of the TTree in the root file.
@@ -54,7 +44,7 @@ data:
   raw_unknown: [-1, -999]
 
 dataset:
-  take: 40_000_000 # Length of data to use.
+  take: 20_000 # Length of data to use.
   batch_size: 2048 # Batch size.
   validation_step: 200 # Validation every n batches.
   reading_size: 1_000 # Number of events to load at a time.

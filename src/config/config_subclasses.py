@@ -29,6 +29,7 @@ class Data:
     raw_gluon: int 
     raw_quarks: list[int] 
     raw_unknown: list[int]
+    path: str   # Path to data folder containing folder of *.root files.
 
 @dataclass
 class Dataset:
@@ -51,7 +52,6 @@ class Params:
     seed: int   # Random seed.
     threads: int   # Maximum number of threads to use.
     debug: bool   # Debug mode.
-    data_path: str   # Path to data folder containing folder of *.root files.
     logdir: str   # Path to log directory.
     #TODO
     decay_steps: int # Number of steps to decay for.

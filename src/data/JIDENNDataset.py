@@ -3,10 +3,12 @@ import uproot
 # import pandas as pd
 import tensorflow as tf
 from typing import Iterator
+import timeit
+import numpy as np
 
 # /work/sched3am/exTau/jets1tau-v01/nom/user.scheiric.mc16_13TeV.41047*
 
-    
+
 @dataclass
 class JIDENNDataset:
     files: list[str]
@@ -15,10 +17,10 @@ class JIDENNDataset:
     target: str | None = None
     weight : str | None = None
     num_workers: int | None = 1
-    cut: str | None = None # 40 < tau_pt < 60
+    cut: str | None = None 
     
     
-    def _data_iterator_pd(self) -> Iterator[tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
+    def _data_iterator(self) -> Iterator[tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
         target =[self.target] if self.target is not None else []
         weight =[self.weight] if self.weight is not None else []
         expressions = self.variables + target + weight
@@ -49,12 +51,41 @@ class JIDENNDataset:
                 sample_weight = tf.reshape(sample_weight, [-1,])
                 
                 yield sample_data, sample_labels, sample_weight
-    
+                
+                
+    def _data_iteratorv2(self) -> Iterator[tuple[tf.Tensor, tf.Tensor | None, tf.Tensor]]:
+        target =[self.target] if self.target is not None else []
+        weight =[self.weight] if self.weight is not None else []
+        expressions = self.variables + target + weight
+        
+        
+        for df in uproot.iterate(files=self.files, 
+                                 expressions=expressions,  
+                                 step_size=self.reading_size, 
+                                 cut=self.cut, 
+                                 num_workers=self.num_workers, 
+                                 file_handler=uproot.MultithreadedFileSource, 
+                                 library='pd'):  # type: ignore
+            
+            
+            lenghts = list(df.groupby(level=0).count()[self.variables[0]])
+            data = tf.RaggedTensor.from_row_lengths(df, row_lengths=lenghts)
+            
+            data = data.merge_dims(0,1)
+            
+            sample_weight = data[:,-1] if self.weight is not None else tf.ones_like(data[:,0])
+            sample_labels = tf.cast(data[:,-2], tf.int32) if self.target is not None else None
+            sample_data = data[:,:-2]
+            
+
+            yield sample_data, sample_labels, sample_weight
+            
+
             
 
     @property
     def dataset(self)->tf.data.Dataset:
-        dataset = tf.data.Dataset.from_generator(self._data_iterator_pd,
+        dataset = tf.data.Dataset.from_generator(self._data_iterator,
                                             output_signature=(tf.TensorSpec(shape=(None, len(self.variables)), dtype=tf.float32),  # type: ignore
                                                                 tf.TensorSpec(shape=(None, ), dtype=tf.int32), # type: ignore
                                                                 tf.TensorSpec(shape=(None, ), dtype=tf.float32)))  # type: ignore
@@ -65,6 +96,4 @@ class JIDENNDataset:
         
 
 
-    
 
-    

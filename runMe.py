@@ -43,7 +43,7 @@ def main(args: config.JIDENNConfig) -> None:
     
     
     #dataset preparation
-    datafiles = [os.path.join(args.params.data_path, folder, file+f':{args.data.tttree_name}') for folder in os.listdir(args.params.data_path) for file in os.listdir(os.path.join(args.params.data_path, folder)) if '.root' in file]
+    datafiles = [os.path.join(args.data.path, folder, file+f':{args.data.tttree_name}') for folder in os.listdir(args.data.path) for file in os.listdir(os.path.join(args.data.path, folder)) if '.root' in file]
     np.random.shuffle(datafiles)
     
     num_files = len(datafiles)
@@ -65,8 +65,15 @@ def main(args: config.JIDENNConfig) -> None:
         args.data.cut = f'({args.data.cut})&({args.data.weight}>0)' if args.data.cut is not None else f"{args.data.weight}>0"
 
     train, dev, test = [Dataset.get_qg_dataset(files, args_data=args.data, args_dataset=args.dataset, size=size) for files, size in zip(dataset_files, sizes)]
+    if num_dev_files == 0:
+        dev = None
+        log.warning("No dev dataset, skipping validation")
+        
+    if num_test_files == 0:
+        test = None
+        log.warning("No test dataset, skipping evaluation")
 
-    def choose_model():
+    def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
             prep_ds = train.take(args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
             prep_ds=prep_ds.map(lambda x,y,z:x)
@@ -84,6 +91,7 @@ def main(args: config.JIDENNConfig) -> None:
         elif args.params.model == "transformer":
             model = transformer.create(args.params, args.transformer, args.data, preprocess=normalizer)
             model.summary(print_fn=log.info)   
+        
             
         elif args.params.model=='BDT':
             model = BDT.create(args.bdt)
@@ -95,13 +103,12 @@ def main(args: config.JIDENNConfig) -> None:
     
     # creating model
     if len(gpus) < 2:
-        model = choose_model()
+        model = _model()
     else:
         # mirrored_strategy = tf.distribute.MirroredStrategy()
-        mirrored_strategy = tf.distribute.MultiWorkerMirroredStrategy()
+        mirrored_strategy = tf.distribute.MirroredStrategy()
         with mirrored_strategy.scope():
-            model = choose_model()
-        
+            model = _model()
         
     #callbacks
     callbacks = get_callbacks(args.params, log)
@@ -109,10 +116,13 @@ def main(args: config.JIDENNConfig) -> None:
     #running training
     model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks, validation_steps=args.dataset.validation_batches if args.dataset.take is None else None)
         
+    if test is None:
+        log.warning("No test dataset, skipping evaluation.")
+        return 
+    
     #split train into labels and features
     test_dataset = test.unbatch().map(lambda d, l, w: d).batch(args.dataset.batch_size)
     test_dataset_labels = test.unbatch().map(lambda x,y,z: y)
-    
     postprocess_pipe(model, test_dataset,test_dataset_labels, args.params.logdir, log)
 
 if __name__ == "__main__":
