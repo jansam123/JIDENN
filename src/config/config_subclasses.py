@@ -15,12 +15,17 @@ class BDT:
     categorical_algorithm: str
 
 @dataclass
+class Variables:
+    perJet: list[str]
+    perJetTuple: list[str]
+    perEvent: list[str]
+@dataclass
 class Data:
     labels: list[str]    # list of labels to use.
     num_labels: int   # Number of labels to use.
     input_size: int    # Number of input features.
     target: str  
-    variables: list[str] 
+    variables: Variables
     weight: str | None 
     cut: str | None 
     tttree_name: str  # Name of the tree in the root file.
@@ -30,12 +35,13 @@ class Data:
     raw_quarks: list[int] 
     raw_unknown: list[int]
     path: str   # Path to data folder containing folder of *.root files.
+    reading_size: int   # Number of events to load at a time.
+
 
 @dataclass
 class Dataset:
     batch_size: int   # Batch size.
     validation_step: int   # Validation every n batches.
-    reading_size: int   # Number of events to load at a time.
     num_workers: int   # Number of workers to use when loading data.
     take: int | None   # Length of data to use.
     validation_batches: int   # Size of validation dataset.

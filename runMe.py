@@ -49,6 +49,7 @@ def main(args: config.JIDENNConfig) -> None:
     #dataset preparation
     datafiles = [os.path.join(args.data.path, folder, file+f':{args.data.tttree_name}') for folder in os.listdir(args.data.path) for file in os.listdir(os.path.join(args.data.path, folder)) if '.root' in file]
     np.random.shuffle(datafiles)
+    log.info(datafiles)
     
     num_files = len(datafiles)
     
@@ -68,14 +69,19 @@ def main(args: config.JIDENNConfig) -> None:
     if args.params.model == 'BDT':
         args.data.cut = f'({args.data.cut})&({args.data.weight}>0)' if args.data.cut is not None else f"{args.data.weight}>0"
 
-    train, dev, test = [Dataset.get_qg_dataset(files, args_data=args.data, args_dataset=args.dataset, size=size) for files, size in zip(dataset_files, sizes)]
+    train = Dataset.get_qg_dataset(train_files, args_data=args.data, args_dataset=args.dataset, size=args.dataset.take)
+    
     if num_dev_files == 0:
         dev = None
         log.warning("No dev dataset, skipping validation")
+    else:
+        dev = Dataset.get_qg_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, size=dev_size)
         
     if num_test_files == 0:
         test = None
         log.warning("No test dataset, skipping evaluation")
+    else:
+        test = Dataset.get_qg_dataset(test_files, args_data=args.data, args_dataset=args.dataset, size=test_size)
 
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
