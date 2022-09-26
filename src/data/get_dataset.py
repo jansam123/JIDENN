@@ -10,7 +10,7 @@ def get_gluon_dataset(args_data:cfg.Data,
     cut = cut[1:] if cut[0] == '&' else cut
     
     return JIDENNDataset(files=files,
-                         variables=args_data.variables,
+                         variables=args_data.variables.perJet,
                          target=args_data.target,
                          weight=args_data.weight,
                          reading_size=args_data.reading_size,
@@ -28,7 +28,7 @@ def get_quark_dataset(args_data:cfg.Data,
     cut = cut[1:] if cut[0] == '&' or cut[0] == '|' else cut
 
     return JIDENNDataset(files=files,
-                         variables=args_data.variables,
+                         variables=args_data.variables.perJet,
                          target=args_data.target,
                          weight=args_data.weight,
                          reading_size=args_data.reading_size,

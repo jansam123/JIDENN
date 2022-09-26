@@ -36,7 +36,6 @@ class JIDENNDataset:
             sample_data = df[self.variables]
             sample_data = tf.convert_to_tensor(sample_data, dtype=tf.float64)
             sample_data = tf.reshape(sample_data, [-1, len(self.variables)])
-            
                 
             sample_labels = df[self.target]
             sample_labels = tf.convert_to_tensor(sample_labels, dtype=tf.int32)

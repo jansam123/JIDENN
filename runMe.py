@@ -19,6 +19,9 @@ cs.store(name="args", node=config.JIDENNConfig)
 @hydra.main(version_base="1.2",config_path="src/config", config_name="config")
 def main(args: config.JIDENNConfig) -> None:
     log = logging.getLogger(__name__)
+    args.data.input_size = len(args.data.variables.perJet) if args.data.variables.perJet is not None else 0
+    args.data.input_size += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
+    args.data.input_size += len(args.data.variables.perJetTuple) if args.data.variables.perJetTuple is not None else 0
     
     # GPU logging
     gpus = tf.config.list_physical_devices("GPU")
