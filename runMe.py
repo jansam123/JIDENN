@@ -49,7 +49,6 @@ def main(args: config.JIDENNConfig) -> None:
     #dataset preparation
     datafiles = [os.path.join(args.data.path, folder, file+f':{args.data.tttree_name}') for folder in os.listdir(args.data.path) for file in os.listdir(os.path.join(args.data.path, folder)) if '.root' in file]
     np.random.shuffle(datafiles)
-    log.info(datafiles)
     
     num_files = len(datafiles)
     
