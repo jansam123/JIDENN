@@ -13,7 +13,7 @@ def get_gluon_dataset(args_data:cfg.Data,
                          variables=args_data.variables,
                          target=args_data.target,
                          weight=args_data.weight,
-                         reading_size=1000,
+                         reading_size=args_data.reading_size,
                          num_workers=1,
                          cut=cut,)
                          
@@ -31,7 +31,7 @@ def get_quark_dataset(args_data:cfg.Data,
                          variables=args_data.variables,
                          target=args_data.target,
                          weight=args_data.weight,
-                         reading_size=1000,
+                         reading_size=args_data.reading_size,
                          num_workers=1,
                          cut=cut,)
 
@@ -50,7 +50,7 @@ def get_mixed_dataset(args_data:cfg.Data,
                          variables=args_data.variables,
                          target=args_data.target,
                          weight=args_data.weight,
-                         reading_size=1000,
+                         reading_size=args_data.reading_size,
                          num_workers=1,
                          cut=cut,)
                          

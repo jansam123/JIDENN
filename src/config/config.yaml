@@ -1,5 +1,5 @@
 defaults:
-  - data: data0
+  - data: data1
   - _self_
 
 hydra:
@@ -22,7 +22,7 @@ params:
   learning_rate: 0.001
   seed: 42 # Random seed.
   threads: 0 # Maximum number of threads to use. 0 means all available.
-  debug: False # Debug mode.
+  debug: True # Debug mode.
   logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
   # TODO
   decay_steps: 10
@@ -42,12 +42,12 @@ data:
   raw_gluon: 21
   raw_quarks: [1, 2, 3, 4, 5]
   raw_unknown: [-1, -999]
+  reading_size: 7 # Number of events to load at a time.
 
 dataset:
   take: 20_000 # Length of data to use.
   batch_size: 2048 # Batch size.
   validation_step: 200 # Validation every n batches.
-  reading_size: 1_000 # Number of events to load at a time.
   num_workers: 6 # Number of workers to use when loading data.
   validation_batches: 1_000 # Size of validation dataset.
   dev_size: 0.1 # Size of dev dataset.
@@ -55,7 +55,7 @@ dataset:
   shuffle_buffer: # Size of shuffler buffer.
 
 preprocess:
-  normalize: True # Normalize data.
+  normalize: False # Normalize data.
   normalization_size: 100 # Size of normalization dataset.
 
 basic_fc:

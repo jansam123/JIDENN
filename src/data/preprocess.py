@@ -11,10 +11,10 @@ def pipe(datasets: list[tf.data.Dataset],
     
     assert len(datasets) == len(dataset_weights), "Number of datasets and weights must be equal."
 
-        
+    
     prep_datasets = [ds.take(int(take/len(datasets))) for ds in datasets] if take is not None else datasets
     dataset = tf.data.Dataset.sample_from_datasets(prep_datasets, weights=dataset_weights)
-    
+        
     if label_mapping is not None:
         dataset = dataset.map(lambda x,y,z: (x, label_mapping(y),z))
     
