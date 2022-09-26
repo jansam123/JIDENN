@@ -7,7 +7,7 @@ from .BasicFCModel import BasicFCModel
 
 def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, preprocess: tf.keras.layers.Layer | None  = None) -> BasicFCModel:
     activation = tf.nn.relu
-    inputs = tf.keras.layers.Input(shape=(args_data.input_size))
+    inputs = tf.keras.layers.Input(shape=(args_data.input_size, None), ragged=True)
     
     if args_data.num_labels == 2:
         output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
