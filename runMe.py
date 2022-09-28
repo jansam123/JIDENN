@@ -7,7 +7,7 @@ from hydra.core.config_store import ConfigStore
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 
 from src.data import Dataset
-from src.models import BDT, basicFC, transformer
+from src.models import basicFC, transformer #, BDT
 from src.postprocess.pipeline import postprocess_pipe
 from src.config import config
 from src.callbacks.get_callbacks import get_callbacks
@@ -43,8 +43,8 @@ def main(args: config.JIDENNConfig) -> None:
         tf.random.set_seed(args.params.seed)
     
     # managing threads
-    # tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
-    # tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
+    tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
+    tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
     
     mirrored_strategy = tf.distribute.MirroredStrategy() if len(gpus) > 1 else None
     
@@ -52,6 +52,10 @@ def main(args: config.JIDENNConfig) -> None:
     #dataset preparation
     datafiles = [os.path.join(args.data.path, folder, file+f':{args.data.tttree_name}') for folder in os.listdir(args.data.path) for file in os.listdir(os.path.join(args.data.path, folder)) if '.root' in file]
     np.random.shuffle(datafiles)
+    
+    if len(datafiles) == 0:
+        log.error("No data found!")
+        raise FileNotFoundError("No data found!")
     
     num_files = len(datafiles)
     
@@ -88,7 +92,7 @@ def main(args: config.JIDENNConfig) -> None:
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
             prep_ds = train.take(args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
-            prep_ds=prep_ds.map(lambda x,y,z:x[0])
+            prep_ds=prep_ds.map(lambda x,y,z: x[0]) if args.data.variables.perJetTuple is not None else prep_ds.map(lambda x1,y1,z1: x1)
             normalizer = tf.keras.layers.Normalization(axis=-1)
             log.info("Getting std and mean of the dataset...")
             log.info(f"Subsample size: {args.preprocess.normalization_size}")

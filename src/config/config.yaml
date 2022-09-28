@@ -17,7 +17,7 @@ hydra:
 params:
   base_logdir: logs # Base log directory for all runs.
   model: basic_fc # Model to use, options:  transformer, basics_fc, BDT.
-  epochs: 10 # Number of epochs.
+  epochs: 1 # Number of epochs.
   label_smoothing: 0.1 # Label smoothing.
   learning_rate: 0.001
   seed: 42 # Random seed.
@@ -45,8 +45,8 @@ data:
   reading_size: 7 # Number of events to load at a time.
 
 dataset:
-  take: 20_000 # Length of data to use.
-  batch_size: 2048 # Batch size.
+  take: 2_000 # Length of data to use.
+  batch_size: 16 #2048 # Batch size.
   validation_step: 200 # Validation every n batches.
   num_workers: 6 # Number of workers to use when loading data.
   validation_batches: 1_000 # Size of validation dataset.
@@ -59,8 +59,9 @@ preprocess:
   normalization_size: 100 # Size of normalization dataset.
 
 basic_fc:
-  hidden_layers: [2048, 2048] # Hidden layer sizes.
+  hidden_layers: [256]#, 2048] # Hidden layer sizes.
   dropout: 0.5 # Dropout after FC layers.
+  rnn_dim: 64
 
 transformer:
   warmup_steps: 100 # Number of steps to warmup for

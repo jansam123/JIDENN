@@ -32,7 +32,7 @@ variables:
     - jets_phi
     - jets_pt
   perJetTuple:
-    - jets_TrackWidthPt1000
-    - jets_SumPtTrkPt500
+    # - jets_TrackWidthPt1000
+    # - jets_SumPtTrkPt500
   perEvent:
     - corrected_averageInteractionsPerCrossing

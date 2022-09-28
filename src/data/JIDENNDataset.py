@@ -23,29 +23,28 @@ class JIDENNDataset:
     
     
     def __post_init__(self):
-        self.all_variables = [*self.variables.perEvent, *self.variables.perJet, *self.variables.perJetTuple]
-        self.jet_variables = [*self.variables.perJet, *self.variables.perEvent]
-        self.jet_variables_target_weight = [*self.variables.perJet, *self.variables.perEvent, self.target, self.weight]
-        self.jet_tuple_variables = [*self.variables.perJetTuple]
-    
-    
-    def _data_iterator(self) -> Iterator[tuple[tf.RaggedTensor, tf.Tensor, tf.Tensor]]:
-        target = [self.target] if self.target is not None else []
-        weight = [self.weight] if self.weight is not None else []
-        expressions = target + weight
-        expressions += [*self.variables.perEvent]
-        expressions += [*self.variables.perJet]
-        expressions += [*self.variables.perJetTuple]
+        self.jet_variables = [*self.variables.perJet]
+        self.jet_variables += [*self.variables.perEvent] if self.variables.perEvent is not None else []
         
-        for df in uproot.iterate(files=self.files, 
-                                 expressions=expressions,  
+        self.jet_variables_target_weight = self.jet_variables + [self.target] if self.target is not None else self.jet_variables
+        self.jet_variables_target_weight += [self.weight] if self.weight is not None else []
+        
+        self.jet_tuple_variables = [*self.variables.perJetTuple] if self.variables.perJetTuple is not None else None
+
+        self.all_variables = self.jet_variables + self.jet_tuple_variables if self.jet_tuple_variables is not None else self.jet_variables
+        
+        self.all_variables_target_weight = self.all_variables + [self.target] if self.target is not None else self.all_variables
+        self.all_variables_target_weight += [self.weight] if self.weight is not None else []
+        
+        self.root_iterator = uproot.iterate(files=self.files, 
+                                 expressions=self.all_variables_target_weight,  
                                  step_size=self.reading_size, 
                                  cut=None,#self.cut, 
                                  num_workers=self.num_workers, 
-                                 file_handler=uproot.MultithreadedFileSource):  # type: ignore
-            # cut = ak.any(df['jets_truth_partonPDG'] > 0, axis=1)
-            
-            # perJet = ak.to_pandas(df[self.variables.perJet])
+                                 file_handler=uproot.MultithreadedFileSource)
+    
+    def _data_iterator(self) -> Iterator[tuple[tuple[tf.Tensor, tf.RaggedTensor], tf.Tensor, tf.Tensor]]:
+        for df in self.root_iterator:  # type: ignore
             perJetTuple: pd.DataFrame = ak.to_pandas(df[self.jet_tuple_variables])
             perJet: pd.DataFrame = ak.to_pandas(df[self.jet_variables_target_weight])
             
@@ -53,7 +52,6 @@ class JIDENNDataset:
         
             df = pd.concat([perJet, perJetTuple], axis=1)
             df = df.query(self.cut) if self.cut is not None else df
-            
             for _, row in df.iterrows():
                 sample_data_perJet = tf.constant(row[self.jet_variables].values, dtype=tf.float32)
                 sample_data_perJetTuple = tf.constant(row[self.jet_tuple_variables].to_list(), dtype=tf.float32)
@@ -62,19 +60,37 @@ class JIDENNDataset:
                 sample_weight = row[self.weight] if self.weight is not None else 1.0
                 sample_labels = row[self.target] if self.target is not None else None
                 yield (sample_data_perJet, sample_data_perJetTuple), sample_labels, sample_weight
+    
+    def _data_iterator_simple(self) -> Iterator[tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
+        for df in self.root_iterator:  # type: ignore
+            df: pd.DataFrame = ak.to_pandas(df[self.jet_variables_target_weight])    
+            df = df.query(self.cut) if self.cut is not None else df
             
+            for _, row in df.iterrows():
+                sample_data_perJet = tf.constant(row[self.jet_variables].values, dtype=tf.float32)
+                sample_weight = row[self.weight] if self.weight is not None else 1.0
+                sample_labels = row[self.target] if self.target is not None else None
+                yield sample_data_perJet, sample_labels, sample_weight
                 
             
 
     @property
     def dataset(self)->tf.data.Dataset:
-        dataset = tf.data.Dataset.from_generator(self._data_iterator,
-                                                 output_signature=((tf.TensorSpec(shape=(len(self.jet_variables), ), dtype=tf.float32),        #type:ignore
-                                                                    tf.RaggedTensorSpec(shape=(None, len(self.jet_tuple_variables)), dtype=tf.float32)),        #type:ignore
-                                                                   tf.TensorSpec(shape=(), dtype=tf.int32),     #type:ignore
-                                                                   tf.TensorSpec(shape=(), dtype=tf.float32),)      #type:ignore
-                                                 )
-        return dataset
+        if self.jet_tuple_variables is not None:
+            return tf.data.Dataset.from_generator(self._data_iterator,
+                                                    output_signature=((tf.TensorSpec(shape=(len(self.jet_variables), ), dtype=tf.float32),        #type:ignore
+                                                                        tf.RaggedTensorSpec(shape=(None, len(self.jet_tuple_variables)), dtype=tf.float32)),        #type:ignore
+                                                                    tf.TensorSpec(shape=(), dtype=tf.int32),     #type:ignore
+                                                                    tf.TensorSpec(shape=(), dtype=tf.float32),)      #type:ignore
+                                                    )
+        else:
+            return tf.data.Dataset.from_generator(self._data_iterator_simple,
+                                                    output_signature=(tf.TensorSpec(shape=(len(self.jet_variables), ), dtype=tf.float32),        #type:ignore
+                                                                    tf.TensorSpec(shape=(), dtype=tf.int32),     #type:ignore
+                                                                    tf.TensorSpec(shape=(), dtype=tf.float32),)      #type:ignore
+                                                    )
+            
+        
     
         
 
