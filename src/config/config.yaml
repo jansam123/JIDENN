@@ -22,7 +22,7 @@ params:
   learning_rate: 0.001
   seed: 42 # Random seed.
   threads: 0 # Maximum number of threads to use. 0 means all available.
-  debug: True # Debug mode.
+  debug: False # Debug mode.
   logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
   # TODO
   decay_steps: 10
@@ -55,7 +55,7 @@ dataset:
   shuffle_buffer: # Size of shuffler buffer.
 
 preprocess:
-  normalize: False # Normalize data.
+  normalize: True # Normalize data.
   normalization_size: 100 # Size of normalization dataset.
 
 basic_fc:

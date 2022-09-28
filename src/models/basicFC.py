@@ -7,7 +7,10 @@ from .BasicFCModel import BasicFCModel
 
 def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, preprocess: tf.keras.layers.Layer | None  = None) -> BasicFCModel:
     activation = tf.nn.relu
-    inputs = tf.keras.layers.Input(shape=(args_data.input_size, None), ragged=True)
+    input0_size = len(args_data.variables.perJet)
+    input0_size += len(args_data.variables.perEvent) if args_data.variables.perEvent is not None else 0
+    inputs0 = tf.keras.layers.Input(shape=(input0_size, ))
+    inputs1 = tf.keras.layers.Input(shape=(None, len(args_data.variables.perJetTuple)), ragged=True) 
     
     if args_data.num_labels == 2:
         output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
@@ -25,7 +28,7 @@ def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, prepr
     model = BasicFCModel(
         hidden_layers=args_model.hidden_layers,
         dropout=args_model.dropout,
-        input_layer=inputs,
+        input_layer=(inputs0, inputs1),
         output_layer=output,
         activation=activation,
         loss=loss,

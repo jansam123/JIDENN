@@ -55,12 +55,13 @@ class JIDENNDataset:
             df = df.query(self.cut) if self.cut is not None else df
             
             for _, row in df.iterrows():
-                sample_data_perJet = tf.ragged.constant(row[self.jet_variables].values, dtype=tf.float32)[:, tf.newaxis]
-                sample_data_perJetTuple = tf.ragged.constant(row[self.jet_tuple_variables])
-                sample_data = tf.concat([sample_data_perJet, sample_data_perJetTuple], axis=0)
+                sample_data_perJet = tf.constant(row[self.jet_variables].values, dtype=tf.float32)
+                sample_data_perJetTuple = tf.constant(row[self.jet_tuple_variables].to_list(), dtype=tf.float32)
+                sample_data_perJetTuple = tf.transpose(sample_data_perJetTuple)
+                sample_data_perJetTuple = tf.RaggedTensor.from_tensor(sample_data_perJetTuple, ragged_rank=1)
                 sample_weight = row[self.weight] if self.weight is not None else 1.0
                 sample_labels = row[self.target] if self.target is not None else None
-                yield sample_data, sample_labels, sample_weight
+                yield (sample_data_perJet, sample_data_perJetTuple), sample_labels, sample_weight
             
                 
             
@@ -68,7 +69,8 @@ class JIDENNDataset:
     @property
     def dataset(self)->tf.data.Dataset:
         dataset = tf.data.Dataset.from_generator(self._data_iterator,
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(len(self.all_variables), None), dtype=tf.float32),        #type:ignore
+                                                 output_signature=((tf.TensorSpec(shape=(len(self.jet_variables), ), dtype=tf.float32),        #type:ignore
+                                                                    tf.RaggedTensorSpec(shape=(None, len(self.jet_tuple_variables)), dtype=tf.float32)),        #type:ignore
                                                                    tf.TensorSpec(shape=(), dtype=tf.int32),     #type:ignore
                                                                    tf.TensorSpec(shape=(), dtype=tf.float32),)      #type:ignore
                                                  )

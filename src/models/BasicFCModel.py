@@ -6,7 +6,7 @@ from typing import Callable
 class BasicFCModel(tf.keras.Model):
     def __init__(self, 
                  hidden_layers: list[int], 
-                 input_layer: tf.keras.layers.Layer,
+                 input_layer: tuple[tf.keras.layers.Layer],
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable,
                  loss: tf.keras.losses.Loss,
@@ -17,8 +17,8 @@ class BasicFCModel(tf.keras.Model):
         
         self._activation = activation
         inputs = input_layer
-        
         embed = tf.keras.layers.Embedding(input_dim=100, output_dim=16)(preprocess(inputs) if preprocess else inputs)
+        
         dropout_layer = tf.keras.layers.Dropout(dropout) if dropout is not None else None
         hidden = self._hidden_layers(embed, hidden_layers, dropout_layer)
         output = output_layer(hidden)

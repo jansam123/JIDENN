@@ -32,12 +32,15 @@ def main(args: config.JIDENNConfig) -> None:
     
     #debug mode for tensorflow
     if args.params.debug:
+        log.info("Debug mode enabled")
         tf.config.run_functions_eagerly(True)
         tf.data.experimental.enable_debug_mode()
 
     #fixing seed for reproducibility
-    np.random.seed(args.params.seed)
-    tf.random.set_seed(args.params.seed)
+    if args.params.seed is not None:
+        log.info(f"Setting seed to {args.params.seed}")
+        np.random.seed(args.params.seed)
+        tf.random.set_seed(args.params.seed)
     
     # managing threads
     # tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
@@ -85,7 +88,7 @@ def main(args: config.JIDENNConfig) -> None:
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
             prep_ds = train.take(args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
-            prep_ds=prep_ds.map(lambda x,y,z:x)
+            prep_ds=prep_ds.map(lambda x,y,z:x[0])
             normalizer = tf.keras.layers.Normalization(axis=-1)
             log.info("Getting std and mean of the dataset...")
             log.info(f"Subsample size: {args.preprocess.normalization_size}")
