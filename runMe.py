@@ -75,19 +75,19 @@ def main(args: config.JIDENNConfig) -> None:
     if args.params.model == 'BDT':
         args.data.cut = f'({args.data.cut})&({args.data.weight}>0)' if args.data.cut is not None else f"{args.data.weight}>0"
 
-    train = Dataset.get_qg_dataset(train_files, args_data=args.data, args_dataset=args.dataset, size=args.dataset.take)
+    train = Dataset.get_qg_dataset(train_files, args_data=args.data, args_dataset=args.dataset, size=args.dataset.take, name="train")
     
     if num_dev_files == 0:
         dev = None
         log.warning("No dev dataset, skipping validation")
     else:
-        dev = Dataset.get_qg_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, size=dev_size)
+        dev = Dataset.get_qg_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, size=dev_size, name="dev")
         
     if num_test_files == 0:
         test = None
         log.warning("No test dataset, skipping evaluation")
     else:
-        test = Dataset.get_qg_dataset(test_files, args_data=args.data, args_dataset=args.dataset, size=test_size)
+        test = Dataset.get_qg_dataset(test_files, args_data=args.data, args_dataset=args.dataset, size=test_size, name="test")
 
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':

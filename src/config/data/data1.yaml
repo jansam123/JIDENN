@@ -6,14 +6,11 @@ variables:
     - jets_ActiveArea4vec_m
     - jets_ActiveArea4vec_phi
     - jets_ActiveArea4vec_pt
-    - jets_ConeTruthLabelID
     - jets_DetectorEta
     - jets_EMFrac
     - jets_FracSamplingMax
     - jets_FracSamplingMaxIndex
     - jets_GhostMuonSegmentCount
-    - jets_HadronConeExclExtendedTruthLabelID
-    - jets_HadronConeExclTruthLabelID
     - jets_JVFCorr
     - jets_JetConstitScaleMomentum_eta
     - jets_JetConstitScaleMomentum_m
@@ -32,7 +29,11 @@ variables:
     - jets_phi
     - jets_pt
   perJetTuple:
-    # - jets_TrackWidthPt1000
-    # - jets_SumPtTrkPt500
+    - jets_ChargedPFOWidthPt1000
+    - jets_TrackWidthPt1000
+    - jets_NumChargedPFOPt1000
+    - jets_NumChargedPFOPt500
+    - jets_SumPtChargedPFOPt500
+    - jets_SumPtTrkPt500
   perEvent:
     - corrected_averageInteractionsPerCrossing

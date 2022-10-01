@@ -56,7 +56,7 @@ class TransformerModel(tf.keras.Model):
 
             # TODO: Continue by computing the self-attention weights as Q @ K^T,
             # normalizing by the square root of `dim // heads`.
-            Z = tf.linalg.matmul(Q, K, transpose_b=True) / tf.math.sqrt(float(self.dim // self.heads))
+            Z = tf.linalg.matmul(Q, K, transpose_b=True) / (Q.shape[-1] ** 0.5)
 
             # TODO: Apply the softmax, but including a suitable mask, which ignores all padding words.
             # The original `mask` is a bool matrix of shape [batch_size, max_sentence_len]

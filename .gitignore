@@ -7,3 +7,4 @@ tf_records
 .DS_Store
 logs
 .vscode/*
+rc.cache.*

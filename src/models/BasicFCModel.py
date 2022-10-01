@@ -19,22 +19,27 @@ class BasicFCModel(tf.keras.Model):
         self._activation = activation
             
         
+        dropout_layer = tf.keras.layers.Dropout(dropout) if dropout is not None else None
         if isinstance(input_size, tuple) and len(input_size) == 2:
             inputs0 = tf.keras.layers.Input(shape=(input_size[0], ))
             inputs1 = tf.keras.layers.Input(shape=(None, input_size[1]), ragged=True)
-            densed = tf.keras.layers.Dense(rnn_dim, activation = self._activation)(preprocess(inputs0) if preprocess is not None else inputs0)
+            
+            hidden = self._hidden_layers(preprocess(inputs0) if preprocess is not None else inputs0, hidden_layers, dropout_layer)
+            densed = tf.keras.layers.Dense(rnn_dim, activation = self._activation)(hidden)
+            
             rnned = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(rnn_dim), merge_mode='sum')(inputs1)
-            rnned = tf.keras.layers.LayerNormalization()(rnned)
+            
+            rnned = tf.keras.layers.BatchNormalization()(rnned)
+            
             hidden = tf.keras.layers.Concatenate()([densed, rnned])
             inputs = (inputs0, inputs1)
+            
         elif isinstance(input_size, int):
             inputs = tf.keras.layers.Input(shape=(input_size, ))
             hidden = preprocess(inputs) if preprocess is not None else inputs
         else:
             raise ValueError("Input size must be len two tuple or int.")
 
-        dropout_layer = tf.keras.layers.Dropout(dropout) if dropout is not None else None
-        hidden = self._hidden_layers(hidden, hidden_layers, dropout_layer)
         output = output_layer(hidden)
             
         super().__init__(inputs=inputs, outputs=output)
@@ -52,6 +57,8 @@ class BasicFCModel(tf.keras.Model):
             if dropout is not None:
                 hidden = dropout(hidden)
         return hidden
+    
+
     
     
     
