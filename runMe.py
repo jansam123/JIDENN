@@ -7,7 +7,7 @@ from hydra.core.config_store import ConfigStore
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 
 from src.data import Dataset
-from src.models import BDT, basicFC, transformer
+from src.models import basicFC, transformer #, BDT
 from src.postprocess.pipeline import postprocess_pipe
 from src.config import config
 from src.callbacks.get_callbacks import get_callbacks
@@ -35,16 +35,19 @@ def main(args: config.JIDENNConfig) -> None:
     
     #debug mode for tensorflow
     if args.params.debug:
+        log.info("Debug mode enabled")
         tf.config.run_functions_eagerly(True)
         tf.data.experimental.enable_debug_mode()
 
     #fixing seed for reproducibility
-    np.random.seed(args.params.seed)
-    tf.random.set_seed(args.params.seed)
+    if args.params.seed is not None:
+        log.info(f"Setting seed to {args.params.seed}")
+        np.random.seed(args.params.seed)
+        tf.random.set_seed(args.params.seed)
     
     # managing threads
-    # tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
-    # tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
+    tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
+    tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
     
     mirrored_strategy = tf.distribute.MirroredStrategy() if len(gpus) > 1 else None
     
@@ -52,6 +55,10 @@ def main(args: config.JIDENNConfig) -> None:
     #dataset preparation
     datafiles = [os.path.join(args.data.path, folder, file+f':{args.data.tttree_name}') for folder in os.listdir(args.data.path) for file in os.listdir(os.path.join(args.data.path, folder)) if '.root' in file]
     np.random.shuffle(datafiles)
+    
+    if len(datafiles) == 0:
+        log.error("No data found!")
+        raise FileNotFoundError("No data found!")
     
     num_files = len(datafiles)
     
@@ -71,24 +78,24 @@ def main(args: config.JIDENNConfig) -> None:
     if args.params.model == 'BDT':
         args.data.cut = f'({args.data.cut})&({args.data.weight}>0)' if args.data.cut is not None else f"{args.data.weight}>0"
 
-    train = Dataset.get_qg_dataset(train_files, args_data=args.data, args_dataset=args.dataset, size=args.dataset.take)
+    train = Dataset.get_qg_dataset(train_files, args_data=args.data, args_dataset=args.dataset, size=args.dataset.take, name="train")
     
     if num_dev_files == 0:
         dev = None
         log.warning("No dev dataset, skipping validation")
     else:
-        dev = Dataset.get_qg_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, size=dev_size)
+        dev = Dataset.get_qg_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, size=dev_size, name="dev")
         
     if num_test_files == 0:
         test = None
         log.warning("No test dataset, skipping evaluation")
     else:
-        test = Dataset.get_qg_dataset(test_files, args_data=args.data, args_dataset=args.dataset, size=test_size)
+        test = Dataset.get_qg_dataset(test_files, args_data=args.data, args_dataset=args.dataset, size=test_size, name="test")
 
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
             prep_ds = train.take(args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
-            prep_ds=prep_ds.map(lambda x,y,z:x)
+            prep_ds=prep_ds.map(lambda x,y,z: x[0]) if args.data.variables.perJetTuple is not None else prep_ds.map(lambda x1,y1,z1: x1)
             normalizer = tf.keras.layers.Normalization(axis=-1)
             log.info("Getting std and mean of the dataset...")
             log.info(f"Subsample size: {args.preprocess.normalization_size}")

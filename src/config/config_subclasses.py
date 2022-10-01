@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class BasicFC:
     hidden_layers: list[int]    # Hidden layer sizes.
     dropout: float    # Dropout after FC layers.
+    rnn_dim: int #dimesion of RNN cells  
     
 @dataclass
 class BDT:

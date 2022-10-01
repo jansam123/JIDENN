@@ -5,10 +5,12 @@ from .preprocess import pipe
 def get_qg_dataset(files: list[str],
                    args_data: cfg.Data,
                    args_dataset: cfg.Dataset,
-                   size: int | None = None):
+                   name:str,
+                   size: int | None = None,
+                   ):
     
-    gluon_dataset = get_gluon_dataset(args_data, files).dataset
-    quark_dataset = get_quark_dataset(args_data, files).dataset
+    gluon_dataset = get_gluon_dataset(args_data, files)
+    quark_dataset = get_quark_dataset(args_data, files)
     
 
     def label_mapping(x):
@@ -17,4 +19,4 @@ def get_qg_dataset(files: list[str],
         else:
             return args_data.quark
 
-    return pipe([gluon_dataset, quark_dataset], [0.5, 0.5], args_dataset, label_mapping=label_mapping, take=size)
+    return pipe([gluon_dataset, quark_dataset], [0.5, 0.5], args_dataset, label_mapping=label_mapping, take=size, name=name)
