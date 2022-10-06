@@ -35,7 +35,7 @@ class JIDENNDataset:
         self.jet_variables += [*self.variables.perEvent] if self.variables.perEvent is not None else []
         
         self.jet_variables_target_weight = self.jet_variables + [self.target] if self.target is not None else self.jet_variables
-        # self.jet_variables_target_weight += [self.weight] if self.weight is not None else []
+        self.jet_variables_target_weight += [self.weight] if self.weight is not None else []
         
         self.jet_tuple_variables = [*self.variables.perJetTuple] if self.variables.perJetTuple is not None else None
 

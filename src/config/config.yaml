@@ -34,7 +34,7 @@ data:
     - quark
   num_labels: 2 # Number of labels to use.
   target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
-  weight: #weight_mc[:,0]
+  weight: weight_mc[:,0]
   cut:
   tttree_name: NOMINAL # Name of the TTree in the root file.
   gluon: 0
@@ -46,7 +46,7 @@ data:
   draw_distribution:  # Length of the distribution to draw.
 
 dataset:
-  take: 200_000 # Length of data to use.
+  take: 2_000_000 # Length of data to use.
   batch_size: 128 # Batch size.
   validation_step: 200 # Validation every n batches.
   num_workers: 6 # Number of workers to use when loading data.

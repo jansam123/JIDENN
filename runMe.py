@@ -154,7 +154,7 @@ def main(args: config.JIDENNConfig) -> None:
     #split train into labels and features
     # def split(x,y,z):
     #     return (x[0], x[1]) 
-    print(model.evaluate(train.unbatch().map(lambda *h: (h[0], h[1])).batch(args.dataset.batch_size)))
+    print(model.evaluate(dev.unbatch().map(lambda *h: (h[0], h[1])).batch(args.dataset.batch_size)))
     test_dataset = dev.unbatch().map(lambda*y: y[0]).batch(args.dataset.batch_size)
     test_dataset_labels = dev.unbatch().map(lambda *x: x[1])
     postprocess_pipe(model, test_dataset, test_dataset_labels, args.params.logdir, log)

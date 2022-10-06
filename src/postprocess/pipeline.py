@@ -11,12 +11,11 @@ def postprocess_pipe(model, data:tf.data.Dataset, labels:tf.data.Dataset, logdir
     np_labels = np.array(list(labels.as_numpy_iterator()), dtype=np.int32)
     
     print([i for i in data.take(2).as_numpy_iterator()])
-    res = model.predict(data)
+    res = model.predict(data).ravel()
     print(res)
-    pred = res.round()[:,0].astype(np.int32)
-    print(np_labels)
-    print(pred)
-    res = res[:,0]
+    pred = res.round()
+    print(np_labels[:20])
+    print(res[:20])
     log.info(f"Test accuracy: {np.mean(pred == np_labels):.4f}")
     
     with open(os.path.join(logdir, "predictions.txt"), "w") as f:
