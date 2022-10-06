@@ -8,3 +8,4 @@ tf_records
 logs
 .vscode/*
 rc.cache.*
+*.log

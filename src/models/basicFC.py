@@ -17,17 +17,15 @@ def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, prepr
     else:
         input_size = input0_size
         rnn_dim = None
-        
-    
     
     if args_data.num_labels == 2:
         output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
-        loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=args.label_smoothing)
-        metrics = [tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC()]
+        loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=args.label_smoothing, name='bce')
+        metrics = [tf.keras.metrics.BinaryAccuracy(name='accuracy'), tf.keras.metrics.AUC(name='auc')]
                                             
     else:
         output = tf.keras.layers.Dense(args_data.num_labels, activation=tf.nn.softmax)
-        loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing)
+        loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing )
         metrics = [tf.keras.metrics.CategoricalAccuracy(), tf.keras.metrics.AUC()]
     
     optimizer = tf.optimizers.Adam(learning_rate=args.learning_rate)

@@ -12,37 +12,30 @@ Particle flow - algorithm to stop double counting of particle tracks and cluster
 PFO = particle flow object
 tracks = charged particles measured by the tracker (inner detector)
 width - weighted (pt) average distance from axis oj jet
+pileup - energy density from other p-p collisions other than primary(triggered) collision 
+JVT = jet vertex tagger - fraction of jet pt comming from primary vertex 
+JVF = jet vertex fraction
 
-
-- **jets_ActiveArea4vec_eta**
-- **jets_ActiveArea4vec_m**
-- **jets_ActiveArea4vec_phi**
-- **jets_ActiveArea4vec_pt**
-- **jets_ConeTruthLabelID**
-- **jets_DetectorEta**
-- **jets_EMFrac**
-- **jets_FracSamplingMax**
-- **jets_FracSamplingMaxIndex**
-- **jets_GhostMuonSegmentCount**
-- **jets_HadronConeExclExtendedTruthLabelID**
-- **jets_HadronConeExclTruthLabelID**
+- **jets_ConeTruthLabelID** - truth label, not from data
+- **jets_HadronConeExclExtendedTruthLabelID** - truth label, not from data
+- **jets_HadronConeExclTruthLabelID** - truth label, not from data
+- **jets_ActiveArea4vec_(eta/m/phi/pt)** - energy carried by pileup in the cross section of the jet
+- **jets_DetectorEta** - uncorrected eta of jet (not important)
+- **jets_EMFrac** - fraction of energy of a hadron deposited in electromagnetic calorimeter (decay in hadron calorimeter)
+- **jets_FracSamplingMax** - fraction of energy deposited in the calorimeter cell with the highest energy deposition
+- **jets_FracSamplingMaxIndex** - index of the calorimeter cell with the highest energy deposition
+- **jets_GhostMuonSegmentCount** - number of muon segments (muon spectrometer) hit by segments of the jet which did not decay in the hadron calorimeter
+- **jets_JetConstitScaleMomentum_(eta/m/phi/pt)** - total energie of jet constituents (not important)
+- **jets_chf** - charged fraction
+- **jets_(eta/m/phi/pt)** - reconstructed jet kinematics
+- **jets_Width** - weighted (pt) average distance of constituents from axis oj jet
+- **jets_Jvt** - fraction of jet pt comming from primary vertex 
+- **jets_Timing** - jet time with respect to the collsion time
 - **jets_JVFCorr**
-- **jets_JetConstitScaleMomentum_eta**
-- **jets_JetConstitScaleMomentum_m**
-- **jets_JetConstitScaleMomentum_phi**
-- **jets_JetConstitScaleMomentum_pt**
 - **jets_JvtRpt**
-- **jets_Width**
 - **jets_fJVT**
 - **jets_passFJVT**
 - **jets_passJVT**
-- **jets_Jvt** - fraction of jet pt comming from primary vertex 
-- **jets_Timing**
-- **jets_chf** - charged fraction
-- **jets_eta**
-- **jets_m**
-- **jets_phi**
-- **jets_pt**
 
 ### Branched variables (branched at verticies)
 - **jets_ChargedPFOWidthPt1000** - charged PFOs width with pt > 1000

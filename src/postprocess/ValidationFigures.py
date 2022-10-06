@@ -65,7 +65,7 @@ class ValidationFigures:
         figures.append(self._confusion_matrix(self._labels, self._argmax_predictions))
         figures.append(self._roc(self._labels, self._predictions))
         figures.append(self._violin([self._labels, self._predictions, self._argmax_predictions], x_labels=['labels', 'predictions', 'argmax_predictions']))
-        figures.append(self._hist(self._predictions))
+        figures.append(self._hist({'quark (1)':self._predictions[np.where(self._labels == 1)], 'gluon (0)':self._predictions[np.where(self._labels == 0)]}))
         figures.append(self._hist(self._labels))
         figure_names = ['confusion_matrix', 'roc', 'violin', 'predictions', 'labels']
         return figures, figure_names
@@ -73,7 +73,7 @@ class ValidationFigures:
     
     def _hist(self, predictions):
         fig = plt.figure(figsize=(8, 8))
-        sns.histplot(predictions, label='predictions', alpha=0.5)
+        sns.histplot(predictions)
         plt.xlabel('Prediction probability')
         plt.ylabel('Count')
         return fig

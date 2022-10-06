@@ -6,16 +6,15 @@ from typing import Iterator
 import time
 import numpy as np
 import awkward as ak
-import sys
-# from src.config.config_subclasses import Variables
+from src.config.config_subclasses import Variables
 
 
-#TODO: DELETE THIS 
-@dataclass
-class Variables:
-    perJet: list[str]
-    perJetTuple: list[str]
-    perEvent: list[str]
+# #TODO: DELETE THIS 
+# @dataclass
+# class Variables:
+#     perJet: list[str]
+#     perJetTuple: list[str]
+#     perEvent: list[str]
 
 
 
@@ -36,7 +35,7 @@ class JIDENNDataset:
         self.jet_variables += [*self.variables.perEvent] if self.variables.perEvent is not None else []
         
         self.jet_variables_target_weight = self.jet_variables + [self.target] if self.target is not None else self.jet_variables
-        self.jet_variables_target_weight += [self.weight] if self.weight is not None else []
+        # self.jet_variables_target_weight += [self.weight] if self.weight is not None else []
         
         self.jet_tuple_variables = [*self.variables.perJetTuple] if self.variables.perJetTuple is not None else None
 
@@ -93,6 +92,16 @@ class JIDENNDataset:
             
             for sample in zip(perJet, perJetTuple, labels, weight):
                 yield (sample[0], sample[1]), sample[2], sample[3]
+                
+    def _data_iterator_simple_v2(self) -> Iterator[tuple[tuple[tf.Tensor, tf.RaggedTensor], tf.Tensor, tf.Tensor]]:
+        for df in self.root_iterator:  # type: ignore
+            perJet_target_weight = ak.to_pandas(df[self.jet_variables_target_weight])
+            perJet = tf.constant(perJet_target_weight[self.jet_variables].values.astype(float), dtype=tf.float32)
+            
+            weight = perJet_target_weight[self.weight].values.astype(np.float32) if self.weight is not None else 1
+            labels = perJet_target_weight[self.target].values.astype(np.int32) if self.target is not None else None
+            
+            yield perJet, labels, weight
             
     
     def _data_iterator_simple(self) -> Iterator[tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
@@ -105,8 +114,6 @@ class JIDENNDataset:
                 weight = row[self.weight] if self.weight is not None else 1.0
                 labels = row[self.target] if self.target is not None else None
                 yield data_perJet, labels, weight
-                
-            
 
     @property
     def dataset(self)->tf.data.Dataset:
@@ -121,11 +128,13 @@ class JIDENNDataset:
             # dt = dt.flat_map(lambda x,y,z,w : tf.data.Dataset.from_tensor_slices((x,y,z,w )))
             return dt
         else:
-            return tf.data.Dataset.from_generator(self._data_iterator_simple,
-                                                    output_signature=(tf.TensorSpec(shape=(len(self.jet_variables), ), dtype=tf.float32),        #type:ignore
-                                                                    tf.TensorSpec(shape=(), dtype=tf.int32),     #type:ignore
-                                                                    tf.TensorSpec(shape=(), dtype=tf.float32),)      #type:ignore
+            dt =  tf.data.Dataset.from_generator(self._data_iterator_simple_v2,
+                                                    output_signature=(tf.TensorSpec(shape=(None, len(self.jet_variables), ), dtype=tf.float32),        #type:ignore
+                                                                    tf.TensorSpec(shape=(None, ), dtype=tf.int32),     #type:ignore
+                                                                    tf.TensorSpec(shape=(None, ), dtype=tf.float32),)      #type:ignore
                                                     )
+            dt = dt.flat_map(lambda *x : tf.data.Dataset.from_tensor_slices((x)))
+            return dt
             
         
     
@@ -142,7 +151,7 @@ class JIDENNDataset:
 #     return wrapper
 
 # def setup():
-#     files = ["/home/home-pc/bakalarka/JIDENN/data/data1/user.pleskot.mc16_13TeV.364703.JETM13.e7142_s3126_r10724_p4277.jetProp3_ANALYSIS/user.pleskot.30561067.ANALYSIS._000020.root"]
+#     files = ["/home/jankovys/JIDENN/data/data1/user.pleskot.mc16_13TeV.364702.JETM13.e7142_s3126_r10724_p4277.jetProp3_ANALYSIS/user.pleskot.30588293.ANALYSIS._000001.root"]
 #     perJet = ["jets_ActiveArea4vec_eta", "jets_ActiveArea4vec_m", "jets_ActiveArea4vec_phi", "jets_ActiveArea4vec_pt", "jets_DetectorEta", "jets_EMFrac", "jets_FracSamplingMax", "jets_FracSamplingMaxIndex", "jets_GhostMuonSegmentCount", "jets_JVFCorr", "jets_JetConstitScaleMomentum_eta", "jets_JetConstitScaleMomentum_m", "jets_JetConstitScaleMomentum_phi", "jets_JetConstitScaleMomentum_pt", "jets_JvtRpt", "jets_Width", "jets_fJVT", "jets_passFJVT", "jets_passJVT", "jets_Jvt", "jets_Timing", "jets_chf", "jets_eta", "jets_m", "jets_phi", "jets_pt"]
 #     perJetTuple = ["jets_ChargedPFOWidthPt1000", "jets_TrackWidthPt1000", "jets_NumChargedPFOPt1000", "jets_NumChargedPFOPt500", "jets_SumPtChargedPFOPt500", "jets_SumPtTrkPt500"]
 #     perEvent = ["corrected_averageInteractionsPerCrossing"]
@@ -151,19 +160,25 @@ class JIDENNDataset:
 #         perJetTuple=perJetTuple,
 #         perEvent=perEvent,
 #         )
-#     dataset = JIDENNDataset(files, variables, target="jets_truth_partonPDG", weight="weight_mc[:,0]", cut="jets_truth_partonPDG>0")
+#     dataset = JIDENNDataset(files, variables, target="jets_truth_partonPDG", weight="weight_mc[:,0]")
 #     return dataset
+
 
 
 # @timing_decorator
 # def test(dataset, subset_len):
-#     for idx, (x,y,z) in enumerate(dataset.take(subset_len)):
-#         print(f"{idx+1}/{subset_len}: ", x[1].shape, y.shape, z.shape, end="\r")
-
-        
-        
+    
+#     def test_func():
+#         return dataset
+    
+#     for i, a in enumerate(test_func()):
+#         print(f"{i+1}/{subset_len}: ", a[-1], end="\r")
+#         if i == subset_len-1:
+#             break
 #     print()
 #     print("done")
+
+    
         
 # if __name__ == '__main__':
 #     dataset = setup()

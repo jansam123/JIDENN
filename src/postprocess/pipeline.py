@@ -1,4 +1,5 @@
 from logging import Logger
+from tabnanny import verbose
 import tensorflow as tf
 import numpy as np
 import os
@@ -9,8 +10,12 @@ from .ValidationFigures import ValidationFigures
 def postprocess_pipe(model, data:tf.data.Dataset, labels:tf.data.Dataset, logdir:str, log:Logger):
     np_labels = np.array(list(labels.as_numpy_iterator()), dtype=np.int32)
     
+    print([i for i in data.take(2).as_numpy_iterator()])
     res = model.predict(data)
-    pred = res.round()[:,0]
+    print(res)
+    pred = res.round()[:,0].astype(np.int32)
+    print(np_labels)
+    print(pred)
     res = res[:,0]
     log.info(f"Test accuracy: {np.mean(pred == np_labels):.4f}")
     

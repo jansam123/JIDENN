@@ -37,6 +37,7 @@ class Data:
     raw_unknown: list[int]
     path: str   # Path to data folder containing folder of *.root files.
     reading_size: int   # Number of events to load at a time.
+    draw_distribution: int | None   # Number of events to draw distribution for.
 
 
 @dataclass
