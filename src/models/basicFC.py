@@ -38,8 +38,11 @@ def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, prepr
         output_layer=output,
         activation=activation,
         rnn_dim=rnn_dim,
+        preprocess=preprocess)
+    
+    model.compile(
         loss=loss,
-        metrics=metrics,
-        preprocess=preprocess,
+        weighted_metrics=metrics,
         optimizer=optimizer)
+    
     return model

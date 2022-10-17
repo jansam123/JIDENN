@@ -9,3 +9,4 @@ logs
 .vscode/*
 rc.cache.*
 *.log
+good_logs

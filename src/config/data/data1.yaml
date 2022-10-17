@@ -1,5 +1,8 @@
-path: ./data/data1 # Path to data folder containing folder of *.root files.
+path: ./data/dataset1 # Path to data folder containing folder of *.root files.
+subfolder_id:  # Subfolder id to use.
 input_size: #28 # Number of input features.
+target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
+weight: weight_mc[0]
 variables:
   perJet:
     - jets_ActiveArea4vec_eta
@@ -28,6 +31,11 @@ variables:
     - jets_m
     - jets_phi
     - jets_pt
+    - jets_ChargedPFOWidthPt1000[:,:1]
+    - jets_TrackWidthPt1000[:,:1]
+    - jets_NumChargedPFOPt1000[:,:1]
+    - jets_NumChargedPFOPt500[:,:1]
+    - jets_SumPtChargedPFOPt500[:,:1]
   perJetTuple:
     # - jets_ChargedPFOWidthPt1000
     # - jets_TrackWidthPt1000
@@ -36,4 +44,4 @@ variables:
     # - jets_SumPtChargedPFOPt500
     # - jets_SumPtTrkPt500
   perEvent:
-    # - corrected_averageInteractionsPerCrossing
+    - corrected_averageInteractionsPerCrossing

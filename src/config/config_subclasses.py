@@ -38,15 +38,16 @@ class Data:
     path: str   # Path to data folder containing folder of *.root files.
     reading_size: int   # Number of events to load at a time.
     draw_distribution: int | None   # Number of events to draw distribution for.
+    toy: bool  # Whether to use toy data.
+    subfolder_id: int   # Subfolder ID to use.
+    num_workers: int   # Number of workers to use when loading data.
 
 
 @dataclass
 class Dataset:
     batch_size: int   # Batch size.
     validation_step: int   # Validation every n batches.
-    num_workers: int   # Number of workers to use when loading data.
     take: int | None   # Length of data to use.
-    validation_batches: int   # Size of validation dataset.
     dev_size: float    # Size of dev dataset.
     test_size: float   # Size of test dataset.
     shuffle_buffer: int | None   # Size of shuffler buffer.

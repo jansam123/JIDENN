@@ -1,5 +1,4 @@
 from logging import Logger
-from tabnanny import verbose
 import tensorflow as tf
 import numpy as np
 import os
@@ -10,16 +9,14 @@ from .ValidationFigures import ValidationFigures
 def postprocess_pipe(model, data:tf.data.Dataset, labels:tf.data.Dataset, logdir:str, log:Logger):
     np_labels = np.array(list(labels.as_numpy_iterator()), dtype=np.int32)
     
-    print([i for i in data.take(2).as_numpy_iterator()])
+
     res = model.predict(data).ravel()
-    print(res)
     pred = res.round()
-    print(np_labels[:20])
-    print(res[:20])
+    
     log.info(f"Test accuracy: {np.mean(pred == np_labels):.4f}")
     
     with open(os.path.join(logdir, "predictions.txt"), "w") as f:
-        for i,j,k in zip(data.unbatch(), res, np_labels):
+        for i,j,k in zip(data.unbatch().take(100), res, np_labels):
             print(f'data={i} \n prediction={j} \n label={k} \n', file=f)
         
     base_path = os.path.join(logdir, "figs")
@@ -29,11 +26,11 @@ def postprocess_pipe(model, data:tf.data.Dataset, labels:tf.data.Dataset, logdir
     log.info("Generating validation figures...")
     val_figs = ValidationFigures(res, np_labels, pred, ['gluon', 'quark'])
     
-    log.info("Saving to tensorboard...")
-    val_figs.to_tensorboard(tb_base_path)
-    
     log.info("Saving figures to disk...")
     for format in ['png', 'pdf']:
         format_path = os.path.join(base_path, format)
         os.makedirs(format_path, exist_ok=True)
         val_figs.save_figures(os.path.join(base_path, format), format=format)
+    
+    log.info("Saving to tensorboard...")
+    val_figs.to_tensorboard(tb_base_path)

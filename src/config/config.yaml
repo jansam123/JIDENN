@@ -17,11 +17,11 @@ hydra:
 params:
   base_logdir: logs # Base log directory for all runs.
   model: basic_fc # Model to use, options:  transformer, basics_fc, BDT.
-  epochs: 1 # Number of epochs.
+  epochs: 3 # Number of epochs.
   label_smoothing: 0 # Label smoothing.
   learning_rate: 0.001
   seed: 42 # Random seed.
-  threads: 0 # Maximum number of threads to use. 0 means all available.
+  threads:  # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
   logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
   # TODO
@@ -29,12 +29,12 @@ params:
   weight_decay: 0.0
 
 data:
+  num_workers: 6 # Number of workers to use when loading data.
+  toy: False # Use toy dataset.
   labels: # list of labels to use.
     - gluon
     - quark
   num_labels: 2 # Number of labels to use.
-  target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
-  weight: weight_mc[:,0]
   cut:
   tttree_name: NOMINAL # Name of the TTree in the root file.
   gluon: 0
@@ -42,27 +42,25 @@ data:
   raw_gluon: 21
   raw_quarks: [1, 2, 3, 4, 5]
   raw_unknown: [-1, -999]
-  reading_size: 1000 # Number of events to load at a time.
-  draw_distribution:  # Length of the distribution to draw.
+  reading_size: 1_000 # Number of events to load at a time.
+  draw_distribution: 2_000  # Length of the distribution to draw.
 
 dataset:
-  take: 2_000_000 # Length of data to use.
-  batch_size: 128 # Batch size.
+  take:   # Length of data to use.
+  batch_size: 256 # Batch size.
   validation_step: 200 # Validation every n batches.
-  num_workers: 6 # Number of workers to use when loading data.
-  validation_batches: # Size of validation dataset.
-  dev_size: 0.1 # Size of dev dataset.
-  test_size: 0.1 # Size of test dataset.
-  shuffle_buffer: 200_000 # Size of shuffler buffer.
+  dev_size: 0.02 # Size of dev dataset.
+  test_size: 0.02 # Size of test dataset.
+  shuffle_buffer: 20_000 # Size of shuffler buffer.
 
 preprocess:
-  normalize: False # Normalize data.
-  normalization_size: 1000 # Size of normalization dataset.
+  normalize: True # Normalize data.
+  normalization_size: 2_000 # Size of normalization dataset.
 
 basic_fc:
-  hidden_layers: [128] # Hidden layer sizes.
+  hidden_layers: [512, 512, 512] # Hidden layer sizes.
   dropout:  # Dropout after FC layers.
-  rnn_dim: 256
+  rnn_dim: 128
 
 transformer:
   warmup_steps: 100 # Number of steps to warmup for
