@@ -50,4 +50,10 @@ JVF = jet vertex fraction
 
 ## Notes
 
-[ML in ROOT](https://root.cern/manual/tmva/)
+Shuffling matters because we flatten each event to individial jets and the order remains.  
+p_T cut na 50 GeV
+vhodne cuty na uletene premenne
+fyzikalne test spravnosti taggeru (perEvent)
+
+
+

@@ -39,7 +39,7 @@ class ValidationCallback(tf.keras.callbacks.Callback):
             
 def get_callbacks(args: cfg.Params, log: Logger, val_dataset: tf.data.Dataset) -> list[tf.keras.callbacks.Callback]:
     callbacks = []
-    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=args.logdir, histogram_freq=1, embeddings_freq=1)
+    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=args.logdir, histogram_freq=1, embeddings_freq=1, profile_batch=(10,15))
     callbacks += [tb_callback]
             
     callbacks += [LogCallback(args.epochs, log)]#, ValidationCallback(val_dataset, log)]

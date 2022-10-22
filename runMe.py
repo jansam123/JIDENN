@@ -10,7 +10,7 @@ import logging
 import hydra
 from hydra.core.config_store import ConfigStore
 from src.data.get_dataset import get_preprocessed_dataset
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
+# os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
@@ -59,7 +59,9 @@ def main(args: config.JIDENNConfig) -> None:
     test_files = []
     folders = os.listdir(args.data.path)
     folders.sort()
-    folders = [folders[args.data.subfolder_id-1]] if args.data.subfolder_id is not None else folders
+    slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
+    folders = [folders[slc-1] for slc in slices]
+    log.info(f"Folders used for training: {folders}")
     for folder in folders:
         train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
             os.path.join(args.data.path, folder, 'train'))])
@@ -83,24 +85,24 @@ def main(args: config.JIDENNConfig) -> None:
         log.info(f"Drawing data distribution with {args.data.draw_distribution} samples")
         data_info.generate_data_distributions([train, dev, test], f'{args.params.logdir}/dist',
                                               size=args.data.draw_distribution,
-                                              var_names=args.data.variables.perJet,
-                                              datasets_names=["train", "dev", "test"])
+                                              var_names=args.data.variables.perJet+args.data.variables.perEvent,
+                                              datasets_names=["train", "dev", "test"],
+                                              weights=args.data.distribution_weights)
 
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
-            def norm_preprocess(x, y, z):
-                if args.data.variables.perJetTuple is not None:
-                    return x[0]
-                else:
-                    return x
 
-            prep_ds = train.take(
-                args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
-            prep_ds = prep_ds.map(norm_preprocess)
+            # @tf.function
+            # def norm_preprocess(x, y, z):
+            #     return x
+
+            # prep_ds = train.take(
+            #     args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
+            # prep_ds = prep_ds.map(norm_preprocess)
             normalizer = tf.keras.layers.Normalization(axis=-1)
             log.info("Getting std and mean of the dataset...")
             log.info(f"Subsample size: {args.preprocess.normalization_size}")
-            normalizer.adapt(prep_ds)
+            normalizer.adapt(train.map(lambda x, y, z: x), steps=args.preprocess.normalization_size)
         else:
             normalizer = None
             log.warning("Normalization disabled.")
@@ -142,7 +144,7 @@ def main(args: config.JIDENNConfig) -> None:
         log.info("Done!")
         return
 
-    print(model.evaluate(test))
+    print(model.evaluate(test, return_dict=True))
 
     @tf.function
     def labels_only(x, y, z):

@@ -5,8 +5,9 @@ from dataclasses import dataclass
 class BasicFC:
     hidden_layers: list[int]    # Hidden layer sizes.
     dropout: float    # Dropout after FC layers.
-    rnn_dim: int #dimesion of RNN cells  
-    
+    rnn_dim: int  # dimesion of RNN cells
+
+
 @dataclass
 class BDT:
     num_trees: int
@@ -15,32 +16,38 @@ class BDT:
     split_axis: str
     categorical_algorithm: str
 
+
 @dataclass
 class Variables:
     perJet: list[str]
     perJetTuple: list[str]
     perEvent: list[str]
+
+
 @dataclass
 class Data:
     labels: list[str]    # list of labels to use.
     num_labels: int   # Number of labels to use.
     input_size: int    # Number of input features.
-    target: str  
+    target: str
     variables: Variables
-    weight: str | None 
-    cut: str | None 
+    weight: str | None
+    cut: str | None
     tttree_name: str  # Name of the tree in the root file.
-    gluon: int 
-    quark: int 
-    raw_gluon: int 
-    raw_quarks: list[int] 
+    gluon: int
+    quark: int
+    raw_gluon: int
+    raw_quarks: list[int]
     raw_unknown: list[int]
     path: str   # Path to data folder containing folder of *.root files.
     reading_size: int   # Number of events to load at a time.
     draw_distribution: int | None   # Number of events to draw distribution for.
+    distribution_weights: bool   # Whether to use weights when drawing distribution.w
     toy: bool  # Whether to use toy data.
-    subfolder_id: int   # Subfolder ID to use.
     num_workers: int   # Number of workers to use when loading data.
+    JZ_slices: list[int] | None   # Slices of JZ to use.
+    JZ_cut: list[str] | None   # Cut to apply to JZ slices.
+    JZ_weights: list[float] | None   # Weights to apply to JZ slices.
 
 
 @dataclass
@@ -52,31 +59,34 @@ class Dataset:
     test_size: float   # Size of test dataset.
     shuffle_buffer: int | None   # Size of shuffler buffer.
 
+
 @dataclass
 class Params:
-    model: str # Model to use, options: 'basic_fc', 'transformer'.
-    epochs: int # Number of epochs.
-    label_smoothing: float # Label smoothing.
+    model: str  # Model to use, options: 'basic_fc', 'transformer'.
+    epochs: int  # Number of epochs.
+    label_smoothing: float  # Label smoothing.
     learning_rate: float
     seed: int   # Random seed.
     threads: int   # Maximum number of threads to use.
     debug: bool   # Debug mode.
     logdir: str   # Path to log directory.
-    #TODO
-    decay_steps: int # Number of steps to decay for.
+    # TODO
+    decay_steps: int  # Number of steps to decay for.
     weight_decay: float
+
 
 @dataclass
 class Preprocess:
     normalize: bool  # Normalize data.
-    normalization_size: int | None  # Size of normalization dataset. 
+    normalization_size: int | None  # Size of normalization dataset.
+
 
 @dataclass
 class Transformer:
-    warmup_steps: int # Number of steps to warmup for
-    transformer_dropout: float # Dropout after FFN layer.
-    transformer_expansion: int  #4,  number of hidden units in FFN is transformer_expansion * embed_dim
-    transformer_heads: int  #12, must divide embed_dim
-    transformer_layers: int  #6,12
+    warmup_steps: int  # Number of steps to warmup for
+    transformer_dropout: float  # Dropout after FFN layer.
+    transformer_expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
+    transformer_heads: int  # 12, must divide embed_dim
+    transformer_layers: int  # 6,12
     last_hidden_layer: int  # Size of last fully connected layer.
-    embed_dim: int 
+    embed_dim: int

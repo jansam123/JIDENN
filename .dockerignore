@@ -1,8 +1,0 @@
-venv
-__pycache__
-tf_dataset
-tf_records
-.DS_Store
-data?
-data
-!src/data

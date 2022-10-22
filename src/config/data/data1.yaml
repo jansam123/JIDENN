@@ -1,8 +1,7 @@
 path: ./data/dataset1 # Path to data folder containing folder of *.root files.
-subfolder_id:  # Subfolder id to use.
 input_size: #28 # Number of input features.
 target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
-weight: weight_mc[0]
+weight: #weight_mc[0]
 variables:
   perJet:
     - jets_ActiveArea4vec_eta

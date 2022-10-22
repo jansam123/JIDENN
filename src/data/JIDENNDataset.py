@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 import uproot
 import tensorflow as tf
-from typing import Iterator
+from typing import Iterator, Callable
 import numpy as np
 import awkward as ak
 import src.config.config_subclasses as cfg
+from src.data.utils.Expression import Expression
 # import pandas as pd
 # import time
 # import os
@@ -31,6 +32,7 @@ class JIDENNDataset:
     weight: str | None = None
     num_workers: int | None = 4
     cut: str | None = None
+    filter: Callable | None = None
 
     def __post_init__(self):
         self.jet_variables = [*self.variables.perJet]
@@ -87,41 +89,25 @@ class JIDENNDataset:
 
             yield perJet, labels, weight
 
-    
-
     def get_preprocess_mapping(self):
-        
-        def parse_slice(slice_str: str):
-            return tuple((slice(*(int(i) if i else None for i in part.strip().split(':'))) if ':' in part else int(part.strip())) for part in slice_str.split(','))
-        
-        @tf.function
-        def _pick_var(sample, var):
-            var_split = var.split('[')
-            if len(var_split) == 1:
-                return sample[var]
-            var_name = var_split[0]
-            var_slice = parse_slice(var_split[1][:-1]) if '[' in var else None
-            if sample[var_name].shape.rank == 1:
-                return sample[var_name][var_slice]
-            return tf.squeeze(sample[var_name][var_slice], axis=-1) 
 
         @tf.function
         def pick_variables(sample):
-            perJet = tf.stack([tf.cast(_pick_var(sample, var), tf.float32) for var in self.variables.perJet], axis=-1)
+            perJet = tf.stack([tf.cast(Expression(var)(sample), tf.float32) for var in self.variables.perJet], axis=-1)
 
-            perEvent = tf.stack([tf.cast(_pick_var(sample, var), tf.float32)
+            perEvent = tf.stack([tf.cast(Expression(var)(sample), tf.float32)
                                 for var in self.variables.perEvent], axis=-1) if self.variables.perEvent is not None else None
             perEvent = tf.tile(perEvent[tf.newaxis, :], [tf.shape(perJet)[0], 1]) if perEvent is not None else None
 
-            label = _pick_var(sample, self.target) if self.target is not None else None
+            label = Expression(self.target)(sample) if self.target is not None else None
 
-            weight = _pick_var(sample, self.weight) if self.weight is not None else None
+            weight = Expression(self.weight)(sample) if self.weight is not None else None
+
             weight = tf.fill([tf.shape(perJet)[0]], weight) if weight is not None else tf.ones_like(
                 label, dtype=tf.float32)
-            weight = weight*1e9
 
             if self.variables.perJetTuple is not None:
-                perJetTuple = tf.stack([_pick_var(sample, var) for var in self.variables.perJetTuple], axis=-1)
+                perJetTuple = tf.stack([Expression(var)(sample) for var in self.variables.perJetTuple], axis=-1)
                 return (tf.concat([perJet, perEvent], axis=-1), perJetTuple), label, weight
             else:
                 return tf.concat([perJet, perEvent], axis=-1), label, weight
@@ -130,12 +116,14 @@ class JIDENNDataset:
 
     def load_single_dataset(self, file) -> tf.data.Dataset:
         dataset = tf.data.experimental.load(file, compression='GZIP', element_spec=self.dataset_TypeSpec)
-        dataset = dataset.map(self.get_preprocess_mapping())
+        dataset = dataset.map(self.get_preprocess_mapping(), num_parallel_calls=tf.data.AUTOTUNE).flat_map(
+            lambda *x: tf.data.Dataset.from_tensor_slices(x))
+        dataset = dataset.filter(self.filter) if self.filter is not None else dataset
         return dataset
 
     @property
     def dataset(self):
-        return tf.data.Dataset.from_tensor_slices(self.files).interleave(self.load_single_dataset, num_parallel_calls=tf.data.experimental.AUTOTUNE).flat_map(lambda *x: tf.data.Dataset.from_tensor_slices(x))
+        return tf.data.Dataset.from_tensor_slices(self.files).interleave(self.load_single_dataset, num_parallel_calls=tf.data.experimental.AUTOTUNE, deterministic=False)
 
     @property
     def dataset_old(self) -> tf.data.Dataset:

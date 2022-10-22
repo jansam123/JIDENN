@@ -21,7 +21,7 @@ params:
   label_smoothing: 0 # Label smoothing.
   learning_rate: 0.001
   seed: 42 # Random seed.
-  threads:  # Maximum number of threads to use. 0 means all available.
+  threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
   logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
   # TODO
@@ -35,7 +35,7 @@ data:
     - gluon
     - quark
   num_labels: 2 # Number of labels to use.
-  cut:
+  cut: # Cut to apply to data.
   tttree_name: NOMINAL # Name of the TTree in the root file.
   gluon: 0
   quark: 1
@@ -43,23 +43,33 @@ data:
   raw_quarks: [1, 2, 3, 4, 5]
   raw_unknown: [-1, -999]
   reading_size: 1_000 # Number of events to load at a time.
-  draw_distribution: 2_000  # Length of the distribution to draw.
+  JZ_slices: [1, 2, 3, 4, 5]
+  JZ_cut:
+    - "jets_pt>10_000"
+    - "jets_pt>30_000"
+    - "jets_pt>100_000"
+    - "jets_pt>300_000"
+    - "jets_pt>600_000"
+  JZ_weights: [0.34, 0.12, 0.29, 0.16, 0.09] # [83, 26, 71, 39, 22]/241
+  draw_distribution: 10_000 # Length of the distribution to draw.
+  #TODO:
+  distribution_weights: True # Whether to use weights when drawing distributions.
 
 dataset:
-  take:   # Length of data to use.
+  take: # Length of data to use.
   batch_size: 256 # Batch size.
   validation_step: 200 # Validation every n batches.
   dev_size: 0.02 # Size of dev dataset.
   test_size: 0.02 # Size of test dataset.
-  shuffle_buffer: 20_000 # Size of shuffler buffer.
+  shuffle_buffer: 2_000 # Size of shuffler buffer.
 
 preprocess:
   normalize: True # Normalize data.
-  normalization_size: 2_000 # Size of normalization dataset.
+  normalization_size: 10_000 # Size of normalization dataset.
 
 basic_fc:
   hidden_layers: [512, 512, 512] # Hidden layer sizes.
-  dropout:  # Dropout after FC layers.
+  dropout: # Dropout after FC layers.
   rnn_dim: 128
 
 transformer:
