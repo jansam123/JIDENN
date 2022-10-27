@@ -69,8 +69,11 @@ def get_preprocessed_dataset(files: list[list[str]],
         q_JZ_cuts = [quark_cut.get_filter_function(to_dict)]*len(files)
         g_JZ_cuts = [gluon_cut.get_filter_function(to_dict)]*len(files)
     datasets = [gen_single_JZ(subfiles, q_cut, g_cut) for subfiles, q_cut, g_cut in zip(files, q_JZ_cuts, g_JZ_cuts)]
-
-    dataset = tf.data.Dataset.sample_from_datasets(datasets, stop_on_empty_dataset=True, weights=args_data.JZ_weights)
+    
+    if len(datasets) > 1:
+        dataset = tf.data.Dataset.sample_from_datasets(datasets, stop_on_empty_dataset=True, weights=args_data.JZ_weights)
+    else:
+        dataset = datasets[0]
 
     @tf.function
     def label_mapping(x):

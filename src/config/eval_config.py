@@ -10,3 +10,5 @@ class EvalConfig:
     draw_distribution: int | None
     test_subfolder: str
     model_dir: str
+    batch_size: int
+    take: int

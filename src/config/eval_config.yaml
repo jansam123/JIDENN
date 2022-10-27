@@ -1,12 +1,12 @@
 defaults:
-  - data: data1
+  - data: data1_small
   - _self_
 
 hydra:
   run:
-    dir: ${params.base_logdir}
+    dir: ${logdir}
   sweep:
-    dir: ${params.base_logdir}
+    dir: ${logdir}
     subdir: ${hydra.job.num}
   job_logging:
     formatters:
@@ -17,11 +17,10 @@ hydra:
 draw_distribution: 0
 test_subfolder: test
 seed: 42
-logdir: 'logs'
-model_dir: 'model'
-test_sample_cuts: 
-  - "(jets_pt>20_000) && (jets_pt<60_000)"
-  - "(jets_pt>60_000) && (jets_pt<160_000)"
-  - "(jets_pt>160_000) && (jets_pt<400_000)"
-  - "(jets_pt>400_000) && (jets_pt<800_000)"
-  - "jets_pt>800_000"
+logdir: "logs/eval"
+model_dir: "/Users/samueljankovych/Documents/MFF/bakalarka/JIDENN/logs/2022-10-27__09_38_42/model"
+test_sample_cuts:
+  # - "(jets_pt>20_000) && (jets_pt<60_000)"
+  # - jets_pt>60_000
+batch_size: 64
+take: 1_000

@@ -1,41 +1,41 @@
+from abc import abstractmethod
 import tensorflow as tf
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import pandas as pd 
 import seaborn as sns
 from  sklearn.metrics import roc_curve,confusion_matrix, auc
-from itertools import product
 from io import BytesIO
 
 sns.set_theme(style="dark")
 
-
-
-
-class ValidationFigures:
-        
-    def __init__(self, predictions:np.ndarray, labels:np.ndarray, argmax_predictions:np.ndarray, class_names:list[str]):
+class ValidationFigure:
+    def __init__(self, df:pd.DataFrame, name: str = 'fig', class_names: list[str] | None = None):
+        self._df = df 
+        self._name = name
         self._class_names = class_names
-        self._predictions = predictions
-        self._labels = labels
-        self._argmax_predictions = argmax_predictions
-        
-        self._figures, self._figure_names = self._get_figures()        
+        self._fig = self._get_fig()
         
     @property
-    def figures(self):
-        return self._figures
-    
+    def figure(self):
+        return self._fig    
     @property
-    def figure_names(self):
-        return self._figure_names
+    def figure_name(self):
+        return self._name
 
-    def to_tensorboard(self, path:str):        
-        for fig, name in zip(self._figures, self._figure_names):
-            with tf.summary.create_file_writer(path).as_default():
-                tf.summary.image(name, self._plot_to_image(fig), step=0)
+    @abstractmethod
+    def _get_fig(self):
+        "Method that creates matplotlib figure."
         
-    def _plot_to_image(self, figure):
+    def save_fig(self, path:str, format:str='png'):
+        self._fig.savefig(os.path.join(path, self._name + f".{format}"))
+        
+    def to_tensorboard(self, path:str):        
+        with tf.summary.create_file_writer(path).as_default():
+            tf.summary.image(self._name, self._fig_to_image(self._fig), step=0)
+    
+    def _fig_to_image(self, figure):
         """
         Converts the matplotlib plot specified by 'figure' to a PNG image and
         returns it. The supplied figure is closed and inaccessible after this call.
@@ -55,45 +55,15 @@ class ValidationFigures:
         # Use tf.expand_dims to add the batch dimension
         image = tf.expand_dims(image, 0)
         return image
-        
-    def save_figures(self, path:str, format:str='png'):
-        for fig, name in zip(self._figures, self._figure_names):
-            fig.savefig(os.path.join(path, name + f".{format}"))
-        
-    def _get_figures(self):
-        figures = []
-        figures.append(self._confusion_matrix(self._labels, self._argmax_predictions))
-        figures.append(self._roc(self._labels, self._predictions))
-        figures.append(self._violin([self._labels, self._predictions, self._argmax_predictions], x_labels=['labels', 'predictions', 'argmax_predictions']))
-        figures.append(self._hist({'quark (1)':self._predictions[np.where(self._labels == 1)], 'gluon (0)':self._predictions[np.where(self._labels == 0)]}))
-        figures.append(self._hist(self._labels))
-        figure_names = ['confusion_matrix', 'roc', 'violin', 'predictions', 'labels']
-        return figures, figure_names
-        
-    
-    def _hist(self, predictions):
-        fig = plt.figure(figsize=(8, 8))
-        sns.histplot(predictions)
-        plt.xlabel('Prediction probability')
-        plt.ylabel('Count')
-        return fig
-    
-    def _violin(self, predictions:list[np.ndarray] = [], x_labels: list[str] | None = None):
-        fig = plt.figure(figsize=(8, 8))
-        sns.violinplot(data=predictions)
-        if x_labels is not None:
-            plt.xticks(range(len(predictions)), x_labels)
-        plt.xlabel('Prediction probability')
-        plt.ylabel('Count')
-        return fig
-    
-    def _roc(self, labels, predictions):
-        fp, tp, _ = roc_curve(labels, predictions)
+
+class ValidationROC(ValidationFigure):
+    def _get_fig(self):
+        fp, tp, _ = roc_curve(self._df['label'].values, self._df['score'].values)
         auc_score = auc(fp, tp)
         
         fig = plt.figure(figsize=(8, 8))
         sns.lineplot(x=100*fp, y=100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
-        sns.lineplot(x=100*fp, y=100*fp, label=f'AUC = 0.5', linewidth=1, linestyle='--', color='gray')
+        sns.lineplot(x=100*fp, y=100*fp, label=f'Random', linewidth=1, linestyle='--', color='gray')
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
         plt.grid(True)
@@ -101,27 +71,32 @@ class ValidationFigures:
         ax = plt.gca()
         ax.set_aspect('equal')
         return fig
+        
+class ValidationCM(ValidationFigure):
     
-    def _confusion_matrix(self, labels, predictions):
-        cm = confusion_matrix(labels, predictions)
-        fig = plt.figure(figsize=(8, 8))
-        plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)  # type: ignore
-        plt.title("Confusion matrix")
-        tick_marks = np.arange(len(self._class_names))
-        plt.xticks(tick_marks, self._class_names, rotation=45)
-        plt.yticks(tick_marks, self._class_names)
+    def _get_fig(self):
+        cm = confusion_matrix(self._df['label'].values, self._df['prediction'].values)        
+        fig = plt.figure(figsize=(6, 6))
 
-        # Normalize the confusion matrix.
         cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 1000, decimals=0).astype(int)
-
-        # Use white text if squares are dark; otherwise black.
-        threshold = cm.max() / 2.
-
-        for i, j in product(range(cm.shape[0]), range(cm.shape[1])):
-            color = "white" if cm[i, j] > threshold else "black"
-            plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
-
-        plt.tight_layout()
+        df_cm = pd.DataFrame(cm, index=self._class_names, columns=self._class_names)
+        sns.heatmap(df_cm, annot=True, fmt='4d', cmap=plt.cm.Blues, cbar=False)
+        plt.title("Confusion matrix")
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
         return fig
+    
+class ValidationScoreHistogram(ValidationFigure):
+    def _get_fig(self):
+        fig = plt.figure(figsize=(8, 8))
+        sns.histplot(self._df, x='score', hue='named_label', stat='count')
+        plt.xlabel('Score')
+        return fig
+    
+class ValidationLabelHistogram(ValidationFigure):
+    def _get_fig(self):
+        fig = plt.figure(figsize=(8, 8))
+        sns.histplot(self._df, x='named_prediction', hue='named_label', stat='count', multiple='stack')
+        plt.xlabel('Predicted Tag')
+        return fig
+

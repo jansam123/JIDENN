@@ -91,9 +91,8 @@ def main(args: config.JIDENNConfig) -> None:
             dataset = dataset.unbatch().take(args.preprocess.draw_distribution)
             dir = os.path.join(args.params.logdir, 'dist', name)
             os.makedirs(dir, exist_ok=True)
-            data_info.generate_data_distributions(dataset=dataset,
-                                                  folder=dir,
-                                                  var_names=args.data.variables.perJet+args.data.variables.perEvent)
+            df = data_info.tf_dataset_to_pandas(dataset=dataset.unbatch(), var_names=args.data.variables.perJet+args.data.variables.perEvent)
+            data_info.generate_data_distributions(df=df, folder=dir)
 
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
