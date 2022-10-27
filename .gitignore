@@ -9,4 +9,6 @@ logs
 .vscode/*
 rc.cache.*
 *.log
+*.swp
 good_logs
+outputs

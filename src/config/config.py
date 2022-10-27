@@ -11,5 +11,6 @@ class JIDENNConfig:
     basic_fc: BasicFC
     transformer: Transformer
     bdt: BDT
+    highway: Highway
 
     

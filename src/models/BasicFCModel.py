@@ -4,7 +4,8 @@ from typing import Callable
 
 class BasicFCModel(tf.keras.Model):
     def __init__(self, 
-                 hidden_layers: list[int], 
+                 hidden_layer_size: int,
+                 num_layers: int,
                  input_size: tuple[int, int] | int,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable,
@@ -18,7 +19,8 @@ class BasicFCModel(tf.keras.Model):
             inputs0 = tf.keras.layers.Input(shape=(input_size[0], ))
             inputs1 = tf.keras.layers.Input(shape=(None, input_size[1]), ragged=True)
             
-            densed = self._hidden_layers(preprocess(inputs0) if preprocess is not None else inputs0, hidden_layers, dropout)
+            densed = self._hidden_layers(preprocess(
+                inputs0) if preprocess is not None else inputs0, hidden_layer_size, num_layers, dropout)
             
             rnned = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(rnn_dim), merge_mode='sum')(inputs1)
             
@@ -30,7 +32,7 @@ class BasicFCModel(tf.keras.Model):
             inputs = tf.keras.layers.Input(shape=(input_size, ))
             preprocessed = preprocess(inputs) if preprocess is not None else inputs
             # preprocessed = tf.keras.layers.LayerNormalization()(preprocessed)
-            hidden = self._hidden_layers(preprocessed, hidden_layers, dropout)
+            hidden = self._hidden_layers(preprocessed, hidden_layer_size, num_layers, dropout)
         else:
             raise ValueError("Input size must be len two tuple or int.")
 
@@ -39,15 +41,14 @@ class BasicFCModel(tf.keras.Model):
         super().__init__(inputs=inputs, outputs=output)
         
 
-    def _hidden_layers(self, inputs, layers:list[int], dropout:float | None = None) -> tf.Tensor:
+    def _hidden_layers(self, inputs, layer_size:int, num_layers:int,  dropout:float | None = None) -> tf.Tensor:
         hidden = inputs #tf.keras.layers.Flatten()(inputs)
-        for hidden_layer in layers:
-            hidden = tf.keras.layers.Dense(hidden_layer, activation=self._activation)(hidden)
+        for _ in range(num_layers):
+            hidden = tf.keras.layers.Dense(layer_size, activation=self._activation)(hidden)
             if dropout is not None:
                 hidden = tf.keras.layers.Dropout(dropout)(hidden)
         return hidden
     
-
     
     
     

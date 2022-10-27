@@ -1,0 +1,26 @@
+runMe.py params.activation=relu params.model=basic_fc
+runMe.py params.activation=gelu params.model=basic_fc
+runMe.py params.activation=elu params.model=basic_fc
+runMe.py params.activation=silu params.model=basic_fc
+runMe.py params.activation=relu params.model=highway
+runMe.py params.activation=gelu params.model=highway
+runMe.py params.activation=elu params.model=highway
+runMe.py params.activation=silu params.model=highway
+runMe.py dataset.batch_size=512
+runMe.py dataset.batch_size=1024
+runMe.py dataset.shuffle_buffer=100
+runMe.py dataset.shuffle_buffer=10000
+runMe.py preprocess.normalization_size=1000
+runMe.py preprocess.normalization_size=100000
+runMe.py basic_fc.hidden_layers=[512,512]
+runMe.py basic_fc.hidden_layers=[512,512,512,512,512]
+runMe.py basic_fc.hidden_layers=[512,512,512,512,512,512,512,512,512,512]
+runMe.py basic_fc.hidden_layers=[1024,1024,1024]
+runMe.py highway.num_layers=2 params.model=highway
+runMe.py highway.num_layers=5 params.model=highway
+runMe.py highway.num_layers=10 params.model=highway
+runMe.py highway.num_layers=3 highway.layer_size=1024 params.model=highway
+
+
+
+

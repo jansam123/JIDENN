@@ -16,61 +16,43 @@ hydra:
 
 params:
   base_logdir: logs # Base log directory for all runs.
-  model: basic_fc # Model to use, options:  transformer, basics_fc, BDT.
-  epochs: 3 # Number of epochs.
+  model: highway # Model to use, options:  transformer, basic_fc, BDT, highway.
+  epochs: 10 # Number of epochs.
   label_smoothing: 0 # Label smoothing.
   learning_rate: 0.001
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
   logdir: ${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
+  activation: relu # Activation function to use (relu/elu/gelu/silu).
   # TODO
   decay_steps: 10
   weight_decay: 0.0
 
-data:
-  num_workers: 6 # Number of workers to use when loading data.
-  toy: False # Use toy dataset.
-  labels: # list of labels to use.
-    - gluon
-    - quark
-  num_labels: 2 # Number of labels to use.
-  cut: # Cut to apply to data.
-  tttree_name: NOMINAL # Name of the TTree in the root file.
-  gluon: 0
-  quark: 1
-  raw_gluon: 21
-  raw_quarks: [1, 2, 3, 4, 5]
-  raw_unknown: [-1, -999]
-  reading_size: 1_000 # Number of events to load at a time.
-  JZ_slices: [1, 2, 3, 4, 5]
-  JZ_cut:
-    - "jets_pt>10_000"
-    - "jets_pt>30_000"
-    - "jets_pt>100_000"
-    - "jets_pt>300_000"
-    - "jets_pt>600_000"
-  JZ_weights: [0.34, 0.12, 0.29, 0.16, 0.09] # [83, 26, 71, 39, 22]/241
-  draw_distribution: 10_000 # Length of the distribution to draw.
-  #TODO:
-  distribution_weights: True # Whether to use weights when drawing distributions.
-
 dataset:
-  take: # Length of data to use.
-  batch_size: 256 # Batch size.
+  take: 70_000_000 # Length of data to use.
+  batch_size: 512 # Batch size.
   validation_step: 200 # Validation every n batches.
-  dev_size: 0.02 # Size of dev dataset.
-  test_size: 0.02 # Size of test dataset.
-  shuffle_buffer: 2_000 # Size of shuffler buffer.
+  dev_size: 0.1 # Size of dev dataset.
+  test_size: 0.1 # Size of test dataset.
+  shuffle_buffer: 10_000 # Size of shuffler buffer.
 
 preprocess:
   normalize: True # Normalize data.
-  normalization_size: 10_000 # Size of normalization dataset.
+  normalization_size: 10_000 # 100_000 is better Size of normalization dataset.
+  draw_distribution: 10_000 # Size of the distribution to draw.
+  min_max_path: #'min_max.csv'
 
 basic_fc:
-  hidden_layers: [512, 512, 512] # Hidden layer sizes.
+  layer_size: 512 # Hidden layer sizes.
+  num_layers: 10
   dropout: # Dropout after FC layers.
   rnn_dim: 128
+
+highway:
+  layer_size: 512 # Size of the highway layer.
+  num_layers: 40 # Number of highway layers.
+  dropout: # Dropout after highway layers.
 
 transformer:
   warmup_steps: 100 # Number of steps to warmup for

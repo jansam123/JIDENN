@@ -2,9 +2,10 @@ import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.postprocess.pipeline import postprocess_pipe
-from src.models import basicFC, transformer, BDT
+from src.models import basicFC, transformer, BDT, highway
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 import os
 import logging
 import hydra
@@ -74,41 +75,56 @@ def main(args: config.JIDENNConfig) -> None:
         log.error("No data found!")
         raise FileNotFoundError("No data found!")
 
+    dev_size = int(args.dataset.take *
+                   args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
+    test_size = int(
+        args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
     train = get_preprocessed_dataset(train_files, args_data=args.data,
                                      args_dataset=args.dataset, name="train", size=args.dataset.take)
-    dev = get_preprocessed_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, name="dev", size=int(
-        args.dataset.take*args.dataset.dev_size) if args.dataset.take is not None else None)
-    test = get_preprocessed_dataset(test_files, args_data=args.data, args_dataset=args.dataset, name="test", size=int(
-        args.dataset.take*args.dataset.test_size) if args.dataset.take is not None else None)
+    dev = get_preprocessed_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, name="dev", size=dev_size)
+    test = get_preprocessed_dataset(test_files, args_data=args.data,
+                                    args_dataset=args.dataset, name="test", size=test_size)
 
-    if args.data.draw_distribution is not None:
-        log.info(f"Drawing data distribution with {args.data.draw_distribution} samples")
-        data_info.generate_data_distributions([train, dev, test], f'{args.params.logdir}/dist',
-                                              size=args.data.draw_distribution,
-                                              var_names=args.data.variables.perJet+args.data.variables.perEvent,
-                                              datasets_names=["train", "dev", "test"],
-                                              weights=args.data.distribution_weights)
+    if args.preprocess.draw_distribution is not None:
+        log.info(f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
+        for name, dataset in zip(["train", "dev", "test"], [train, dev, test]):
+            dataset = dataset.unbatch().take(args.preprocess.draw_distribution)
+            dir = os.path.join(args.params.logdir, 'dist', name)
+            os.makedirs(dir, exist_ok=True)
+            data_info.generate_data_distributions(dataset=dataset,
+                                                  folder=dir,
+                                                  var_names=args.data.variables.perJet+args.data.variables.perEvent)
 
     def _model():
         if args.preprocess.normalize and args.params.model != 'BDT':
-
-            # @tf.function
-            # def norm_preprocess(x, y, z):
-            #     return x
-
-            # prep_ds = train.take(
-            #     args.preprocess.normalization_size) if args.preprocess.normalization_size is not None else train
-            # prep_ds = prep_ds.map(norm_preprocess)
-            normalizer = tf.keras.layers.Normalization(axis=-1)
-            log.info("Getting std and mean of the dataset...")
-            log.info(f"Subsample size: {args.preprocess.normalization_size}")
-            normalizer.adapt(train.map(lambda x, y, z: x), steps=args.preprocess.normalization_size)
+            if args.preprocess.min_max_path is not None:
+                min_max = pd.read_csv(args.preprocess.min_max_path, index_col=0)
+                mins = []
+                maxs = []
+                for var in args.data.variables.perJet+args.data.variables.perEvent:
+                    var = var.split('[')[0]
+                    mins.append(min_max.loc[var]['min'])
+                    maxs.append(min_max.loc[var]['max'])
+                mean = tf.constant(mins)
+                variance = (tf.constant(maxs) - tf.constant(mins))**2
+                log.info(
+                    f"Using loaded mins: {mins} and maxs: {maxs} for normalization with mean=mins and variance=(maxs-mins)**2")
+                normalizer = tf.keras.layers.Normalization(axis=-1, mean=mean, variance=variance)
+            else:
+                normalizer = tf.keras.layers.Normalization(axis=-1)
+                log.info("Getting std and mean of the dataset...")
+                log.info(f"Subsample size: {args.preprocess.normalization_size}")
+                normalizer.adapt(train.map(lambda x, y, z: x), steps=args.preprocess.normalization_size)
         else:
             normalizer = None
             log.warning("Normalization disabled.")
 
         if args.params.model == "basic_fc":
             model = basicFC.create(args.params, args.basic_fc, args.data, preprocess=normalizer)
+            model.summary(print_fn=log.info)
+
+        elif args.params.model == "highway":
+            model = highway.create(args.params, args.highway, args.data, preprocess=normalizer)
             model.summary(print_fn=log.info)
 
         elif args.params.model == "transformer":
@@ -138,6 +154,11 @@ def main(args: config.JIDENNConfig) -> None:
     # running training
     # tf.keras.utils.plot_model(model, f"{args.params.logdir}/model.png", show_shapes=True, expand_nested=True)
     model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks)
+    
+    # saving model
+    model_dir = os.path.join(args.params.logdir, 'model')
+    log.info(f"Saving model to {model_dir}")
+    model.save(model_dir)
 
     if test is None:
         log.warning("No test dataset, skipping evaluation.")

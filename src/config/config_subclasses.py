@@ -3,9 +3,17 @@ from dataclasses import dataclass
 
 @dataclass
 class BasicFC:
-    hidden_layers: list[int]    # Hidden layer sizes.
-    dropout: float    # Dropout after FC layers.
+    layer_size: int    # Hidden layer sizes.
+    num_layers: int    # Number of highway layers.
+    dropout: float | None    # Dropout after FC layers.
     rnn_dim: int  # dimesion of RNN cells
+
+
+@dataclass
+class Highway:
+    layer_size: int    # Hidden layer sizes.
+    num_layers: int    # Number of highway layers.
+    dropout: float | None    # Dropout after FC layers.
 
 
 @dataclass
@@ -41,9 +49,6 @@ class Data:
     raw_unknown: list[int]
     path: str   # Path to data folder containing folder of *.root files.
     reading_size: int   # Number of events to load at a time.
-    draw_distribution: int | None   # Number of events to draw distribution for.
-    distribution_weights: bool   # Whether to use weights when drawing distribution.w
-    toy: bool  # Whether to use toy data.
     num_workers: int   # Number of workers to use when loading data.
     JZ_slices: list[int] | None   # Slices of JZ to use.
     JZ_cut: list[str] | None   # Cut to apply to JZ slices.
@@ -55,9 +60,9 @@ class Dataset:
     batch_size: int   # Batch size.
     validation_step: int   # Validation every n batches.
     take: int | None   # Length of data to use.
-    dev_size: float    # Size of dev dataset.
-    test_size: float   # Size of test dataset.
     shuffle_buffer: int | None   # Size of shuffler buffer.
+    dev_size: float | None = None  # Size of dev dataset.
+    test_size: float | None = None # Size of test dataset.
 
 
 @dataclass
@@ -70,6 +75,7 @@ class Params:
     threads: int   # Maximum number of threads to use.
     debug: bool   # Debug mode.
     logdir: str   # Path to log directory.
+    activation: str   # Activation function to use.
     # TODO
     decay_steps: int  # Number of steps to decay for.
     weight_decay: float
@@ -78,7 +84,9 @@ class Params:
 @dataclass
 class Preprocess:
     normalize: bool  # Normalize data.
+    draw_distribution: int | None   # Number of events to draw distribution for.
     normalization_size: int | None  # Size of normalization dataset.
+    min_max_path: str | None  # Path to min max values.
 
 
 @dataclass

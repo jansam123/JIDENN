@@ -48,7 +48,13 @@ class SimpleCut:
         return self._cut_repr
 
     def __call__(self, sample: dict[str, tf.Tensor]) -> tf.Tensor:
-        if '==' in self._cut_repr:
+        if '<=' in self._cut_repr:
+            key, value = self._cut_repr.split('<=')
+            return sample[key] <= tf.cast(float(value), sample[key].dtype)
+        elif '>=' in self._cut_repr:
+            key, value = self._cut_repr.split('>=')
+            return sample[key] >= tf.cast(float(value), sample[key].dtype)
+        elif '==' in self._cut_repr:
             key, value = self._cut_repr.split('==')
             return sample[key] == tf.cast(float(value), sample[key].dtype)
         elif '!=' in self._cut_repr:
@@ -60,12 +66,6 @@ class SimpleCut:
         elif '>' in self._cut_repr:
             key, value = self._cut_repr.split('>')
             return sample[key] > tf.cast(float(value), sample[key].dtype)
-        elif '<=' in self._cut_repr:
-            key, value = self._cut_repr.split('<=')
-            return sample[key] <= tf.cast(float(value), sample[key].dtype)
-        elif '>=' in self._cut_repr:
-            key, value = self._cut_repr.split('>=')
-            return sample[key] >= tf.cast(float(value), sample[key].dtype)
         else:
             raise ValueError(f"Cut {self._cut_repr} is not valid")
 

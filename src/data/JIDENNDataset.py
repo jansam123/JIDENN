@@ -100,7 +100,6 @@ class JIDENNDataset:
             perEvent = tf.tile(perEvent[tf.newaxis, :], [tf.shape(perJet)[0], 1]) if perEvent is not None else None
 
             label = Expression(self.target)(sample) if self.target is not None else None
-
             weight = Expression(self.weight)(sample) if self.weight is not None else None
 
             weight = tf.fill([tf.shape(perJet)[0]], weight) if weight is not None else tf.ones_like(
