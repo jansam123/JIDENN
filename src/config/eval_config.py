@@ -4,6 +4,7 @@ from .config_subclasses import Data, Dataset
 @dataclass
 class EvalConfig:
     logdir: str
+    base_logdir: str
     test_sample_cuts: list[str]
     data: Data
     seed: int

@@ -1,5 +1,5 @@
 defaults:
-  - data: data1_small
+  - data: data1
   - _self_
 
 hydra:
@@ -14,13 +14,17 @@ hydra:
         format: "[${now:%Y-%m-%d}  ${now:%H:%M:%S}][%(levelname)s] - %(message)s"
   output_subdir: config
 
+base_logdir: logs # Base log directory for all runs.
+logdir: ${base_logdir}/eval
+model_dir: ${base_logdir}/model
 draw_distribution: 0
 test_subfolder: test
 seed: 42
-logdir: "logs/eval"
-model_dir: "/Users/samueljankovych/Documents/MFF/bakalarka/JIDENN/logs/2022-10-27__09_38_42/model"
 test_sample_cuts:
-  # - "(jets_pt>20_000) && (jets_pt<60_000)"
-  # - jets_pt>60_000
-batch_size: 64
-take: 1_000
+  - "(jets_pt>20_000) && (jets_pt<60_000)"
+  - "(jets_pt>60_000) && (jets_pt<160_000)"
+  - "(jets_pt>160_000) && (jets_pt<400_000)"
+  - "(jets_pt>400_000) && (jets_pt<800_000)"
+  - "(jets_pt>800_000)"
+batch_size: 1024
+take: 

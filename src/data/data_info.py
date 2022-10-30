@@ -25,10 +25,9 @@ def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,):
     var_names = list(df.columns)
     corr_matrix = df.corr()
-    df['label'] = df['label'].replace({0: 'gluon', 1: 'quark'})
     # create distributions of data, labels and weights
     for var_name in var_names+['label', 'weight']:
-        sns.histplot(data=df, x=var_name, hue='label', stat='count')
+        sns.histplot(data=df, x=var_name, hue='named_label', stat='count')
         plt.savefig(os.path.join(folder, f'{var_name}.png'))
         plt.close()
 

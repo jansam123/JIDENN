@@ -56,8 +56,6 @@ def main(args: eval_config.EvalConfig) -> None:
     model = tf.keras.models.load_model(args.model_dir)
     model.summary(print_fn=log.info)
     
-        
-    
     for cut, dt in zip(['base'] + args.test_sample_cuts, [test] + sub_tests):
         dir_name = os.path.join(args.logdir, cut)
         os.makedirs(dir_name, exist_ok=True)
@@ -65,18 +63,16 @@ def main(args: eval_config.EvalConfig) -> None:
         os.makedirs(dist_dir, exist_ok=True)
         
         df = data_info.tf_dataset_to_pandas(dataset=dt.unbatch(), var_names=args.data.variables.perJet+args.data.variables.perEvent)
-        #!
-        # if cut == 'base':
-        #     data_info.feature_importance(df, dir_name)
-        # data_info.generate_data_distributions(df=df, folder=dist_dir)                                                 
-        # sub_test_eval = model.evaluate(dt, verbose=1, return_dict=True)
-        # log.info(f"Test evaluation for cut {cut}: {sub_test_eval}")
-        # dt_labels = dt.unbatch().map(labels_only)
-        #!
+        if cut == 'base':
+            data_info.feature_importance(df, dir_name)
+        df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
+        data_info.generate_data_distributions(df=df, folder=dist_dir)                                                 
+        sub_test_eval = model.evaluate(dt, verbose=1, return_dict=True)
+        log.info(f"Test evaluation for cut {cut}: {sub_test_eval}")
+        
         score = model.predict(dt).ravel()
         df['score'] = score
         df['prediction'] = score.round()
-        df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
         df['named_prediction'] = df['prediction'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
         postprocess_pipe(df, dir_name, log=log)
     

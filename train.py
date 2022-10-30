@@ -1,8 +1,3 @@
-import src.data.data_info as data_info
-from src.callbacks.get_callbacks import get_callbacks
-from src.config import config
-from src.postprocess.pipeline import postprocess_pipe
-from src.models import basicFC, transformer, BDT, highway
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -10,7 +5,13 @@ import os
 import logging
 import hydra
 from hydra.core.config_store import ConfigStore
+#
 from src.data.get_dataset import get_preprocessed_dataset
+import src.data.data_info as data_info
+from src.callbacks.get_callbacks import get_callbacks
+from src.config import config
+from src.postprocess.pipeline import postprocess_pipe
+from src.models import basicFC, transformer, BDT, highway
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -91,7 +92,9 @@ def main(args: config.JIDENNConfig) -> None:
             dataset = dataset.unbatch().take(args.preprocess.draw_distribution)
             dir = os.path.join(args.params.logdir, 'dist', name)
             os.makedirs(dir, exist_ok=True)
-            df = data_info.tf_dataset_to_pandas(dataset=dataset.unbatch(), var_names=args.data.variables.perJet+args.data.variables.perEvent)
+            df = data_info.tf_dataset_to_pandas(
+                dataset=dataset, var_names=args.data.variables.perJet+args.data.variables.perEvent)
+            df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
             data_info.generate_data_distributions(df=df, folder=dir)
 
     def _model():
@@ -142,7 +145,6 @@ def main(args: config.JIDENNConfig) -> None:
     if len(gpus) < 2:
         model = _model()
     else:
-        # mirrored_strategy = tf.distribute.MirroredStrategy()
         mirrored_strategy = tf.distribute.MirroredStrategy()
         with mirrored_strategy.scope():
             model = _model()
@@ -153,7 +155,7 @@ def main(args: config.JIDENNConfig) -> None:
     # running training
     # tf.keras.utils.plot_model(model, f"{args.params.logdir}/model.png", show_shapes=True, expand_nested=True)
     model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks)
-    
+
     # saving model
     model_dir = os.path.join(args.params.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
@@ -166,11 +168,15 @@ def main(args: config.JIDENNConfig) -> None:
 
     print(model.evaluate(test, return_dict=True))
 
-    @tf.function
-    def labels_only(x, y, z):
-        return y
-    test_dataset_labels = test.unbatch().map(labels_only)
-    postprocess_pipe(model, test, test_dataset_labels, args.params.logdir, log)
+    # df = data_info.tf_dataset_to_pandas(dataset=test.unbatch(
+    # ), var_names=args.data.variables.perJet+args.data.variables.perEvent)
+    # data_info.feature_importance(df, args.params.logdir)
+    # score = model.predict(test).ravel()
+    # df['score'] = score
+    # df['prediction'] = score.round()
+    # df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
+    # df['named_prediction'] = df['prediction'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
+    # postprocess_pipe(df, args.params.logdir, log=log)
 
     log.info("Done!")
 

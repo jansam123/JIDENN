@@ -2,6 +2,8 @@ from logging import Logger
 import pandas as pd 
 import numpy as np
 import os
+import matplotlib.pyplot as plt
+
 #
 from .ValidationFigures import ValidationROC, ValidationCM, ValidationScoreHistogram, ValidationLabelHistogram
     
@@ -31,3 +33,5 @@ def postprocess_pipe(df:pd.DataFrame, logdir:str, log:Logger, formats=['png', 'p
         for fmt, path in zip(formats, format_path):
             val_fig.save_fig(path, fmt)
         val_fig.to_tensorboard(tb_base_path)
+        plt.close()
+    

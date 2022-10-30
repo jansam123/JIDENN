@@ -20,7 +20,8 @@ def create(args: cfg.Params, args_model: cfg.Highway, args_data: cfg.Data, prepr
         loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing)
         metrics = [tf.keras.metrics.CategoricalAccuracy(), tf.keras.metrics.AUC()]
 
-    optimizer = tf.optimizers.Adam(learning_rate=args.learning_rate)
+    l_r = tf.keras.optimizers.schedules.CosineDecay(args.learning_rate, args.decay_steps) if args.decay_steps is not None else args.learning_rate
+    optimizer = tf.optimizers.Adam(learning_rate=l_r)
     # optimizer = tf.optimizers.SGD(learning_rate=args.learning_rate, momentum=0.1)
 
     model = HighwayModel(
