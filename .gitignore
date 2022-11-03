@@ -12,3 +12,4 @@ rc.cache.*
 *.swp
 good_logs
 outputs
+output

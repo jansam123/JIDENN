@@ -5,7 +5,7 @@ labels: # list of labels to use.
   - gluon
   - quark
 num_labels: 2 # Number of labels to use.
-cut: "jets_pt>20_000" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+cut: "jets_pt>20_000" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
 gluon: 0
 quark: 1
 raw_gluon: 21
@@ -25,16 +25,16 @@ target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
 weight: #weight_mc[0]
 variables:
   perJet:
-    - jets_ActiveArea4vec_eta
+    # - jets_ActiveArea4vec_eta
     - jets_ActiveArea4vec_m
     - jets_ActiveArea4vec_phi
     - jets_ActiveArea4vec_pt
-    - jets_DetectorEta
+    # - jets_DetectorEta
     - jets_FracSamplingMax
     - jets_FracSamplingMaxIndex
     - jets_GhostMuonSegmentCount
     - jets_JVFCorr
-    - jets_JetConstitScaleMomentum_eta
+    # - jets_JetConstitScaleMomentum_eta
     - jets_JetConstitScaleMomentum_m
     - jets_JetConstitScaleMomentum_phi
     - jets_JetConstitScaleMomentum_pt
@@ -47,7 +47,7 @@ variables:
     - jets_EMFrac
     - jets_Width
     - jets_chf
-    - jets_eta
+    # - jets_eta
     - jets_m
     - jets_phi
     - jets_pt

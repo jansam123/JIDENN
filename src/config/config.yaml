@@ -16,8 +16,8 @@ hydra:
 
 params:
   base_logdir: logs # Base log directory for all runs.
-  model: basic_fc # Model to use, options:  transformer, basic_fc, BDT, highway.
-  activation: gelu # Activation function to use (relu/elu/gelu/silu).
+  model: highway # Model to use, options:  transformer, basic_fc, BDT, highway.
+  activation: relu # Activation function to use (relu/elu/gelu/silu).
   epochs: 10 # Number of epochs.
   label_smoothing: 0 # Label smoothing.
   learning_rate: 0.001
@@ -25,7 +25,7 @@ params:
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
   logdir: ${params.base_logdir} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
-  decay_steps: 977_000 #(10 * 50_000_000 / 1024) == (epochs * take / batch_size)
+  decay_steps: 500_000 #(10 * 50_000_000 / 1024) == (epochs * take / batch_size)
   # TODO
   weight_decay: 0.0
 
@@ -45,13 +45,13 @@ preprocess:
 
 basic_fc:
   layer_size: 512 # Hidden layer sizes.
-  num_layers: 10
+  num_layers: 3
   dropout: # Dropout after FC layers.
   rnn_dim: 128
 
 highway:
   layer_size: 512 # Size of the highway layer.
-  num_layers: 40 # Number of highway layers.
+  num_layers: 10 # Number of highway layers.
   dropout: # Dropout after highway layers.
 
 transformer:

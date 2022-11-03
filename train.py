@@ -10,7 +10,7 @@ from src.data.get_dataset import get_preprocessed_dataset
 import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
-from src.postprocess.pipeline import postprocess_pipe
+from src.postprocess.tb_plots import tb_postprocess
 from src.models import basicFC, transformer, BDT, highway
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -154,12 +154,21 @@ def main(args: config.JIDENNConfig) -> None:
 
     # running training
     # tf.keras.utils.plot_model(model, f"{args.params.logdir}/model.png", show_shapes=True, expand_nested=True)
-    model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks)
 
-    # saving model
+    history = model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks)
+
     model_dir = os.path.join(args.params.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir)
+
+    log.info(f"Saving history")
+    history_dir = os.path.join(args.params.logdir, 'history')
+    os.makedirs(history_dir, exist_ok=True)
+    for metric in [m for m in history.history.keys() if 'val' not in m]:
+        tb_postprocess(
+            {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.params.epochs)
+
+    # saving model
 
     if test is None:
         log.warning("No test dataset, skipping evaluation.")

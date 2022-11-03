@@ -21,10 +21,12 @@ draw_distribution: 0
 test_subfolder: test
 seed: 42
 test_sample_cuts:
+  # - "(jets_eta>-2.5) && (jets_eta<2.5)"
+  # - "(jets_eta<-2.5) && (jets_eta>2.5)"
   - "(jets_pt>20_000) && (jets_pt<60_000)"
   - "(jets_pt>60_000) && (jets_pt<160_000)"
   - "(jets_pt>160_000) && (jets_pt<400_000)"
   - "(jets_pt>400_000) && (jets_pt<800_000)"
   - "(jets_pt>800_000)"
-batch_size: 1024
-take: 
+batch_size: 1
+take: 5_000_000

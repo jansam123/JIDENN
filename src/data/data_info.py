@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import mutual_info_classif, f_classif
+from sklearn.feature_selection import mutual_info_classif, f_classif, chi2
 
 
 def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: list[str]) -> pd.DataFrame:
@@ -29,7 +29,7 @@ def generate_data_distributions(df: pd.DataFrame,
     for var_name in var_names+['label', 'weight']:
         sns.histplot(data=df, x=var_name, hue='named_label', stat='count')
         plt.savefig(os.path.join(folder, f'{var_name}.png'))
-        plt.close()
+        plt.close('all')
 
     # Generate a custom diverging colormap
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
@@ -44,7 +44,7 @@ def generate_data_distributions(df: pd.DataFrame,
                 annot=True, fmt='.1f', cbar_kws={'shrink': .8})
     # plt.xticks(rotation=40)
     plt.savefig(os.path.join(folder, 'correlation_matrix.png'))
-    plt.close()
+    plt.close('all')
 
 def feature_importance(df: pd.DataFrame, 
                  folder: str,
@@ -63,6 +63,6 @@ def feature_importance(df: pd.DataFrame,
         ax.set_ylabel(ylabel="")
         ax.set_xlabel(xlabel="Score")
         plt.savefig(os.path.join(folder, f'feature_{score_name}.png'))
-        plt.close()
+        plt.close('all')
     
 
