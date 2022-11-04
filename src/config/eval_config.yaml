@@ -29,4 +29,4 @@ test_sample_cuts:
   - "(jets_pt>400_000) && (jets_pt<800_000)"
   - "(jets_pt>800_000)"
 batch_size: 1
-take: 5_000_000
+take:
