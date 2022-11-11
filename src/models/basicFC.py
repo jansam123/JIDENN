@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_addons as tfa
 
 from src.config import config_subclasses as cfg
 from .BasicFCModel import BasicFCModel
@@ -31,7 +32,10 @@ def create(args: cfg.Params, args_model: cfg.BasicFC, args_data: cfg.Data, prepr
     
     l_r = tf.keras.optimizers.schedules.CosineDecay(
         args.learning_rate, args.decay_steps) if args.decay_steps is not None else args.learning_rate
-    optimizer = tf.optimizers.Adam(learning_rate=l_r)
+    if args.weight_decay is not None and args.weight_decay > 0:
+        optimizer = tfa.optimizers.AdamW(learning_rate=l_r, weight_decay=args.weight_decay)
+    else:
+        optimizer = tf.optimizers.Adam(learning_rate=l_r)
 
 
     model = BasicFCModel(

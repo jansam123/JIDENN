@@ -20,6 +20,8 @@ JZ_cut:
   - "jets_pt>800_000"
 JZ_weights: [0.34, 0.12, 0.29, 0.16, 0.09] # [83, 26, 71, 39, 22]/241
 path: ./data/dataset1 # Path to data folder containing folder of *.root files.
+cached: ./data/filtered
+element_spec_file: ./data/dataset1/element_spec
 input_size: #28 # Number of input features.
 target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
 weight: #weight_mc[0]

@@ -14,10 +14,9 @@ def get_dataset(files: list[str],
                             variables=args_data.variables,
                             target=args_data.target,
                             weight=args_data.weight,
-                            reading_size=args_data.reading_size,
-                            num_workers=args_data.num_workers,
                             cut=args_data.cut,
-                            filter=filter).dataset
+                            filter=filter,
+                            element_spec_file=args_data.element_spec_file).dataset
 
     # dataset = dataset.filter(filter) if filter is not None else dataset
     return dataset
@@ -71,7 +70,7 @@ def get_preprocessed_dataset(files: list[list[str]],
     datasets = [gen_single_JZ(subfiles, q_cut, g_cut) for subfiles, q_cut, g_cut in zip(files, q_JZ_cuts, g_JZ_cuts)]
     
     if len(datasets) > 1:
-        dataset = tf.data.Dataset.sample_from_datasets(datasets, stop_on_empty_dataset=True, weights=args_data.JZ_weights)
+        dataset = tf.data.Dataset.sample_from_datasets(datasets, weights=args_data.JZ_weights)
     else:
         dataset = datasets[0]
 

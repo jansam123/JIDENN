@@ -1,5 +1,6 @@
 import tensorflow as tf
-
+import tensorflow_addons as tfa
+#
 from src.config import config_subclasses as cfg
 from .HighwayModel import HighwayModel
 
@@ -20,9 +21,12 @@ def create(args: cfg.Params, args_model: cfg.Highway, args_data: cfg.Data, prepr
         loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=args.label_smoothing)
         metrics = [tf.keras.metrics.CategoricalAccuracy(), tf.keras.metrics.AUC()]
 
-    l_r = tf.keras.optimizers.schedules.CosineDecay(args.learning_rate, args.decay_steps) if args.decay_steps is not None else args.learning_rate
-    optimizer = tf.optimizers.Adam(learning_rate=l_r)
-    # optimizer = tf.optimizers.SGD(learning_rate=args.learning_rate, momentum=0.1)
+    l_r = tf.keras.optimizers.schedules.CosineDecay(
+        args.learning_rate, args.decay_steps) if args.decay_steps is not None else args.learning_rate
+    if args.weight_decay is not None and args.weight_decay > 0:
+        optimizer = tfa.optimizers.AdamW(learning_rate=l_r, weight_decay=args.weight_decay)
+    else:    
+        optimizer = tf.optimizers.Adam(learning_rate=l_r)
 
     model = HighwayModel(
         layer_size=args_model.layer_size,

@@ -14,7 +14,11 @@ def create(args_model: cfg.BDT)->tfdf.keras.RandomForestModel:
         split_axis=args_model.split_axis,
         categorical_algorithm=args_model.categorical_algorithm,
         early_stopping='NONE',
-        verbose=2
+        shrinkage=args_model.shrinkage,
+        min_examples=args_model.min_examples,
+        verbose=2,
+        num_threads=args_model.num_threads,
+        l2_regularization=args_model.l2_regularization,
         )
     model.compile(
             weighted_metrics=[tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC()])

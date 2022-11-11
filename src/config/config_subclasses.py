@@ -23,6 +23,10 @@ class BDT:
     max_depth: int
     split_axis: str
     categorical_algorithm: str
+    shrinkage: int
+    min_examples: int
+    num_threads: int
+    l2_regularization: float
 
 
 @dataclass
@@ -53,7 +57,8 @@ class Data:
     JZ_slices: list[int] | None   # Slices of JZ to use.
     JZ_cut: list[str] | None   # Cut to apply to JZ slices.
     JZ_weights: list[float] | None   # Weights to apply to JZ slices.
-
+    cached: str | None   # Path to cached data.
+    element_spec_file: str
 
 @dataclass
 class Dataset:

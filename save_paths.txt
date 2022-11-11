@@ -1,0 +1,2 @@
+/home/jankovys/JIDENN/data/data1/user.pleskot.mc16_13TeV.364701.JETM13.e7142_s3126_r10724_p4277.jetProp3_ANALYSIS/train/user.pleskot.30588292.ANALYSIS._000011.root
+/home/jankovys/JIDENN/data/data1/user.pleskot.mc16_13TeV.364701.JETM13.e7142_s3126_r10724_p4277.jetProp3_ANALYSIS/train/user.pleskot.30588292.ANALYSIS._000012.root

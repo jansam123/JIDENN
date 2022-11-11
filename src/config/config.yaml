@@ -24,13 +24,13 @@ params:
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
-  logdir: ${params.base_logdir} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
+  logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H_%M_%S} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
   decay_steps: 500_000 #(10 * 50_000_000 / 1024) == (epochs * take / batch_size)
   # TODO
-  weight_decay: 0.0
+  weight_decay: 
 
 dataset:
-  take: 50_000_000 # Length of data to use.
+  take: # Length of data to use.
   batch_size: 1024 # Batch size.
   validation_step: 200 # Validation every n batches.
   dev_size: 0.1 # Size of dev dataset.
@@ -38,9 +38,9 @@ dataset:
   shuffle_buffer: 10_000 # Size of shuffler buffer.
 
 preprocess:
-  normalize: True # Normalize data.
+  normalize: True # Normalize data. max size 146208768
   normalization_size: 10_000 # 100_000 is better Size of normalization dataset.
-  draw_distribution: 10_000 # Size of the distribution to draw.
+  draw_distribution: 100 # Size of the distribution to draw.
   min_max_path: #'min_max.csv'
 
 basic_fc:
@@ -64,8 +64,12 @@ transformer:
   embed_dim: 256 #512
 
 bdt:
-  num_trees: 10
+  num_trees: 600 #  Number of trees in the forest.
   growing_strategy: LOCAL
-  max_depth: 3
+  max_depth: 10 #  Maximum depth of the tree.
   split_axis: SPARSE_OBLIQUE
   categorical_algorithm: CART
+  shrinkage: 0.5 #learning rate
+  min_examples: 1_000
+  num_threads: 40
+  l2_regularization: 0.2

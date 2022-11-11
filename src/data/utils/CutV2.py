@@ -3,6 +3,9 @@ from typing import Callable
 import tensorflow as tf
 
 
+ROOTVariables = dict[str, tf.RaggedTensor]
+
+
 def bracketed_split(string, delimiter, strip_brackets=False):
     """ Split a string by the delimiter unless it is inside brackets.
     e.g.
@@ -38,6 +41,9 @@ def bracketed_split(string, delimiter, strip_brackets=False):
 
 
 class SimpleCut:
+    SIGN_MAPPING = {'==': tf.equal, '!=': tf.not_equal, '>': tf.greater, '<': tf.less, '>=': tf.greater_equal, '<=': tf.less_equal}
+    ORDERED_SIGNS = ['<=', '>=', '==', '!=', '<', '>']
+                
     
     def __init__(self, cut_repr: str) -> None:
         if cut_repr[0] == '(' and cut_repr[-1] == ')':
@@ -48,37 +54,32 @@ class SimpleCut:
     def __str__(self) -> str:
         return self._cut_repr
 
-    def __call__(self, sample: dict[str, tf.Tensor]) -> tf.Tensor:
-        if '<=' in self._cut_repr:
-            key, value = self._cut_repr.split('<=')
-            return sample[key] <= tf.cast(float(value), sample[key].dtype)
-        elif '>=' in self._cut_repr:
-            key, value = self._cut_repr.split('>=')
-            return sample[key] >= tf.cast(float(value), sample[key].dtype)
-        elif '==' in self._cut_repr:
-            key, value = self._cut_repr.split('==')
-            return sample[key] == tf.cast(float(value), sample[key].dtype)
-        elif '!=' in self._cut_repr:
-            key, value = self._cut_repr.split('!=')
-            return sample[key] != tf.cast(float(value), sample[key].dtype)
-        elif '<' in self._cut_repr:
-            key, value = self._cut_repr.split('<')
-            return sample[key] < tf.cast(float(value), sample[key].dtype)
-        elif '>' in self._cut_repr:
-            key, value = self._cut_repr.split('>')
-            return sample[key] > tf.cast(float(value), sample[key].dtype)
-        else:
-            raise ValueError(f"Cut {self._cut_repr} is not valid")
+    def __call__(self, sample: ROOTVariables) -> tf.Tensor:
+        for sign in self.ORDERED_SIGNS:
+            if sign in self._cut_repr:
+                left, right = self._cut_repr.split(sign)
+                left = left.strip()
+                right = right.strip()
+                if left in sample:
+                    left = sample[left]
+                else:
+                    left = tf.constant(float(left))
+                if right in sample:
+                    right = sample[right]
+                else:
+                    right = tf.cast(float(right), left.dtype)
+                return tf.reduce_all(self.SIGN_MAPPING[sign](left, right))
+        
 
 
 class Cut:
     def __init__(self, repr: str) -> None:
         self._repr = repr
 
-    def __call__(self, sample: dict[str, tf.Tensor]) -> bool:
+    def __call__(self, sample: ROOTVariables) -> bool:
         return self._evaluate(self, sample)
 
-    def _evaluate(self, cut: Cut, sample: dict[str, tf.Tensor]) -> bool:
+    def _evaluate(self, cut: Cut, sample: ROOTVariables) -> tf.Tensor:
         split = list(bracketed_split(cut._repr, delimiter=' '))
         if '&&' in split and '||' in split:
             raise ValueError(f"Cut {cut._repr} is not valid, use brackets to separate && and ||")
@@ -100,11 +101,3 @@ class Cut:
 
     def __or__(self, other: Cut) -> Cut:
         return Cut(f'({self._repr}) || ({other._repr})')
-
-    def get_filter_function(self, dict_mapping: Callable[[tf.Tensor, tf.Tensor, tf.Tensor], dict[str, tf.Tensor]]) -> Callable[[tf.Tensor, tf.Tensor, tf.Tensor], bool]:
-        
-        @tf.function
-        def dataset_filter(x: tf.Tensor, y: tf.Tensor, z: tf.Tensor) -> bool:
-            return self(dict_mapping(x, y, z))
-        
-        return dataset_filter

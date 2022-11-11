@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import logging
 import hydra
+import pickle
 from hydra.core.config_store import ConfigStore
 #
 from src.data.get_dataset import get_preprocessed_dataset
@@ -11,6 +12,7 @@ import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.postprocess.tb_plots import tb_postprocess
+from src.postprocess.pipeline import postprocess_pipe
 from src.models import basicFC, transformer, BDT, highway
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -56,37 +58,56 @@ def main(args: config.JIDENNConfig) -> None:
     mirrored_strategy = tf.distribute.MirroredStrategy() if len(gpus) > 1 else None
 
     # dataset preparation
-    train_files = []
-    dev_files = []
-    test_files = []
-    folders = os.listdir(args.data.path)
-    folders.sort()
-    slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
-    folders = [folders[slc-1] for slc in slices]
-    log.info(f"Folders used for training: {folders}")
-    for folder in folders:
-        train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
-            os.path.join(args.data.path, folder, 'train'))])
-        dev_files.append([os.path.join(args.data.path, folder, 'dev', file) for file in os.listdir(
-            os.path.join(args.data.path, folder, 'dev'))])
-        test_files.append([os.path.join(args.data.path, folder, 'test', file) for file in os.listdir(
-            os.path.join(args.data.path, folder, 'test'))])
+    if args.data.cached is None:
+        train_files = []
+        dev_files = []
+        test_files = []
+        folders = os.listdir(args.data.path)
+        folders.sort()
+        slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
+        folders = [folders[slc-1] for slc in slices]
+        log.info(f"Folders used for training: {folders}")
+        for folder in folders:
+            train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
+                os.path.join(args.data.path, folder, 'train'))])
+            dev_files.append([os.path.join(args.data.path, folder, 'dev', file) for file in os.listdir(
+                os.path.join(args.data.path, folder, 'dev'))])
+            test_files.append([os.path.join(args.data.path, folder, 'test', file) for file in os.listdir(
+                os.path.join(args.data.path, folder, 'test'))])
 
-    if len(train_files) == 0:
-        log.error("No data found!")
-        raise FileNotFoundError("No data found!")
+        if len(train_files) == 0:
+            log.error("No data found!")
+            raise FileNotFoundError("No data found!")
 
-    dev_size = int(args.dataset.take *
-                   args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
-    test_size = int(
-        args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
-    train = get_preprocessed_dataset(train_files, args_data=args.data,
-                                     args_dataset=args.dataset, name="train", size=args.dataset.take)
-    dev = get_preprocessed_dataset(dev_files, args_data=args.data, args_dataset=args.dataset, name="dev", size=dev_size)
-    test = get_preprocessed_dataset(test_files, args_data=args.data,
-                                    args_dataset=args.dataset, name="test", size=test_size)
+        dev_size = int(args.dataset.take *
+                       args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
+        test_size = int(
+            args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
+        train = get_preprocessed_dataset(train_files, args_data=args.data,
+                                         args_dataset=args.dataset, name="train", size=args.dataset.take)
+        dev = get_preprocessed_dataset(dev_files, args_data=args.data,
+                                       args_dataset=args.dataset, name="dev", size=dev_size)
+        test = get_preprocessed_dataset(test_files, args_data=args.data,
+                                        args_dataset=args.dataset, name="test", size=test_size)
+    else:
+        with open(os.path.join(args.data.cached, "train") + '/element_spec', 'rb') as in_:
+            es = pickle.load(in_)
 
-    if args.preprocess.draw_distribution is not None:
+        train, dev, test = [tf.data.experimental.load(os.path.join(
+            args.data.cached, f"{name}"), es) for name in ["train", "dev", "test"]]
+        if args.dataset.take is not None:
+            dev_size = int(args.dataset.take *
+                           args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
+            test_size = int(
+                args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
+            train = train.take(args.dataset.take)
+            dev = dev.take(dev_size)
+            test = test.take(test_size)
+
+        train, dev, test = [ds.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
+                            for ds in [train, dev, test]]
+
+    if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0:
         log.info(f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
         for name, dataset in zip(["train", "dev", "test"], [train, dev, test]):
             dataset = dataset.unbatch().take(args.preprocess.draw_distribution)
@@ -134,6 +155,7 @@ def main(args: config.JIDENNConfig) -> None:
             model.summary(print_fn=log.info)
 
         elif args.params.model == 'BDT':
+            args.params.epochs = 1
             model = BDT.create(args.bdt)
 
         else:
@@ -161,12 +183,13 @@ def main(args: config.JIDENNConfig) -> None:
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir)
 
-    log.info(f"Saving history")
-    history_dir = os.path.join(args.params.logdir, 'history')
-    os.makedirs(history_dir, exist_ok=True)
-    for metric in [m for m in history.history.keys() if 'val' not in m]:
-        tb_postprocess(
-            {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.params.epochs)
+    if args.params.model != 'BDT':
+        log.info(f"Saving history")
+        history_dir = os.path.join(args.params.logdir, 'history')
+        os.makedirs(history_dir, exist_ok=True)
+        for metric in [m for m in history.history.keys() if 'val' not in m]:
+            tb_postprocess(
+                {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.params.epochs)
 
     # saving model
 
@@ -177,15 +200,27 @@ def main(args: config.JIDENNConfig) -> None:
 
     print(model.evaluate(test, return_dict=True))
 
-    # df = data_info.tf_dataset_to_pandas(dataset=test.unbatch(
-    # ), var_names=args.data.variables.perJet+args.data.variables.perEvent)
-    # data_info.feature_importance(df, args.params.logdir)
-    # score = model.predict(test).ravel()
-    # df['score'] = score
-    # df['prediction'] = score.round()
-    # df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-    # df['named_prediction'] = df['prediction'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-    # postprocess_pipe(df, args.params.logdir, log=log)
+    if args.params.model == 'BDT':
+        model.summary(print_fn=log.info)
+        variable_importance_metric = "SUM_SCORE"
+        variable_importances = model.make_inspector().variable_importances()[variable_importance_metric]
+        variable_importances = pd.DataFrame({'variable': [str(vi[0].name) for vi in variable_importances],
+                                             'score': [vi[1] for vi in variable_importances]})
+        all_variables = args.data.variables.perJet + args.data.variables.perEvent
+        variable_importances['variable'] = variable_importances['variable'].apply(
+            lambda x: all_variables[int(x.split('.')[-1])])
+        print(variable_importances)
+        data_info.plot_feature_importance(variable_importances, os.path.join(
+            args.params.logdir, f'feature_bdt_score.png'))
+
+        df = data_info.tf_dataset_to_pandas(dataset=test.unbatch(
+        ), var_names=args.data.variables.perJet+args.data.variables.perEvent)
+        score = model.predict(test).ravel()
+        df['score'] = score
+        df['prediction'] = score.round()
+        df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
+        df['named_prediction'] = df['prediction'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
+        postprocess_pipe(df, args.params.logdir, log=log)
 
     log.info("Done!")
 

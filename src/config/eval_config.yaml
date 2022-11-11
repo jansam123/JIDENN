@@ -17,7 +17,8 @@ hydra:
 base_logdir: logs # Base log directory for all runs.
 logdir: ${base_logdir}/eval
 model_dir: ${base_logdir}/model
-draw_distribution: 0
+draw_distribution: 
+feature_importance: False # Whether to draw feature importance.
 test_subfolder: test
 seed: 42
 test_sample_cuts:
@@ -28,5 +29,5 @@ test_sample_cuts:
   - "(jets_pt>160_000) && (jets_pt<400_000)"
   - "(jets_pt>400_000) && (jets_pt<800_000)"
   - "(jets_pt>800_000)"
-batch_size: 1
+batch_size: 32
 take:

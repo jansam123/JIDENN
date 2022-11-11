@@ -45,6 +45,19 @@ def generate_data_distributions(df: pd.DataFrame,
     # plt.xticks(rotation=40)
     plt.savefig(os.path.join(folder, 'correlation_matrix.png'))
     plt.close('all')
+    
+    
+def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name:str = 'score', variable_name: str = 'variable'):
+    feature_scores = df.sort_values(score_name, ascending=False).reset_index(drop=True)
+    fig = plt.figure(figsize=(10, 15))
+    # [x0, y0, width, height]
+    ax = fig.add_axes([0.33, 0.05, 0.6, 0.92])
+    sns.barplot(x=score_name, y=variable_name, data=feature_scores)
+    ax.set_ylabel(ylabel="")
+    ax.set_xlabel(xlabel="Score")
+    plt.savefig(fig_path)
+    plt.close('all')
+    
 
 def feature_importance(df: pd.DataFrame, 
                  folder: str,
@@ -55,14 +68,7 @@ def feature_importance(df: pd.DataFrame,
     for score_name, score_func in zip(['linear', 'mutual'], [f_classif, mutual_info_classif]):
         bestfeatures = SelectKBest(score_func=score_func, k=k)
         fit = bestfeatures.fit(X,y)
-        feature_scores = pd.DataFrame({'score':fit.scores_, 'variable':X.columns}).sort_values('score', ascending=False).reset_index(drop=True)
-        fig = plt.figure(figsize=(10, 15))
-        # [x0, y0, width, height]
-        ax = fig.add_axes([0.33, 0.05, 0.6, 0.92])
-        sns.barplot(x="score", y="variable", data=feature_scores)
-        ax.set_ylabel(ylabel="")
-        ax.set_xlabel(xlabel="Score")
-        plt.savefig(os.path.join(folder, f'feature_{score_name}.png'))
-        plt.close('all')
+        feature_scores = pd.DataFrame({'score':fit.scores_, 'variable':X.columns})
+        plot_feature_importance(feature_scores, os.path.join(folder, f'feature_{score_name}.png'))
     
 

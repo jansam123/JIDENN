@@ -3,6 +3,7 @@ import numpy as np
 import os
 import logging
 import hydra
+import pickle
 from hydra.core.config_store import ConfigStore
 #
 import src.data.data_info as data_info
@@ -24,19 +25,25 @@ def main(args: eval_config.EvalConfig) -> None:
         log.info(f"Setting seed to {args.seed}")
         np.random.seed(args.seed)
         tf.random.set_seed(args.seed)
+        
+    if args.data.cached is None:
+        folders = os.listdir(args.data.path)
+        folders.sort()
+        slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
+        folders = [folders[slc-1] for slc in slices]
+        log.info(f"Folders used for evaluation: {folders}")
 
-    folders = os.listdir(args.data.path)
-    folders.sort()
-    slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
-    folders = [folders[slc-1] for slc in slices]
-    log.info(f"Folders used for evaluation: {folders}")
+        test_files = [[os.path.join(args.data.path, folder, args.test_subfolder, file)
+                       for file in os.listdir(os.path.join(args.data.path, folder, args.test_subfolder))] for folder in folders]
+        log.info(f"Files used for evaluation: {test_files}")
 
-    test_files = [[os.path.join(args.data.path, folder, args.test_subfolder, file)
-                  for file in os.listdir(os.path.join(args.data.path, folder, args.test_subfolder))] for folder in folders]
-    log.info(f"Files used for evaluation: {test_files}")
-
-    test = get_preprocessed_dataset(test_files, args_data=args.data, name="test",
-                                    size=args.take)
+        test = get_preprocessed_dataset(test_files, args_data=args.data, name="test",
+                                        size=args.take)
+    else:
+        with open(os.path.join(args.data.cached, args.test_subfolder) + '/element_spec', 'rb') as in_:
+            es = pickle.load(in_)
+        test = tf.data.experimental.load(os.path.join(args.data.cached, args.test_subfolder), element_spec=es)
+        test = test.take(args.take) if args.take is not None else test
 
     def to_dict(x, y, z):
         sample_dict = {var: x[i] for i, var in enumerate(args.data.variables.perJet)}
@@ -68,10 +75,12 @@ def main(args: eval_config.EvalConfig) -> None:
         os.makedirs(dist_dir, exist_ok=True)
 
         dt = data_info.tf_dataset_to_pandas(dataset=dt.unbatch(), var_names=all_vars)
-        if cut == 'base':
+        if cut == 'base' and args.feature_importance:
             data_info.feature_importance(dt, dir_name)
         dt['named_label'] = dt['label'].replace(naming_schema)
-        data_info.generate_data_distributions(df=dt, folder=dist_dir)
+        if args.draw_distribution is not None:
+            data_info.generate_data_distributions(df=dt.head(args.draw_distribution)
+                                                  if args.draw_distribution == 0 else dt, folder=dist_dir)
         log.info(f"Test evaluation for cut {cut}: {sub_test_eval}")
 
         dt['score'] = score
