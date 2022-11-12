@@ -10,6 +10,7 @@ logs
 rc.cache.*
 *.log
 *.swp
+*.txt
 good_logs
 outputs
 output

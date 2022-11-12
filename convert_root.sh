@@ -1,11 +1,18 @@
 #!/bin/bash
-#SBATCH --partition=ffa                             # partition you want to run job in
-#SBATCH --mem=60G                                # memory resource per cpu
-#SBATCH --time=12:00:00					                # time limit
-#SBATCH --mincpus=32                              # cpus per tasks
-#SBATCH --job-name="cache_dataset"                             # change to your job name
-#SBATCH --output=./output/%x.%j.log               
+#SBATCH --partition=ucjf                             
+#SBATCH --mem=64G                               
+#SBATCH --time=3-12:00:00	                               
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1       
+#SBATCH --array 677-677
+#SBATCH --cpus-per-task=1                              
+#SBATCH --job-name="convert_root"                    
+#SBATCH --output=./outputs/%x.%j.%a.log                             
 
-# export TF_CPP_MIN_LOG_LEVEL=2
+IFS=$'\n' read -d '' -r -a files < root_files.txt
+IFS=$'\n' read -d '' -r -a save_path < save_paths.txt
 
-ch-run -w -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 cache_dataset.py "$@"
+echo "Processing file ${files[$SLURM_ARRAY_TASK_ID]}"
+echo "Saving to ${save_path[$SLURM_ARRAY_TASK_ID]}"
+venv/bin/python3 convert_root.py --file_path=${files[$SLURM_ARRAY_TASK_ID]} --save_path=${save_path[$SLURM_ARRAY_TASK_ID]}
+echo "Done"

@@ -5,7 +5,7 @@ import pickle
 import os
 import uproot
 #
-from utils.CutV2 import Cut
+from .utils.CutV2 import Cut
 # import src.config.config_subclasses as cfg
 # import pandas as pd
 # import time
@@ -33,7 +33,7 @@ class ROOTDataset:
         return self._dataset
 
     @classmethod
-    def from_root_file(cls, filename: str, transformation: Callable[[ROOTVariables], ROOTVariables] | None = None, tree_name: str = 'NOMINAL', metadata_hist: str | None = 'h_metadata') -> ROOTDataset:
+    def from_root_file(cls, filename: str, transformation: Callable[[ROOTVariables], ROOTVariables] = None, tree_name: str = 'NOMINAL', metadata_hist: str = 'h_metadata') -> ROOTDataset:
         file = uproot.open(filename)
         tree = file[tree_name]
         variables = tree.keys()
@@ -63,20 +63,20 @@ class ROOTDataset:
         return cls(final_dataset, datasets[0].variables)
 
     @classmethod
-    def from_root_files(cls, filenames: list[str] | str, transformation: Callable[[ROOTVariables], ROOTVariables] | None = None) -> ROOTDataset:
+    def from_root_files(cls, filenames: list[str] | str, transformation: Callable[[ROOTVariables], ROOTVariables] = None) -> ROOTDataset:
         if isinstance(filenames, str):
             filenames = [filenames]
         return cls.concat([cls.from_root_file(filename, transformation) for filename in filenames])
 
     @classmethod
-    def load(cls, file: str, element_spec_path: str | None = None) -> ROOTDataset:
+    def load(cls, file: str, element_spec_path: str = None) -> ROOTDataset:
         element_spec_path = os.path.join(file, 'element_spec') if element_spec_path is None else element_spec_path
         with open(element_spec_path, 'rb') as f:
             element_spec = pickle.load(f)
         dataset = tf.data.experimental.load(file, compression='GZIP', element_spec=element_spec)
         return cls(dataset, list(element_spec.keys()))
 
-    def save(self, save_path: str, element_spec_path: str | None = None, shard_func: Callable[[ROOTVariables], tf.Tensor] | None = None) -> None:
+    def save(self, save_path: str, element_spec_path: str = None, shard_func: Callable[[ROOTVariables], tf.Tensor] = None) -> None:
         element_spec_path = os.path.join(save_path, 'element_spec') if element_spec_path is None else element_spec_path
         element_spec = self._dataset.element_spec
         tf.data.experimental.save(self._dataset, save_path, compression='GZIP', shard_func=shard_func)

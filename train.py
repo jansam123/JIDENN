@@ -175,7 +175,6 @@ def main(args: config.JIDENNConfig) -> None:
     callbacks = get_callbacks(args.params, log, dev)
 
     # running training
-    # tf.keras.utils.plot_model(model, f"{args.params.logdir}/model.png", show_shapes=True, expand_nested=True)
 
     history = model.fit(train, validation_data=dev, epochs=args.params.epochs, callbacks=callbacks)
 

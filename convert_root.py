@@ -43,12 +43,17 @@ def root_to_preJIDENN_dataset(file: str, save_path: str) -> None:
     root_dt = ROOTDataset.from_root_file(file, transformation=lambda x: get_PFO_in_JetFrame(no_pile_up(x)))
     root_dt.save(save_path)
 
+def test(saved_path: str) -> None:
+    root_dt = ROOTDataset.load(saved_path).dataset
+    print(f'Number of events: {root_dt.cardinality().numpy()}')
+    for i in root_dt.take(1):
+        print(i['jets_PFO_pt_JetFrame'])
+        print(i['jets_PartonTruthLabelID'])
 
 def main(args: argparse.Namespace) -> None:
-    
     os.makedirs(args.save_path, exist_ok=True)
-    root_to_preJIDENN_dataset(args.file_name, args.save_path)
-
+    root_to_preJIDENN_dataset(args.file_path, args.save_path)
+    test(args.save_path)
 
 if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
