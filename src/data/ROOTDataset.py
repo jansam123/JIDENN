@@ -12,11 +12,11 @@ from .utils.CutV2 import Cut
 # import os
 
 
-
 ROOTVariables = dict[str, tf.RaggedTensor]
 
-class ROOTDataset:    
-    
+
+class ROOTDataset:
+
     def __init__(self, dataset: tf.data.Dataset, variables: list[str]):
         for dt in dataset.take(1):
             if not isinstance(dt, dict):
@@ -42,9 +42,18 @@ class ROOTDataset:
             df = tree[var].array(library="pd")
             if df.empty:
                 continue
-            if df.index.nlevels > 1:
-                df = df.groupby(level=0).apply(list)
-            sample[var] = tf.ragged.constant(df)
+            elif df.index.nlevels == 1 and df.dtypes == 'object':
+                df = df.explode()
+                value_rowids = df.index.get_level_values(0).to_numpy()
+                df = df.reset_index(drop=True).explode()
+                value_rowids_2 = df.index.get_level_values(0).to_numpy()
+                sample[var] = tf.RaggedTensor.from_nested_value_rowids(df.values.tolist(), nested_value_rowids=[
+                                                                       value_rowids, value_rowids_2], validate=False)
+            elif df.index.nlevels == 1 and df.dtypes != 'object':
+                sample[var] = tf.constant(df)
+            elif df.index.nlevels > 1:
+                value_rowids = df.index.get_level_values(0).values
+                sample[var] = tf.RaggedTensor.from_value_rowids(df.values, value_rowids, validate=False)
 
         sample = transformation(sample) if transformation is not None else sample
         if metadata_hist is not None:
@@ -85,7 +94,7 @@ class ROOTDataset:
 
     def filter(self, cut: Cut) -> ROOTDataset:
         return ROOTDataset(self._dataset.filter(cut), self._variables)
-    
+
     def split_by_size(self, size: float) -> tuple[ROOTDataset, ROOTDataset]:
         return ROOTDataset(self._dataset.take(int(size * self._dataset.cardinality().numpy())), self._variables), ROOTDataset(self._dataset.skip(int(size * self._dataset.cardinality().numpy())), self._variables)
 
@@ -94,5 +103,3 @@ class ROOTDataset:
         train, dev_test = self.split_by_size(train_size)
         dev, test = dev_test.split_by_size(dev_size / (1 - train_size))
         return train, dev, test
-
-
