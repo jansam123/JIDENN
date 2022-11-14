@@ -11,8 +11,6 @@ from src.data.ROOTDataset import ROOTDataset
 # import os@dataclass
 
 
-
-
 ROOTVariables = dict[str, tf.RaggedTensor]
 
 

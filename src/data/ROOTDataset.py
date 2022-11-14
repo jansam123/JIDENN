@@ -4,23 +4,23 @@ from typing import Callable
 import pickle
 import os
 import uproot
+import logging
+import pandas as pd
+import awkward as ak
 #
-from .utils.CutV2 import Cut
-# import src.config.config_subclasses as cfg
-# import pandas as pd
-# import time
-# import os
 
+logging.basicConfig(format='[%(asctime)s][%(levelname)s] - %(message)s',
+                    level=logging.INFO,  datefmt='%Y-%m-%d %H:%M:%S')
+log = logging.getLogger(__name__)
 
 ROOTVariables = dict[str, tf.RaggedTensor]
 
 
 class ROOTDataset:
-
     def __init__(self, dataset: tf.data.Dataset, variables: list[str]):
-        for dt in dataset.take(1):
-            if not isinstance(dt, dict):
-                raise TypeError("ROOTDataset only accepts datasets that yield dictionaries")
+        # for dt in dataset.take(1):
+        #     if not isinstance(dt, dict):
+        #         raise TypeError("ROOTDataset only accepts datasets that yield dictionaries")
         self._variables = variables
         self._dataset = dataset
 
@@ -33,36 +33,49 @@ class ROOTDataset:
         return self._dataset
 
     @classmethod
-    def from_root_file(cls, filename: str, transformation: Callable[[ROOTVariables], ROOTVariables] = None, tree_name: str = 'NOMINAL', metadata_hist: str = 'h_metadata') -> ROOTDataset:
-        file = uproot.open(filename)
+    def from_root_file(cls, filename: str,
+                       tree_name: str = 'NOMINAL',
+                       metadata_hist: str = 'h_metadata') -> ROOTDataset:
+
+        log.info(f"Loading ROOT file {filename}")
+        file = uproot.open(filename, object_cache=None, array_cache=None)
+        log.info(f"Getting tree {tree_name}")
         tree = file[tree_name]
         variables = tree.keys()
+        # tree_iterator = tree.iterate(entrysteps=100000, flatten=False)
+
         sample = {}
         for var in variables:
-            df = tree[var].array(library="pd")
-            if df.empty:
+            # log.info(f"Getting variable {var}")
+            array: ak.Array = tree[var].array(library="ak")
+            if ak.size(ak.flatten(array, axis=None)) == 0:
                 continue
-            elif df.index.nlevels == 1 and df.dtypes == 'object':
-                df = df.explode()
-                value_rowids = df.index.get_level_values(0).to_numpy()
-                df = df.reset_index(drop=True).explode()
-                value_rowids_2 = df.index.get_level_values(0).to_numpy()
-                sample[var] = tf.RaggedTensor.from_nested_value_rowids(df.values.tolist(), nested_value_rowids=[
-                                                                       value_rowids, value_rowids_2], validate=False)
-            elif df.index.nlevels == 1 and df.dtypes != 'object':
-                sample[var] = tf.constant(df)
-            elif df.index.nlevels > 1:
-                value_rowids = df.index.get_level_values(0).values
-                sample[var] = tf.RaggedTensor.from_value_rowids(df.values, value_rowids, validate=False)
+            sample[var] = cls.awkward_to_tensor(array)
 
-        sample = transformation(sample) if transformation is not None else sample
         if metadata_hist is not None:
+            log.info("Getting metadata")
             metadata = file[metadata_hist].values()
             sample['metadata'] = tf.tile(tf.constant(metadata)[tf.newaxis, :], [sample['eventNumber'].shape[0], 1])
-        return cls(tf.data.Dataset.from_tensor_slices(sample), variables)
+
+        log.info(f'Done loading file:{filename}')
+        dataset = tf.data.Dataset.from_tensors(sample)
+        return cls(dataset, variables)
 
     @classmethod
-    def concat(cls, datasets: list[ROOTDataset]) -> ROOTDataset:
+    def awkward_to_tensor(cls, array: ak.Array) -> tf.RaggedTensor:
+        if array.ndim == 1:
+            return tf.constant(array.to_list())
+        elif array.ndim == 2:
+            row_lengths = ak.num(array, axis=1).to_list()
+            return tf.RaggedTensor.from_row_lengths(ak.flatten(array, axis=None).to_list(), row_lengths=row_lengths, validate=False)
+        else:
+            nested_row_lengths = [ak.flatten(ak.num(array, axis=ax), axis=None).to_list()
+                                  for ax in range(1, array.ndim)]
+            return tf.RaggedTensor.from_nested_row_lengths(ak.flatten(
+                array, axis=None).to_list(), nested_row_lengths=nested_row_lengths, validate=False)
+
+    @classmethod
+    def _concat(cls, datasets: list[ROOTDataset]) -> ROOTDataset:
         for dataset in datasets:
             if dataset.variables != datasets[0].variables:
                 raise ValueError("Variables of datasets do not match")
@@ -72,10 +85,10 @@ class ROOTDataset:
         return cls(final_dataset, datasets[0].variables)
 
     @classmethod
-    def from_root_files(cls, filenames: list[str] | str, transformation: Callable[[ROOTVariables], ROOTVariables] = None) -> ROOTDataset:
+    def from_root_files(cls, filenames: list[str] | str) -> ROOTDataset:
         if isinstance(filenames, str):
             filenames = [filenames]
-        return cls.concat([cls.from_root_file(filename, transformation) for filename in filenames])
+        return cls._concat([cls.from_root_file(filename) for filename in filenames])
 
     @classmethod
     def load(cls, file: str, element_spec_path: str = None) -> ROOTDataset:
@@ -91,9 +104,6 @@ class ROOTDataset:
         tf.data.experimental.save(self._dataset, save_path, compression='GZIP', shard_func=shard_func)
         with open(element_spec_path, 'wb') as f:
             pickle.dump(element_spec, f)
-
-    def filter(self, cut: Cut) -> ROOTDataset:
-        return ROOTDataset(self._dataset.filter(cut), self._variables)
 
     def split_by_size(self, size: float) -> tuple[ROOTDataset, ROOTDataset]:
         return ROOTDataset(self._dataset.take(int(size * self._dataset.cardinality().numpy())), self._variables), ROOTDataset(self._dataset.skip(int(size * self._dataset.cardinality().numpy())), self._variables)
