@@ -46,27 +46,23 @@ def no_pile_up(sample: ROOTVariables) -> ROOTVariables:
     return sample
 
 def transformation(sample: ROOTVariables) -> ROOTVariables:
-    log.info("Getting PFO in Jet Frame")
-    sample = get_PFO_in_JetFrame(sample)
     log.info("Removing Pile Up")
     sample = no_pile_up(sample)
+    log.info("Getting PFO in Jet Frame")
+    sample = get_PFO_in_JetFrame(sample)
     return sample
 
 
 
 def load_dataset_file(file: str, save_path: str) -> None:
     root_dt = ROOTDataset.load(file)
-    log.info('Loaded ROOT file.')
-    
-    root_dt.save(save_path)
-    log.info('Saved dataset.')
 
 
 
 
 def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
-    root_to_preJIDENN_dataset(args.file_path, args.save_path)
+    load_dataset_file(args.file_path, args.save_path)
 
 
 if __name__ == "__main__":

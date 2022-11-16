@@ -1,12 +1,13 @@
 from __future__ import annotations
 import tensorflow as tf
-from typing import Callable
+from typing import Callable, Union
 import pickle
 import os
 import uproot
 import logging
 import pandas as pd
 import awkward as ak
+import numpy as np
 #
 
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] - %(message)s',
@@ -38,28 +39,66 @@ class ROOTDataset:
                        metadata_hist: str = 'h_metadata') -> ROOTDataset:
 
         log.info(f"Loading ROOT file {filename}")
+        sample = cls._load_root_file(filename, tree_name, metadata_hist)
+
+        log.info(f'Done loading file:{filename}')
+        dataset = tf.data.Dataset.from_tensor_slices(sample)
+        return cls(dataset, list(sample.keys()))
+
+    @classmethod
+    def _load_root_file(cls, filename: str, tree_name: str = 'NOMINAL', metadata_hist: str = 'h_metadata') -> ROOTVariables:
         file = uproot.open(filename, object_cache=None, array_cache=None)
-        log.info(f"Getting tree {tree_name}")
         tree = file[tree_name]
         variables = tree.keys()
-        # tree_iterator = tree.iterate(entrysteps=100000, flatten=False)
 
         sample = {}
         for var in variables:
-            # log.info(f"Getting variable {var}")
-            array: ak.Array = tree[var].array(library="ak")
-            if ak.size(ak.flatten(array, axis=None)) == 0:
+            df = tree[var].array(library="ak")
+            # if df.empty:
+            #     continue
+            if ak.size(ak.flatten(df, axis=None)) == 0:
                 continue
-            sample[var] = cls.awkward_to_tensor(array)
+            sample[var] = cls.awkward_to_tensor(df)
 
         if metadata_hist is not None:
             log.info("Getting metadata")
             metadata = file[metadata_hist].values()
             sample['metadata'] = tf.tile(tf.constant(metadata)[tf.newaxis, :], [sample['eventNumber'].shape[0], 1])
 
-        log.info(f'Done loading file:{filename}')
-        dataset = tf.data.Dataset.from_tensors(sample)
-        return cls(dataset, variables)
+        return sample
+
+    @classmethod
+    def _parse_var(cls, df: pd.Series) -> tf.RaggedTensor:
+        if df.index.nlevels == 1 and df.dtypes == 'object':
+            df = df.explode()
+            value_rowids = df.index.get_level_values(0).to_numpy()
+            df = df.reset_index(drop=True).explode()
+            value_rowids_2 = df.index.get_level_values(0).to_numpy()
+            df = np.array(df.values.tolist())
+            return tf.RaggedTensor.from_nested_value_rowids(df, nested_value_rowids=[
+                value_rowids, value_rowids_2], validate=False)
+        elif df.index.nlevels == 1 and df.dtypes != 'object':
+            return tf.constant(df)
+        elif df.index.nlevels > 1:
+            value_rowids = df.index.get_level_values(0).values
+            return tf.RaggedTensor.from_value_rowids(df.values, value_rowids, validate=False)
+        else:
+            return tf.constant(df)
+
+    @classmethod
+    def pandas_to_tensor(cls, df: pd.DataFrame) -> tf.RaggedTensor:
+        if df.index.nlevels == 1:
+            return tf.constant(df.values[:, 0])
+        elif df.index.nlevels == 2:
+            row_lengths_1 = df.groupby(level=[0]).count()
+            return tf.RaggedTensor.from_row_lengths(df.values[:, 0], row_lengths_1.values[:, 0], validate=False)
+        elif df.index.nlevels == 3:
+            row_lengths_1 = df.groupby(level=[0, 1]).count()
+            row_lengths_2 = row_lengths_1.groupby(level=[0]).count()
+            return tf.RaggedTensor.from_nested_row_lengths(df.values[:, 0], nested_row_lengths=[
+                row_lengths_1.values[:, 0], row_lengths_2.values[:, 0]], validate=False)
+        else:
+            return tf.constant(df)
 
     @classmethod
     def awkward_to_tensor(cls, array: ak.Array) -> tf.RaggedTensor:
@@ -104,12 +143,3 @@ class ROOTDataset:
         tf.data.experimental.save(self._dataset, save_path, compression='GZIP', shard_func=shard_func)
         with open(element_spec_path, 'wb') as f:
             pickle.dump(element_spec, f)
-
-    def split_by_size(self, size: float) -> tuple[ROOTDataset, ROOTDataset]:
-        return ROOTDataset(self._dataset.take(int(size * self._dataset.cardinality().numpy())), self._variables), ROOTDataset(self._dataset.skip(int(size * self._dataset.cardinality().numpy())), self._variables)
-
-    def split_train_dev_test(self, test_size: float, dev_size: float) -> tuple[ROOTDataset, ROOTDataset, ROOTDataset]:
-        train_size = 1 - test_size - dev_size
-        train, dev_test = self.split_by_size(train_size)
-        dev, test = dev_test.split_by_size(dev_size / (1 - train_size))
-        return train, dev, test
