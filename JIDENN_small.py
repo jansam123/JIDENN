@@ -28,9 +28,15 @@ EPOCHS = 10
 # name of the TTree in a root file we want to load
 TTREE = 'NOMINAL'
 # root files that are going to be utilized
-FILENAMES = ['/work/ucjf-atlas/plesv6am/for_sam/qg/jetProp4/jetProp4/user.pleskot.mc16_13TeV.364704.JETM13.e7142_s3126_r10724_p4277.jetProp4_ANALYSIS/user.pleskot.31142736.ANALYSIS._000002.root']
-# '/work/ucjf-atlas/plesv6am/for_sam/qg/jetProp4/jetProp4/user.pleskot.mc16_13TeV.364704.JETM13.e7142_s3126_r10724_p4277.jetProp4_ANALYSIS/user.pleskot.31142736.ANALYSIS._000003.root',
-# '/work/ucjf-atlas/plesv6am/for_sam/qg/jetProp4/jetProp4/user.pleskot.mc16_13TeV.364704.JETM13.e7142_s3126_r10724_p4277.jetProp4_ANALYSIS/user.pleskot.31142736.ANALYSIS._000004.root', ]
+# in CHIMERA use:
+base_path = '/work/ucjf-atlas/plesv6am/for_sam/qg/jetProp4/jetProp4/user.pleskot.mc16_13TeV.364704.JETM13.e7142_s3126_r10724_p4277.jetProp4_ANALYSIS'
+if not os.path.exists(base_path):
+    base_path = '/home/jankovys/JIDENN/data/data2'
+# in GPULAB use:
+FILENAMES = [f'{base_path}/user.pleskot.31142736.ANALYSIS._000002.root']
+# f'{base_path}/user.pleskot.31142736.ANALYSIS._000001.root',
+# f'{base_path}/user.pleskot.31142736.ANALYSIS._000003.root',
+# f'{base_path}/user.pleskot.31142736.ANALYSIS._000004.root', ]
 
 # name of a variable that is going to be our label, ie. what we want to predict
 LABEL = 'jets_PartonTruthLabelID'
@@ -168,6 +174,15 @@ def main(args: argparse.Namespace) -> None:
         hidden = tf.keras.layers.Dropout(args.dropout)(hidden)
     # output layer is just one number between 0 and 1, thats why we use the sigmoid=1/(1+exp(-x)) activation to get it
     output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)(hidden)
+
+    # TODO:
+    # try to change the basic FC layers to highway networks (https://arxiv.org/abs/1505.00387)
+    # it is calculated using the following formula: y = H(x) * T(x) + x * (1 - T(x))
+    # where H(x) is the output of the FC layer, T(x) is the output of the sigmoid layer and x is the input
+    # you can either add (multiply) two layers or use the tf.keras.layers.Add() (tf.keras.layers.Multiply()) layer
+    # be careful when adding two layers, because it expects the same shape of the inputs
+    # END TODO
+
     # here we create the model with input and output
     model = tf.keras.Model(inputs=input, outputs=output)
     # we need to compile the model, ie. to specify the loss we want to minimize,
