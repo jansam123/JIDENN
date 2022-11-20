@@ -56,11 +56,6 @@ def main(args: argparse.Namespace) -> None:
     files = [os.path.join(base_dir, f) for f in os.listdir(base_dir) if f.startswith('_')]
     logging.info(f"Found {len(files)} files")
     logging.info(f"Files: {files}")
-    element_specs = []
-    for fil in files:
-        element_spec_path = os.path.join(fil, 'element_spec')
-        with open(element_spec_path, 'rb') as f:
-            element_specs.append(pickle.load(f))
 
     def load_dataset_file(element_spec, file: str) -> tf.data.Dataset:
         root_dt = tf.data.experimental.load(file, compression='GZIP', element_spec=element_spec)
@@ -68,10 +63,16 @@ def main(args: argparse.Namespace) -> None:
                               deterministic=False).filter(filter_empty_jets)
         root_dt = root_dt.prefetch(tf.data.AUTOTUNE)
         return root_dt
-
-    dataset = load_dataset_file(element_specs[0], files[0])
-    for file, spec in zip(files[1:], element_specs[1:]):
-        dataset = dataset.concatenate(load_dataset_file(spec, file))
+    
+    with open(os.path.join(files[0], 'element_spec'), 'rb') as f:
+        element_spec = pickle.load(f)
+    dataset = load_dataset_file(element_spec, files[0])
+    
+    for file in files[1:]:
+        with open(os.path.join(file, 'element_spec'), 'rb') as f:
+            element_spec = pickle.load(f)
+        dataset = dataset.concatenate(load_dataset_file(element_spec, file))
+        
     dataset = dataset.interleave(flatten_toJet, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
     dataset = dataset.shuffle(1000, reshuffle_each_iteration=False)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)

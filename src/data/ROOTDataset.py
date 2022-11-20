@@ -1,18 +1,16 @@
 from __future__ import annotations
 import tensorflow as tf
-from typing import Callable, Union
+from typing import Callable
 import pickle
 import os
 import uproot
 import logging
 import pandas as pd
 import awkward as ak
-import numpy as np
 #
+from .utils.conversions import pandas_to_tensor, awkward_to_tensor
 
-logging.basicConfig(format='[%(asctime)s][%(levelname)s] - %(message)s',
-                    level=logging.INFO,  datefmt='%Y-%m-%d %H:%M:%S')
-log = logging.getLogger(__name__)
+
 
 ROOTVariables = dict[str, tf.RaggedTensor]
 
@@ -36,82 +34,52 @@ class ROOTDataset:
     @classmethod
     def from_root_file(cls, filename: str,
                        tree_name: str = 'NOMINAL',
-                       metadata_hist: str = 'h_metadata') -> ROOTDataset:
+                       metadata_hist: str = 'h_metadata',
+                       backend: str = 'pd') -> ROOTDataset:
+        file = uproot.open(filename, object_cache=None, array_cache=None)
+        tree = file[tree_name]
+        
+        logging.info(f"Loading ROOT file {filename}")
+        if backend == 'pd':
+            sample = cls._read_tree_pandas_backend(tree)
+        elif backend == 'ak':
+            sample = cls._read_tree_awkward_backend(tree)
+        else:
+            raise ValueError("Only pd or ak backends are supported.")
 
-        log.info(f"Loading ROOT file {filename}")
-        sample = cls._load_root_file(filename, tree_name, metadata_hist)
-
-        log.info(f'Done loading file:{filename}')
+        if metadata_hist is not None:
+            logging.info("Getting metadata")
+            metadata = file[metadata_hist].values()
+            sample['metadata'] = tf.tile(tf.constant(metadata)[tf.newaxis, :], [sample['eventNumber'].shape[0], 1])
+            
+        logging.info(f'Done loading file:{filename}')
         dataset = tf.data.Dataset.from_tensor_slices(sample)
         return cls(dataset, list(sample.keys()))
 
     @classmethod
-    def _load_root_file(cls, filename: str, tree_name: str = 'NOMINAL', metadata_hist: str = 'h_metadata') -> ROOTVariables:
-        file = uproot.open(filename, object_cache=None, array_cache=None)
-        tree = file[tree_name]
+    def _read_tree_pandas_backend(cls, tree: uproot.TBranch) -> ROOTVariables:
         variables = tree.keys()
-
         sample = {}
         for var in variables:
             df = tree[var].array(library="ak")
-            # if df.empty:
-            #     continue
+            df: pd.DataFrame = ak.to_pandas(df)
+            if df.empty:
+                continue
+            sample[var] = pandas_to_tensor(df['values'])
+            logging.info(f'{var}: {sample[var].shape}')
+        return sample
+    
+    @classmethod
+    def _read_tree_awkward_backend(cls, tree: uproot.TBranch) -> ROOTVariables:
+        variables = tree.keys()
+        sample = {}
+        for var in variables:
+            df = tree[var].array(library="ak")
             if ak.size(ak.flatten(df, axis=None)) == 0:
                 continue
-            sample[var] = cls.awkward_to_tensor(df)
-
-        if metadata_hist is not None:
-            log.info("Getting metadata")
-            metadata = file[metadata_hist].values()
-            sample['metadata'] = tf.tile(tf.constant(metadata)[tf.newaxis, :], [sample['eventNumber'].shape[0], 1])
-
+            sample[var] = awkward_to_tensor(df)
+            logging.info(f'{var}: {sample[var].shape}')
         return sample
-
-    @classmethod
-    def _parse_var(cls, df: pd.Series) -> tf.RaggedTensor:
-        if df.index.nlevels == 1 and df.dtypes == 'object':
-            df = df.explode()
-            value_rowids = df.index.get_level_values(0).to_numpy()
-            df = df.reset_index(drop=True).explode()
-            value_rowids_2 = df.index.get_level_values(0).to_numpy()
-            df = np.array(df.values.tolist())
-            return tf.RaggedTensor.from_nested_value_rowids(df, nested_value_rowids=[
-                value_rowids, value_rowids_2], validate=False)
-        elif df.index.nlevels == 1 and df.dtypes != 'object':
-            return tf.constant(df)
-        elif df.index.nlevels > 1:
-            value_rowids = df.index.get_level_values(0).values
-            return tf.RaggedTensor.from_value_rowids(df.values, value_rowids, validate=False)
-        else:
-            return tf.constant(df)
-
-    @classmethod
-    def pandas_to_tensor(cls, df: pd.DataFrame) -> tf.RaggedTensor:
-        if df.index.nlevels == 1:
-            return tf.constant(df.values[:, 0])
-        elif df.index.nlevels == 2:
-            row_lengths_1 = df.groupby(level=[0]).count()
-            return tf.RaggedTensor.from_row_lengths(df.values[:, 0], row_lengths_1.values[:, 0], validate=False)
-        elif df.index.nlevels == 3:
-            row_lengths_1 = df.groupby(level=[0, 1]).count()
-            row_lengths_2 = row_lengths_1.groupby(level=[0]).count()
-            return tf.RaggedTensor.from_nested_row_lengths(df.values[:, 0], nested_row_lengths=[
-                row_lengths_1.values[:, 0], row_lengths_2.values[:, 0]], validate=False)
-        else:
-            return tf.constant(df)
-
-    @classmethod
-    def awkward_to_tensor(cls, array: ak.Array) -> tf.RaggedTensor:
-        if array.ndim == 1:
-            return tf.constant(array.to_list())
-        elif array.ndim == 2:
-            row_lengths = ak.num(array, axis=1).to_list()
-            return tf.RaggedTensor.from_row_lengths(ak.flatten(array, axis=None).to_list(), row_lengths=row_lengths, validate=False)
-        else:
-            nested_row_lengths = [ak.flatten(ak.num(array, axis=ax), axis=None).to_list()
-                                  for ax in range(1, array.ndim)]
-            return tf.RaggedTensor.from_nested_row_lengths(ak.flatten(
-                array, axis=None).to_list(), nested_row_lengths=nested_row_lengths, validate=False)
 
     @classmethod
     def _concat(cls, datasets: list[ROOTDataset]) -> ROOTDataset:
