@@ -1,4 +1,3 @@
-#!/home/jankovys/JIDENN/venv/bin/python
 import tensorflow as tf
 import uproot
 import awkward as ak
