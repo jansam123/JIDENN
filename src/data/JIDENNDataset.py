@@ -9,7 +9,7 @@ import vector
 import uproot
 #
 import src.config.config_subclasses as cfg
-from src.data.utils.Expression import Expression
+from .utils.Expression import Expression
 # import pandas as pd
 # import time
 # import os

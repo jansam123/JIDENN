@@ -52,8 +52,6 @@ class Data:
     raw_quarks: list[int]
     raw_unknown: list[int]
     path: str   # Path to data folder containing folder of *.root files.
-    reading_size: int   # Number of events to load at a time.
-    num_workers: int   # Number of workers to use when loading data.
     JZ_slices: list[int] | None   # Slices of JZ to use.
     JZ_cut: list[str] | None   # Cut to apply to JZ slices.
     JZ_weights: list[float] | None   # Weights to apply to JZ slices.
