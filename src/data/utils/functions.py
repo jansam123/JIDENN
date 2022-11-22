@@ -1,11 +1,19 @@
 import tensorflow as tf
 import vector
 import awkward as ak
+import pandas as pd
+
 
 # def split_by_size(self, size: float) -> tuple[ROOTDataset, ROOTDataset]:
 #     return ROOTDataset(self._dataset.take(int(size * self._dataset.cardinality().numpy())), self._variables), ROOTDataset(self._dataset.skip(int(size * self._dataset.cardinality().numpy())), self._variables)
 
+
 def split_dataset(dataset: tf.data.Dataset, size: float) -> tuple[tf.data.Dataset, tf.data.Dataset]:
+    if dataset.cardinality() == tf.data.UNKNOWN_CARDINALITY:
+        raise ValueError("Cannot split dataset with unknown cardinility.")
+    if dataset.cardinality() == tf.data.INFINITE_CARDINALITY:
+        raise ValueError("Cannot split dataset with infinite cardinility.")
+
     return dataset.take(int(size * dataset.cardinality().numpy())), dataset.skip(int(size * dataset.cardinality().numpy()))
 
 
@@ -15,6 +23,7 @@ def split_train_dev_test(dataset: tf.data.Dataset, test_size: float, dev_size: f
     dev, test = split_dataset(dev_test, dev_size / (1 - train_size))
     return train, dev, test
 
+    
 
 # def get_PFO_in_JetFrame(jets_pt: tf.Tensor,
 #                         jets_eta: tf.Tensor,

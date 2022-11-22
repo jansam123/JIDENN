@@ -59,53 +59,53 @@ def main(args: config.JIDENNConfig) -> None:
 
     # dataset preparation
     if args.data.cached is None:
-        train_files = []
-        dev_files = []
-        test_files = []
-        folders = os.listdir(args.data.path)
-        folders.sort()
-        slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
-        folders = [folders[slc-1] for slc in slices]
-        log.info(f"Folders used for training: {folders}")
-        for folder in folders:
-            train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
-                os.path.join(args.data.path, folder, 'train'))])
-            dev_files.append([os.path.join(args.data.path, folder, 'dev', file) for file in os.listdir(
-                os.path.join(args.data.path, folder, 'dev'))])
-            test_files.append([os.path.join(args.data.path, folder, 'test', file) for file in os.listdir(
-                os.path.join(args.data.path, folder, 'test'))])
+    train_files = []
+    dev_files = []
+    test_files = []
+    folders = os.listdir(args.data.path)
+    folders.sort()
+    slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
+    folders = [folders[slc-1] for slc in slices]
+    log.info(f"Folders used for training: {folders}")
+    for folder in folders:
+        train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
+            os.path.join(args.data.path, folder, 'train'))])
+        dev_files.append([os.path.join(args.data.path, folder, 'dev', file) for file in os.listdir(
+            os.path.join(args.data.path, folder, 'dev'))])
+        test_files.append([os.path.join(args.data.path, folder, 'test', file) for file in os.listdir(
+            os.path.join(args.data.path, folder, 'test'))])
 
-        if len(train_files) == 0:
-            log.error("No data found!")
-            raise FileNotFoundError("No data found!")
+    if len(train_files) == 0:
+        log.error("No data found!")
+        raise FileNotFoundError("No data found!")
 
-        dev_size = int(args.dataset.take *
-                       args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
-        test_size = int(
-            args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
-        train = get_preprocessed_dataset(train_files, args_data=args.data,
-                                         args_dataset=args.dataset, name="train", size=args.dataset.take)
-        dev = get_preprocessed_dataset(dev_files, args_data=args.data,
-                                       args_dataset=args.dataset, name="dev", size=dev_size)
-        test = get_preprocessed_dataset(test_files, args_data=args.data,
-                                        args_dataset=args.dataset, name="test", size=test_size)
-    else:
-        with open(os.path.join(args.data.cached, "train") + '/element_spec', 'rb') as in_:
-            es = pickle.load(in_)
+    dev_size = int(args.dataset.take *
+                    args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
+    test_size = int(
+        args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
+    train = get_preprocessed_dataset(train_files, args_data=args.data,
+                                        args_dataset=args.dataset, name="train", size=args.dataset.take)
+    dev = get_preprocessed_dataset(dev_files, args_data=args.data,
+                                    args_dataset=args.dataset, name="dev", size=dev_size)
+    test = get_preprocessed_dataset(test_files, args_data=args.data,
+                                    args_dataset=args.dataset, name="test", size=test_size)
+    # else:
+    #     with open(os.path.join(args.data.cached, "train") + '/element_spec', 'rb') as in_:
+    #         es = pickle.load(in_)
 
-        train, dev, test = [tf.data.experimental.load(os.path.join(
-            args.data.cached, f"{name}"), es) for name in ["train", "dev", "test"]]
-        if args.dataset.take is not None:
-            dev_size = int(args.dataset.take *
-                           args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
-            test_size = int(
-                args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
-            train = train.take(args.dataset.take)
-            dev = dev.take(dev_size)
-            test = test.take(test_size)
+    #     train, dev, test = [tf.data.experimental.load(os.path.join(
+    #         args.data.cached, f"{name}"), es) for name in ["train", "dev", "test"]]
+    #     if args.dataset.take is not None:
+    #         dev_size = int(args.dataset.take *
+    #                        args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
+    #         test_size = int(
+    #             args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
+    #         train = train.take(args.dataset.take)
+    #         dev = dev.take(dev_size)
+    #         test = test.take(test_size)
 
-        train, dev, test = [ds.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
-                            for ds in [train, dev, test]]
+    #     train, dev, test = [ds.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
+    #                         for ds in [train, dev, test]]
 
     if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0:
         log.info(f"Drawing data distribution with {args.preprocess.draw_distribution} samples")

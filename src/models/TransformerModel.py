@@ -81,8 +81,6 @@ class TransformerModel(tf.keras.Model):
 
     class Transformer(tf.keras.layers.Layer):
         def __init__(self, layers, dim, expansion, heads, dropout, activation, *args, **kwargs):
-            # Make sure `dim` is even.
-            assert dim % 2 == 0
 
             super().__init__(*args, **kwargs)
             self.layers, self.dim, self.expansion, self.heads, self.dropout = layers, dim, expansion, heads, dropout
