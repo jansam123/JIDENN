@@ -4,7 +4,6 @@ import pandas as pd
 import os
 import logging
 import hydra
-import pickle
 from hydra.core.config_store import ConfigStore
 #
 from src.data.get_dataset import get_preprocessed_dataset
@@ -13,7 +12,7 @@ from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.postprocess.tb_plots import tb_postprocess
 from src.postprocess.pipeline import postprocess_pipe
-from src.models import basicFC, transformer, BDT, highway
+from src.models import basicFC, transformer, highway #,BDT
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -58,37 +57,37 @@ def main(args: config.JIDENNConfig) -> None:
     mirrored_strategy = tf.distribute.MirroredStrategy() if len(gpus) > 1 else None
 
     # dataset preparation
-    if args.data.cached is None:
-    train_files = []
-    dev_files = []
-    test_files = []
-    folders = os.listdir(args.data.path)
-    folders.sort()
-    slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
-    folders = [folders[slc-1] for slc in slices]
-    log.info(f"Folders used for training: {folders}")
-    for folder in folders:
-        train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
-            os.path.join(args.data.path, folder, 'train'))])
-        dev_files.append([os.path.join(args.data.path, folder, 'dev', file) for file in os.listdir(
-            os.path.join(args.data.path, folder, 'dev'))])
-        test_files.append([os.path.join(args.data.path, folder, 'test', file) for file in os.listdir(
-            os.path.join(args.data.path, folder, 'test'))])
 
-    if len(train_files) == 0:
-        log.error("No data found!")
-        raise FileNotFoundError("No data found!")
+    # train_files = []
+    # dev_files = []
+    # test_files = []
+    # folders = os.listdir(args.data.path)
+    # folders.sort()
+    # slices = args.data.JZ_slices if args.data.JZ_slices is not None else list(range(1, 13))
+    # folders = [folders[slc-1] for slc in slices]
+    # log.info(f"Folders used for training: {folders}")
+    # for folder in folders:
+    #     train_files.append([os.path.join(args.data.path, folder, 'train', file) for file in os.listdir(
+    #         os.path.join(args.data.path, folder, 'train'))])
+    #     dev_files.append([os.path.join(args.data.path, folder, 'dev', file) for file in os.listdir(
+    #         os.path.join(args.data.path, folder, 'dev'))])
+    #     test_files.append([os.path.join(args.data.path, folder, 'test', file) for file in os.listdir(
+    #         os.path.join(args.data.path, folder, 'test'))])
 
-    dev_size = int(args.dataset.take *
-                    args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
-    test_size = int(
-        args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
-    train = get_preprocessed_dataset(train_files, args_data=args.data,
-                                        args_dataset=args.dataset, name="train", size=args.dataset.take)
-    dev = get_preprocessed_dataset(dev_files, args_data=args.data,
-                                    args_dataset=args.dataset, name="dev", size=dev_size)
-    test = get_preprocessed_dataset(test_files, args_data=args.data,
-                                    args_dataset=args.dataset, name="test", size=test_size)
+    # if len(train_files) == 0:
+    #     log.error("No data found!")
+    #     raise FileNotFoundError("No data found!")
+
+    # dev_size = int(args.dataset.take *
+    #                 args.dataset.dev_size) if args.dataset.take is not None and args.dataset.dev_size is not None else None
+    # test_size = int(
+    #     args.dataset.take*args.dataset.test_size) if args.dataset.take is not None and args.dataset.test_size is not None else None
+    # train = get_preprocessed_dataset(train_files, args_data=args.data,
+    #                                     args_dataset=args.dataset, name="train", size=args.dataset.take)
+    # dev = get_preprocessed_dataset(dev_files, args_data=args.data,
+    #                                 args_dataset=args.dataset, name="dev", size=dev_size)
+    # test = get_preprocessed_dataset(test_files, args_data=args.data,
+    #                                 args_dataset=args.dataset, name="test", size=test_size)
     # else:
     #     with open(os.path.join(args.data.cached, "train") + '/element_spec', 'rb') as in_:
     #         es = pickle.load(in_)
@@ -106,6 +105,29 @@ def main(args: config.JIDENNConfig) -> None:
 
     #     train, dev, test = [ds.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
     #                         for ds in [train, dev, test]]
+    path = '/Users/samueljankovych/Documents/MFF/bakalarka/JIDENN/data/data2/JZ04_full'
+    train, dev, test = get_preprocessed_dataset([path], args_data=args.data, test_size=0.2, dev_size=0.2)
+
+    @tf.function
+    def get_constituents(sample, label, weight):
+        return tf.RaggedTensor.from_tensor(tf.stack([sample['perJetTuple'][var] for var in args.data.variables.perJetTuple], axis=-1)), label, weight
+    
+    @tf.function
+    def setup_dataset(dataset):
+        dataset = dataset.map(get_constituents)
+        dataset = dataset.batch(args.dataset.batch_size)
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
+        return dataset
+    
+    train = train.apply(setup_dataset)
+    dev = dev.apply(setup_dataset)
+    test = test.apply(setup_dataset)
+
+    # train = train.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
+    # dev = dev.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
+    # test = test.batch(args.dataset.batch_size).prefetch(tf.data.AUTOTUNE)
+    # 198815 all
+
 
     if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0:
         log.info(f"Drawing data distribution with {args.preprocess.draw_distribution} samples")

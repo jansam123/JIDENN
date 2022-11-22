@@ -38,7 +38,7 @@ class TransformerModel(tf.keras.Model):
         def get_config(self):
             return {"dim": self.dim, "heads": self.heads}
 
-        def call(self, inputs):
+        def call(self, inputs, mask):
             # TODO: Execute the self-attention layer.
             #
             # Start by computing Q, K and V. In all cases:
@@ -65,7 +65,8 @@ class TransformerModel(tf.keras.Model):
             #   of padding words to -1e9.
             # - Alternatively, you can use the fact that tf.keras.layers.Softmax accepts a named
             #   boolean argument `mask` indicating the valid (True) or padding (False) elements.
-            Z = tf.keras.layers.Softmax()(Z)
+            mask = mask[:, tf.newaxis, tf.newaxis, :] & mask[:, tf.newaxis, :, tf.newaxis]
+            Z = tf.keras.layers.Softmax()(Z, mask=mask)
 
             # TODO: Finally,
             # - take a weighted combination of values V according to the computed attention
@@ -97,7 +98,7 @@ class TransformerModel(tf.keras.Model):
         def get_config(self):
             return {name: getattr(self, name) for name in ["layers", "dim", "expansion", "heads", "dropout"]}
 
-        def call(self, inputs):
+        def call(self, inputs, mask):
             # Perform the given number of transformer layers, composed of
             # - a self-attention sub-layer, followed by
             # - a FFN sub-layer.
@@ -107,7 +108,7 @@ class TransformerModel(tf.keras.Model):
             encoded = inputs
             for ffn, self_att, layer_norm_fnn, layer_norm_attn in zip(self.FFN, self.self_attention, self.layer_norms_fnn, self.layer_norms_attn):
                 attended = layer_norm_attn(encoded)
-                attended = self_att(attended)
+                attended = self_att(attended, mask)
                 attended = self.add([encoded, self.dropout(attended)])
 
                 encoded = layer_norm_fnn(attended)
@@ -117,7 +118,7 @@ class TransformerModel(tf.keras.Model):
             return encoded
         
     def __init__(self, 
-                 input_size: int,
+                 input_shape: tuple[int],
                  embedding_dim: int,
                  transformer_layers: int,
                  transformer_expansion: int, 
@@ -125,20 +126,18 @@ class TransformerModel(tf.keras.Model):
                  transformer_dropout: float,
                  last_hidden_layer: int,
                  output_layer: tf.keras.layers.Layer, 
-                 metrics: list[tf.keras.metrics.Metric],
-                 loss: tf.keras.losses.Loss,
-                 optimizer:tf.keras.optimizers.Optimizer,
                  activation:Callable[[tf.Tensor], tf.Tensor],
                  preprocess: tf.keras.layers.Layer | None = None):
         # Implement a transformer encoder network. The input `words` is
         # a RaggedTensor of strings, each batch example being a list of words.
-        input = tf.keras.layers.Input(shape=(input_size))
+        input = tf.keras.layers.Input(shape=input_shape, ragged=True)
         if preprocess is not None:
             hidden = preprocess(input)
         else:
             hidden = input
     
-        hidden = tf.keras.layers.Embedding(input_dim=input_size, output_dim=embedding_dim)(hidden)
+        # hidden = tf.keras.layers.Embedding(input_dim=input_shape[-1], output_dim=embedding_dim)(hidden)
+        hidden = tf.keras.layers.Dense(embedding_dim)(hidden)
 
         # TODO: Call the Transformer layer:
         # - create a `Model.Transformer` layer, using suitable options from `args`
@@ -147,19 +146,22 @@ class TransformerModel(tf.keras.Model):
         #   to a dense one, and also pass the following argument as a mask:
         #     `mask=tf.sequence_mask(ragged_tensor_with_input_words_embeddings.row_lengths())`
         # - finally, convert the result back to a ragged tensor.
-        transformed = TransformerModel.Transformer(transformer_layers, embedding_dim, transformer_expansion, transformer_heads, transformer_dropout, activation)(hidden)
+        # transformed = TransformerModel.Transformer(transformer_layers, embedding_dim, transformer_expansion, transformer_heads, transformer_dropout, activation)(hidden)
+        transformed = tf.RaggedTensor.from_tensor(
+            TransformerModel.Transformer(transformer_layers, embedding_dim, transformer_expansion, transformer_heads, transformer_dropout, activation)(
+                hidden.to_tensor(), mask=tf.sequence_mask(hidden.row_lengths())),
+            hidden.row_lengths(),
+        )
 
         # TODO(tagger_we): Add a softmax classification layer into as many classes as there are unique
         # tags in the `word_mapping` of `train.tags`. Note that the Dense layer can process
         # a `RaggedTensor` without any problem.
-        transformed = tf.keras.layers.Flatten()(transformed)
+        transformed = tf.keras.layers.GlobalAveragePooling1D()(transformed)
         transformed = tf.keras.layers.Dense(last_hidden_layer, activation=activation)(transformed)
         output = output_layer(transformed)
                 
         super().__init__(inputs=input, outputs=output)
         
-        self.compile(optimizer=optimizer,  # type: ignore
-                                loss=loss,
-                                weighted_metrics=metrics,)
+
 
         
