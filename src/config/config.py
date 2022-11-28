@@ -12,5 +12,6 @@ class JIDENNConfig:
     transformer: Transformer
     bdt: BDT
     highway: Highway
+    part: ParT
 
     

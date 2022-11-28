@@ -3,7 +3,7 @@ import tensorflow_addons as tfa
 from typing import Union
 
 from src.config import config_subclasses as cfg
-from src.models.TransformerModel import TransformerModel
+from src.models.ParTModel import ParTModel
 
 
 class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
@@ -25,7 +25,7 @@ class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
                        lambda: self._following(step - self._warmup_steps))
 
 
-def create(args: cfg.Params, args_model: cfg.Transformer, args_data: cfg.Data, preprocess: Union[tf.keras.layers.Layer, None] = None) -> TransformerModel:
+def create(args: cfg.Params, args_model: cfg.ParT, args_data: cfg.Data, preprocess: Union[tf.keras.layers.Layer, None] = None) -> ParTModel:
 
     activations = {'relu': tf.nn.relu, 'elu': tf.nn.elu, 'gelu': tf.nn.gelu, 'silu': tf.nn.silu}
     activation = activations[args.activation]
@@ -48,16 +48,17 @@ def create(args: cfg.Params, args_model: cfg.Transformer, args_data: cfg.Data, p
     else:
         optimizer = tf.optimizers.Adam(learning_rate=l_r)
 
-    model = TransformerModel(
+    model = ParTModel(
         input_shape=(None, args_data.input_size),
         output_layer=output,
         #
         embedding_dim=args_model.embed_dim,
         num_embeding_layers=args_model.num_embed_layers,
-        transformer_layers=args_model.transformer_layers,
+        particle_block_layers=args_model.particle_block_layers,
+        class_block_layers=args_model.class_block_layers,
         transformer_expansion=args_model.transformer_expansion,
         transformer_heads=args_model.transformer_heads,
-        transformer_dropout=args_model.transformer_dropout,
+        particle_block_dropout=args_model.particle_block_dropout,
         #
         preprocess=preprocess,
         activation=activation

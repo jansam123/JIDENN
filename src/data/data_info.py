@@ -4,6 +4,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import pandas as pd
+import logging
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import mutual_info_classif, f_classif, chi2
 
@@ -27,7 +28,10 @@ def generate_data_distributions(df: pd.DataFrame,
     corr_matrix = df.corr()
     # create distributions of data, labels and weights
     for var_name in var_names+['label', 'weight']:
-        sns.histplot(data=df, x=var_name, hue='named_label', stat='count')
+        try:
+            sns.histplot(data=df, x=var_name, hue='named_label', stat='count')
+        except TypeError:
+            logging.warning(f'Could not plot {var_name}, skipping')
         plt.savefig(os.path.join(folder, f'{var_name}.png'))
         plt.close('all')
 

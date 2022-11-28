@@ -1,13 +1,14 @@
 #!/bin/bash
-#SBATCH --partition=ucjf                             
+#SBATCH --partition=ffa                             
 #SBATCH --mem=32G                   
-#SBATCH --time=3-00:00:00	                               
+#SBATCH --time=12:00:00	                               
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1       
 #SBATCH --array=0-5
 #SBATCH --cpus-per-task=32
-#SBATCH --job-name="even_split"                    
+#SBATCH --job-name="triple_split"                    
 #SBATCH --output=out/convert_%A_%a.log
+#SBATCH --constraint=avx
 
 # JZ00
 # frac of q/g = 0.04
@@ -50,4 +51,4 @@ num_shards=(10 190 168 230 282 162)
 
 printf -v pad_id "%02d" $SLURM_ARRAY_TASK_ID
 
-venv/bin/python3 second_stage_preparation.py --file_path="/work/ucjf-atlas/jankovys/JIDENN/data/dataset2/JZ${pad_id}_r10724" --save_path="/work/ucjf-atlas/jankovys/JIDENN/data/dataset2_2/JZ${pad_id}_r10724" --num_shards=${num_shards[$SLURM_ARRAY_TASK_ID]} 
+ch-run -w -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 split_dataset.py --load_path="/home/jankovys/JIDENN/data/dataset2/JZ${pad_id}_r10724" --save_path="/home/jankovys/JIDENN/data/dataset2_3/JZ${pad_id}_r10724" --num_shards=${num_shards[$SLURM_ARRAY_TASK_ID]} 

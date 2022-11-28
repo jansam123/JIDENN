@@ -14,3 +14,4 @@ class EvalConfig:
     batch_size: int
     take: int
     feature_importance: bool
+    model: str

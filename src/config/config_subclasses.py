@@ -56,16 +56,16 @@ class Data:
     JZ_cut: list[str] | None   # Cut to apply to JZ slices.
     JZ_weights: list[float] | None   # Weights to apply to JZ slices.
     cached: str | None   # Path to cached data.
-    element_spec_file: str
+
 
 @dataclass
 class Dataset:
     batch_size: int   # Batch size.
     validation_step: int   # Validation every n batches.
+    dev_size: float   # Size of dev dataset.
+    test_size: float  # Size of test dataset.
     take: int | None   # Length of data to use.
     shuffle_buffer: int | None   # Size of shuffler buffer.
-    dev_size: float | None = None  # Size of dev dataset.
-    test_size: float | None = None # Size of test dataset.
 
 
 @dataclass
@@ -99,5 +99,17 @@ class Transformer:
     transformer_expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
     transformer_heads: int  # 12, must divide embed_dim
     transformer_layers: int  # 6,12
-    last_hidden_layer: int  # Size of last fully connected layer.
     embed_dim: int
+    num_embed_layers: int
+    
+
+@dataclass
+class ParT:
+    warmup_steps: int  # Number of steps to warmup for
+    particle_block_dropout: float  # Dropout after FFN layer.
+    transformer_expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
+    transformer_heads: int  # 12, must divide embed_dim
+    particle_block_layers: int  # 6,12
+    class_block_layers: int
+    embed_dim: int
+    num_embed_layers: int
