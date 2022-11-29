@@ -3,57 +3,117 @@ from typing import Callable, Union
 
 
 class FFN(tf.keras.layers.Layer):
-    def __init__(self, dim, expansion, activation, dropout, *args, **kwargs):
+    def __init__(self, dim, expansion=4, activation=tf.nn.gelu, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
+        self.dim, self.expansion, self.activation = dim, expansion, activation
         # Create the required layers -- first a ReLU-activated dense
         # layer with `dim * expansion` units, followed by a dense layer
         # with `dim` units without an activation.
         self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
         self.dense = tf.keras.layers.Dense(dim, activation=None)
-        self.ln = tf.keras.layers.LayerNormalization()
-        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+        self.preln = tf.keras.layers.LayerNormalization()
+        # self.postln = tf.keras.layers.LayerNormalization()
 
     def get_config(self):
         config = super(FFN, self).get_config()
-        config.update({"dim": self.dim, "expansion": self.expansion,
-                      "activation": self.activation, "dropout": self.dropout})
+        config.update({"dim": self.dim, "expansion": self.expansion, "activation": self.activation})
         return config
 
     def call(self, inputs):
         # Execute the FFN Transformer layer.
-        output = self.ln(inputs)
+        output = self.preln(inputs)
         output = self.wide_dense(output)
+        # output = self.postln(output)
         output = self.dense(output)
-        output = self.layer_dropout(output)
         return output
 
 
-class AttentionBlock(tf.keras.layers.Layer):
-    def __init__(self, dim, heads, dropout, *args, **kwargs):
+class P_MHA(tf.keras.layers.Layer):
+    def __init__(self, dim, heads=8, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dim, self.heads, self.dropout = dim, heads, dropout
+        self.dim, self.heads = dim, heads
+        self.preln = tf.keras.layers.LayerNormalization()
         self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
-        self.ln = tf.keras.layers.LayerNormalization()
+        # self.postln = tf.keras.layers.LayerNormalization()
+
+    def get_config(self):
+        config = super(P_MHA, self).get_config()
+        config.update({"dim": self.dim, "heads": self.heads})
+        return config
+
+    def call(self, inputs, mask):
+        # Execute the Self-Attention Transformer layer.
+        inputs = self.preln(inputs)
+        output = self.mha(query=inputs, value=inputs, key=inputs, attention_mask=mask)
+        # output = self.postln(output)
+        return output
+
+
+class MHA(tf.keras.layers.Layer):
+    def __init__(self, dim, heads=8, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dim, self.heads = dim, heads
+        self.preln = tf.keras.layers.LayerNormalization()
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
+        # self.postln = tf.keras.layers.LayerNormalization()
+
+    def get_config(self):
+        config = super(MHA, self).get_config()
+        config.update({"dim": self.dim, "heads": self.heads, })
+        return config
+
+    def call(self, query, inputs, mask):
+        # Execute the Self-Attention Transformer layer.
+        inputs = self.preln(inputs)
+        output = self.mha(query=query, value=inputs, key=inputs, attention_mask=mask)
+        # output = self.postln(output)
+        return output
+
+
+class ParticleAttentionBlock(tf.keras.layers.Layer):
+    def __init__(self, dim, heads=8, expansion=4, dropout=0.1, activation=tf.nn.gelu, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dim, self.heads, self.expansion, self.activation, self.dropout = dim, heads, expansion, activation, dropout
+        self.p_mha = P_MHA(dim, heads)
+        self.ffn = FFN(dim, expansion, activation)
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
     def get_config(self):
-        config = super(AttentionBlock, self).get_config()
-        config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout})
+        config = super(ParticleAttentionBlock, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in ["layers", "dim", "expansion", "heads", "dropout", "activation"]})
         return config
 
-    def call(self, inputs, mask, class_token=None):
-        # Execute the Self-Attention Transformer layer.
-        if class_token is None:
-            output = self.ln(inputs)
-            output = self.mha(query=output, value=output, key=output, attention_mask=mask)
-        else:
-            output = tf.concat([class_token, inputs], axis=1)
-            output = self.ln(output)
-            output = self.mha(query=class_token, value=output, key=output, attention_mask=mask)
+    def call(self, inputs, mask):
+        attned = self.p_mha(inputs, mask)
+        attned = self.layer_dropout(attned)
+        attned = inputs + attned
+        output = self.ffn(attned)
         output = self.layer_dropout(output)
+        output = output + attned
         return output
 
+
+class ClassAttentionBlock(tf.keras.layers.Layer):
+    def __init__(self, dim, heads=8, expansion=4, activation=tf.nn.gelu, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dim, self.heads, self.expansion, self.activation = dim, heads, expansion, activation
+        self.mha = MHA(dim, heads,)
+        self.ffn = FFN(dim, expansion, activation)
+
+    def get_config(self):
+        config = super(ClassAttentionBlock, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in ["layers", "dim", "expansion", "heads", "activation"]})
+        return config
+
+    def call(self, class_token, inputs, mask):
+        inputs = tf.concat([class_token, inputs], axis=1)
+        attned = self.mha(class_token, inputs, mask)
+        attned = class_token + attned
+        output = self.ffn(attned)
+        output = output + attned
+        return output
 
 
 class ParT(tf.keras.layers.Layer):
@@ -67,11 +127,10 @@ class ParT(tf.keras.layers.Layer):
         # Create the required number of transformer layers, each consisting of
         # - a layer normalization and a self-attention layer followed by a dropout layer,
         # - a layer normalization and a FFN layer followed by a dropout layer.
-        self.class_token = tf.Variable(tf.random.normal((1, 1, dim)), trainable=True)
-        self.particle_layers = [(AttentionBlock(dim, heads, dropout), FFN(dim, expansion, activation, dropout))
-                                for _ in range(num_particle_layers)]
-        self.class_layers = [(AttentionBlock(dim, heads, 0.), FFN(dim, expansion, activation, 0.))
-                             for _ in range(num_class_layers)]
+        self.class_token = tf.Variable(tf.zeros((1, 1, dim)), trainable=True)
+        self.particle_layers = [ParticleAttentionBlock(
+            dim, heads, expansion, dropout, activation) for _ in range(num_particle_layers)]
+        self.class_layers = [ClassAttentionBlock(dim, heads, expansion, activation) for _ in range(num_class_layers)]
 
     def get_config(self):
         config = super(ParT, self).get_config()
@@ -89,16 +148,13 @@ class ParT(tf.keras.layers.Layer):
         # passed to the self-attention operation to ignore the padding words.
         particle_mask = mask[:, tf.newaxis, :] & mask[:, :, tf.newaxis]
         hidden = inputs
-        for attn, ffn in self.particle_layers:
-            hidden += attn(hidden, particle_mask)
-            hidden += ffn(hidden)
-
+        for particle_layer in self.particle_layers:
+            hidden = particle_layer(hidden, particle_mask)
         query = tf.tile(self.class_token, [tf.shape(inputs)[0], 1, 1])
         class_mask = mask[:, tf.newaxis, :]
         class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
-        for attn, ffn in self.class_layers:
-            query += attn(hidden, class_mask, query)
-            query += ffn(query)
+        for class_layer in self.class_layers:
+            query = class_layer(query, hidden, class_mask)
         return query
 
 
@@ -147,8 +203,8 @@ class ParTModel(tf.keras.Model):
         hidden = ParticleEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
         transformed = ParT(embedding_dim, particle_block_layers, class_block_layers, transformer_expansion,
                            transformer_heads, particle_block_dropout, activation)(hidden, tf.sequence_mask(row_lengths))
-
+        transformed = tf.squeeze(transformed, axis=1)
         transformed = tf.keras.layers.LayerNormalization()(transformed)
-        output = output_layer(transformed[:, 0, :])
+        output = output_layer(transformed)
 
         super().__init__(inputs=input, outputs=output)

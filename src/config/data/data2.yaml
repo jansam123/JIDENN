@@ -3,7 +3,7 @@ labels: # list of labels to use.
   - gluon
   - quark
 num_labels: 2 # Number of labels to use.
-cut: "jets_pt>20_000" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+cut: "(jets_pt>20_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
 gluon: 0
 quark: 1
 raw_gluon: 21

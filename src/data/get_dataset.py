@@ -28,7 +28,7 @@ def get_preprocessed_dataset(files: list[str],
                                        target=args_data.target,
                                        weight=args_data.weight)
         jidenn_dataset = jidenn_dataset.load_dataset(jz_file)
-        jidenn_dataset = jidenn_dataset.process(cut=Cut(jz_cut) if jz_cut is not None else None)
+        jidenn_dataset = jidenn_dataset.process(cut=Cut(jz_cut) & Cut(args_data.cut) if args_data.cut is not None else Cut(jz_cut))
         jidenn_dataset = jidenn_dataset.resample_by_label(resample_g_q, [0.5, 0.5])
         jidenn_dataset = jidenn_dataset.remap_labels(label_mapping)
         datasets.append(jidenn_dataset)
