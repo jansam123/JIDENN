@@ -7,12 +7,13 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import roc_curve, confusion_matrix, auc
 from io import BytesIO
+from typing import List, Union
 
 sns.set_theme(style="dark")
 
 
 class ValidationFigure:
-    def __init__(self, df: pd.DataFrame, name: str = 'fig', class_names: list[str] | None = None):
+    def __init__(self, df: pd.DataFrame, name: str = 'fig', class_names: Union[List[str], None] = None):
         self._df = df
         self._name = name
         self._class_names = class_names
@@ -27,7 +28,7 @@ class ValidationFigure:
         return self._name
 
     @abstractmethod
-    def _get_fig(self, fig: plt.Figure | None = None) -> plt.Figure:
+    def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         "Method that creates matplotlib figure."
 
     def save_fig(self, path: str, format: str = 'png'):
@@ -60,7 +61,7 @@ class ValidationFigure:
 
 
 class ValidationROC(ValidationFigure):
-    def _get_fig(self, fig: plt.Figure | None = None) -> plt.Figure:
+    def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         fp, tp, _ = roc_curve(self._df['label'].values, self._df['score'].values)
         auc_score = auc(fp, tp)
 
@@ -79,7 +80,7 @@ class ValidationROC(ValidationFigure):
 
 class ValidationCM(ValidationFigure):
 
-    def _get_fig(self, fig: plt.Figure | None = None) -> plt.Figure:
+    def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         cm = confusion_matrix(self._df['label'].values, self._df['prediction'].values)
         if fig is None:
             fig = plt.figure(figsize=(6, 6))
@@ -94,7 +95,7 @@ class ValidationCM(ValidationFigure):
 
 
 class ValidationScoreHistogram(ValidationFigure):
-    def _get_fig(self, fig: plt.Figure | None = None) -> plt.Figure:
+    def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         sns.histplot(self._df, x='score', hue='named_label', stat='count')
@@ -103,7 +104,7 @@ class ValidationScoreHistogram(ValidationFigure):
 
 
 class ValidationLabelHistogram(ValidationFigure):
-    def _get_fig(self, fig: plt.Figure | None = None) -> plt.Figure:
+    def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         sns.histplot(self._df, x='named_prediction', hue='named_label', stat='count', multiple='stack')

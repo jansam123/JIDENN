@@ -1,4 +1,5 @@
 import tensorflow as tf
+from typing import Dict, Union
 
 
 class SimpleExpression:
@@ -15,7 +16,7 @@ class SimpleExpression:
         
         
 
-    def __call__(self, sample: dict[str, tf.Tensor]) -> tf.Tensor:
+    def __call__(self, sample: Dict[str, tf.Tensor]) -> tf.Tensor:
         if self._var not in sample:
             try:
                 return float(self._var)
@@ -67,7 +68,7 @@ class Expression:
         self._expression = expression
 
     @tf.function
-    def __call__(self, sample: dict[str, tf.Tensor]) -> tf.Tensor:
+    def __call__(self, sample: Dict[str, tf.Tensor]) -> tf.Tensor:
         return self._evaluate(self._expression, sample)
 
     def __str__(self):

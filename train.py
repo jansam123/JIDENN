@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_datasets as tfds
 import numpy as np
 import pandas as pd
 import os
@@ -11,9 +12,8 @@ import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.postprocess.tb_plots import tb_postprocess
-from src.postprocess.pipeline import postprocess_pipe
-from src.models import basicFC, transformer, highway, BDT, part
-from src.data.JIDENNDatasetV2 import get_constituents, get_high_level_variables
+from src.models import basicFC, transformer, highway, BDT, part, depart
+from src.data.get_train_input import get_train_input
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -41,8 +41,8 @@ def main(args: config.JIDENNConfig) -> None:
     # debug mode for tensorflow
     if args.params.debug:
         log.info("Debug mode enabled")
-        tf.data.experimental.enable_debug_mode()
         tf.config.run_functions_eagerly(True)
+        tf.data.experimental.enable_debug_mode()
 
     # fixing seed for reproducibility
     if args.params.seed is not None:
@@ -65,18 +65,26 @@ def main(args: config.JIDENNConfig) -> None:
 
     train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files]
 
+
+    # pick input variables according to model
+    interaction = args.part.interaction if args.params.model == 'part' else None
+    train = train.map_data(get_train_input(args.params.model, interaction))
+    dev = dev.map_data(get_train_input(args.params.model, interaction))
+    test = test.map_data(get_train_input(args.params.model, interaction))
+
+    # draw input data distribution
     if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0:
         log.info(f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
-        for name, dataset in zip(["train"], [train]):
-            dataset = dataset.apply(lambda x: x.take(args.preprocess.draw_distribution))
-            dir = os.path.join(args.params.logdir, 'dist', name)
-            os.makedirs(dir, exist_ok=True)
-            df = dataset.to_pandas()
-            if 'perJetTuple.jets_PFO_pt' in df.columns:
-                df['perJet.jets_PFO_n'] = df['perJetTuple.jets_PFO_pt'].apply(lambda x: len(x))
-            df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-            data_info.generate_data_distributions(df=df, folder=dir)
-
+        dir = os.path.join(args.params.logdir, 'dist')
+        os.makedirs(dir, exist_ok=True)
+        
+        dist_dataset = train.apply(lambda x: x.take(args.preprocess.draw_distribution))
+        df = dist_dataset.to_pandas()
+        df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
+        
+        data_info.generate_data_distributions(df=df, folder=dir)
+            
+    # get proper dataset size
     if args.dataset.take is not None:
         train_size = 1 - args.dataset.dev_size + args.dataset.test_size
         train_size = int(train_size * args.dataset.take)
@@ -85,26 +93,14 @@ def main(args: config.JIDENNConfig) -> None:
     else:
         train_size, dev_size, test_size = None, None, None
 
-    model_to_data_mapping = {
-        "basic_fc": get_high_level_variables,
-        "transformer": get_constituents,
-        "highway": get_high_level_variables,
-        "BDT": get_high_level_variables,
-        "part": get_constituents
-    }
-
+    # get fully prepared (batched, shuffled, prefetched) dataset
     train = train.get_dataset(batch_size=args.dataset.batch_size,
                               shuffle_buffer_size=args.dataset.shuffle_buffer,
-                              map_func=model_to_data_mapping[args.params.model],
                               take=train_size,
                               assert_shape=True)
-
     dev = dev.get_dataset(batch_size=args.dataset.batch_size,
-                          map_func=model_to_data_mapping[args.params.model],
                           take=dev_size)
-
     test = test.get_dataset(batch_size=args.dataset.batch_size,
-                            map_func=model_to_data_mapping[args.params.model],
                             take=test_size)
 
     def _model():
@@ -112,10 +108,20 @@ def main(args: config.JIDENNConfig) -> None:
             normalizer = tf.keras.layers.Normalization(axis=-1)
             log.info("Getting std and mean of the dataset...")
             log.info(f"Subsample size: {args.preprocess.normalization_size}")
+            if args.params.model in ['transformer', 'part', 'depart']:
+                if interaction:
+                    picker = lambda x: x[0][0].to_tensor()
+                else:
+                    picker = lambda x: x[0].to_tensor()
+            elif args.params.model in ['basic_fc', 'highway', 'bdt']:
+                picker = lambda x: x[0]
+            else:
+                log.error(f"Unknown model {args.params.model}")
             try:
-                normalizer.adapt(train.map(lambda x, y, z: x.to_tensor()), steps=args.preprocess.normalization_size)
-            except AttributeError:
-                normalizer.adapt(train.map(lambda x, y, z: x), steps=args.preprocess.normalization_size)
+                normalizer.adapt(train.map(picker), steps=args.preprocess.normalization_size)
+            except Exception as e:
+                log.error(f"Normalization failed: {e}")
+                normalizer = None
         else:
             normalizer = None
             log.warning("Normalization disabled.")
@@ -136,7 +142,11 @@ def main(args: config.JIDENNConfig) -> None:
             model = part.create(args.params, args.part, args.data, preprocess=normalizer)
             model.summary(print_fn=log.info)
 
-        elif args.params.model == 'BDT':
+        elif args.params.model == "depart":
+            model = depart.create(args.params, args.depart, args.data, preprocess=normalizer)
+            model.summary(print_fn=log.info)
+
+        elif args.params.model == 'bdt':
             args.params.epochs = 1
             model = BDT.create(args.bdt)
 
@@ -157,13 +167,13 @@ def main(args: config.JIDENNConfig) -> None:
     callbacks = get_callbacks(args.params, log, dev)
 
     # running training
-    history = model.fit(train, epochs=args.params.epochs, callbacks=callbacks, validation_data=dev, verbose=1)
+    history = model.fit(train, epochs=args.params.epochs, callbacks=callbacks, validation_data=dev, verbose=2 if args.params.model=='bdt' else 1)
 
     model_dir = os.path.join(args.params.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir, save_format='tf')
 
-    if args.params.model != 'BDT':
+    if args.params.model != 'bdt':
         log.info(f"Saving history")
         history_dir = os.path.join(args.params.logdir, 'history')
         os.makedirs(history_dir, exist_ok=True)
@@ -180,28 +190,17 @@ def main(args: config.JIDENNConfig) -> None:
 
     print(model.evaluate(test, return_dict=True))
 
-    if args.params.model == 'BDT':
+    if args.params.model == 'bdt':
         model.summary(print_fn=log.info)
         variable_importance_metric = "SUM_SCORE"
         variable_importances = model.make_inspector().variable_importances()[variable_importance_metric]
         variable_importances = pd.DataFrame({'variable': [str(vi[0].name) for vi in variable_importances],
                                              'score': [vi[1] for vi in variable_importances]})
-        all_variables = args.data.variables.perJet + args.data.variables.perEvent
+        variables_names = ['pt_jet', 'eta_jet', 'N_PFO', 'W_PFO_jet', 'C1_PFO_jet']
         variable_importances['variable'] = variable_importances['variable'].apply(
-            lambda x: all_variables[int(x.split('.')[-1])])
-        print(variable_importances)
+            lambda x: variables_names[int(x.split('.')[-1])])
         data_info.plot_feature_importance(variable_importances, os.path.join(
             args.params.logdir, f'feature_bdt_score.png'))
-
-        df = data_info.tf_dataset_to_pandas(dataset=test.unbatch(
-        ), var_names=args.data.variables.perJet+args.data.variables.perEvent)
-        score = model.predict(test).ravel()
-        df['score'] = score
-        df['prediction'] = score.round()
-        df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-        df['named_prediction'] = df['prediction'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-        postprocess_pipe(df, args.params.logdir, log=log)
-
     log.info("Done!")
 
 

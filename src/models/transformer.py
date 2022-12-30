@@ -3,26 +3,8 @@ import tensorflow_addons as tfa
 from typing import Union
 
 from src.config import config_subclasses as cfg
-from src.models.TransformerModel import TransformerModel
-
-
-class LinearWarmup(tf.optimizers.schedules.LearningRateSchedule):
-    def __init__(self, warmup_steps, following_schedule):
-        self._warmup_steps = warmup_steps
-        self._warmup = tf.optimizers.schedules.PolynomialDecay(0., warmup_steps, following_schedule(0))
-        self._following = following_schedule
-
-    def get_config(self):
-        config = {
-            'warmup_steps': self._warmup_steps,
-            'following_schedule': self._following
-        }
-        return config
-
-    def __call__(self, step):
-        return tf.cond(step < self._warmup_steps,
-                       lambda: self._warmup(step),
-                       lambda: self._following(step - self._warmup_steps))
+from .TransformerModel import TransformerModel 
+from .optimizers import LinearWarmup
 
 
 def create(args: cfg.Params, args_model: cfg.Transformer, args_data: cfg.Data, preprocess: Union[tf.keras.layers.Layer, None] = None) -> TransformerModel:
@@ -43,10 +25,17 @@ def create(args: cfg.Params, args_model: cfg.Transformer, args_data: cfg.Data, p
         args.learning_rate, args.decay_steps) if args.decay_steps is not None else lambda x: args.learning_rate
     l_r = LinearWarmup(args_model.warmup_steps, scheduler)
 
-    if args.weight_decay is not None and args.weight_decay > 0:
-        optimizer = tfa.optimizers.AdamW(learning_rate=l_r, weight_decay=args.weight_decay)
-    else:
-        optimizer = tf.optimizers.Adam(learning_rate=l_r)
+    optimizer = tfa.optimizers.LAMB(learning_rate=l_r, 
+                                    weight_decay=args.weight_decay if args.weight_decay is not None else 0, 
+                                    beta_1=args.beta_1 if args.beta_1 is not None else 0.9, 
+                                    beta_2=args.beta_2 if args.beta_2 is not None else 0.999,
+                                    epsilon=args.epsilon if args.epsilon is not None else 1e-6,
+                                    clipnorm=args.clip_norm)
+    
+    # if args.weight_decay is not None and args.weight_decay > 0:
+    #     optimizer = tfa.optimizers.AdamW(learning_rate=l_r, weight_decay=args.weight_decay, beta_1=args.beta_1, beta_2=args.beta_2)
+    # else:
+    #     optimizer = tf.optimizers.Adam(learning_rate=l_r, beta_1=args.beta_1, beta_2=args.beta_2)
 
     model = TransformerModel(
         input_shape=(None, args_data.input_size),

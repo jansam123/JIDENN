@@ -1,5 +1,5 @@
 import tensorflow as tf
-from typing import Callable, Union
+from typing import Callable, Union, Tuple
 
 
 class FFN(tf.keras.layers.Layer):
@@ -96,7 +96,7 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.cls_token = tf.Variable(initial_value=tf.random.normal([1, 1, self.embedding_dim]))
+        self.cls_token = tf.Variable(initial_value=tf.random.truncated_normal((1, 1, self.embedding_dim), stddev=0.02), trainable=True)
         self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
                                         for _ in range(self.num_embeding_layers)])
 
@@ -115,7 +115,7 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 class TransformerModel(tf.keras.Model):
 
     def __init__(self,
-                 input_shape: tuple[int],
+                 input_shape: Tuple[int],
                  embedding_dim: int,
                  num_embeding_layers: int,
                  transformer_layers: int,

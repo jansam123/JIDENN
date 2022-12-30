@@ -5,11 +5,12 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 import logging
+from typing import Union, List
 from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import mutual_info_classif, f_classif, chi2
+from sklearn.feature_selection import mutual_info_classif, f_classif
 
 
-def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: list[str]) -> pd.DataFrame:
+def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: List[str]) -> pd.DataFrame:
     # create numpy arrays of data, labels and weights from dataset
     data, labels, weights = zip(*dataset.as_numpy_iterator())
     data = np.array(data)
@@ -20,7 +21,8 @@ def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: list[str]) -> pd.D
     df = pd.DataFrame(data=data, columns=var_names)
     df['label'] = labels
     df['weight'] = weights
-    return df 
+    return df
+
 
 def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,):
@@ -31,7 +33,18 @@ def generate_data_distributions(df: pd.DataFrame,
         try:
             sns.histplot(data=df, x=var_name, hue='named_label', stat='count')
         except TypeError:
-            logging.warning(f'Could not plot {var_name}, skipping')
+            # logging.warning(f'Could not plot {var_name}, skipping')
+            small_df = df[[var_name, 'named_label']]
+            rows = len(df.index)
+            small_df = small_df.explode(var_name, ignore_index=True) 
+            small_df = small_df.sample(n=rows).reset_index(drop=True)
+            try:
+                sns.histplot(data=small_df, x=var_name, hue='named_label', stat='count')
+            except TypeError:
+                small_df = small_df.explode(var_name, ignore_index=True)
+                small_df = small_df.sample(n=rows).reset_index(drop=True)
+                sns.histplot(data=small_df, x=var_name, hue='named_label', stat='count')
+            
         plt.savefig(os.path.join(folder, f'{var_name}.png'))
         plt.close('all')
 
@@ -49,9 +62,9 @@ def generate_data_distributions(df: pd.DataFrame,
     # plt.xticks(rotation=40)
     plt.savefig(os.path.join(folder, 'correlation_matrix.png'))
     plt.close('all')
-    
-    
-def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name:str = 'score', variable_name: str = 'variable'):
+
+
+def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name: str = 'score', variable_name: str = 'variable'):
     feature_scores = df.sort_values(score_name, ascending=False).reset_index(drop=True)
     fig = plt.figure(figsize=(10, 15))
     # [x0, y0, width, height]
@@ -61,18 +74,16 @@ def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name:str = 's
     ax.set_xlabel(xlabel="Score")
     plt.savefig(fig_path)
     plt.close('all')
-    
 
-def feature_importance(df: pd.DataFrame, 
-                 folder: str,
-                 k:int | None = None):
+
+def feature_importance(df: pd.DataFrame,
+                       folder: str,
+                       k: Union[int, None] = None):
     X = df.drop(['label', 'weight'], axis=1)
     y = df['label']
     k = len(list(X.columns)) if k is None else k
     for score_name, score_func in zip(['linear', 'mutual'], [f_classif, mutual_info_classif]):
         bestfeatures = SelectKBest(score_func=score_func, k=k)
-        fit = bestfeatures.fit(X,y)
-        feature_scores = pd.DataFrame({'score':fit.scores_, 'variable':X.columns})
+        fit = bestfeatures.fit(X, y)
+        feature_scores = pd.DataFrame({'score': fit.scores_, 'variable': X.columns})
         plot_feature_importance(feature_scores, os.path.join(folder, f'feature_{score_name}.png'))
-    
-

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import tensorflow as tf
-from typing import Callable
+from typing import Callable, List, Union, Dict
 import pickle
 import os
 import uproot
@@ -12,11 +12,26 @@ from .utils.conversions import pandas_to_tensor, awkward_to_tensor
 
 
 
-ROOTVariables = dict[str, tf.RaggedTensor]
+ROOTVariables = Dict[str, tf.RaggedTensor]
 
 
 class ROOTDataset:
-    def __init__(self, dataset: tf.data.Dataset, variables: list[str]):
+    """
+    The ROOTDataset class represents a dataset of ROOT files.
+
+    It contains methods to load the files and access their variables as tensorflow datasets.
+
+    Methods:
+        from_root_file(filename: str, tree_name: str, metadata_hist: str, backend: str):
+        Loads a single ROOT file and returns a ROOTDataset object.
+        from_root_files(filenames: Union[List[str], str]):
+        Loads a list of ROOT files and returns a concatenated ROOTDataset object.
+        load(file: str, element_spec_path: str):
+        Loads a saved ROOTDataset object from disk.
+        save(save_path: str, element_spec_path: str, shard_func: Callable[[ROOTVariables], tf.Tensor]):
+        Saves the ROOTDataset object to disk as a tensorflow dataset.
+    """
+    def __init__(self, dataset: tf.data.Dataset, variables: List[str]):
         # for dt in dataset.take(1):
         #     if not isinstance(dt, dict):
         #         raise TypeError("ROOTDataset only accepts datasets that yield dictionaries")
@@ -24,7 +39,7 @@ class ROOTDataset:
         self._dataset = dataset
 
     @property
-    def variables(self) -> list[str]:
+    def variables(self) -> List[str]:
         return self._variables
 
     @property
@@ -82,7 +97,7 @@ class ROOTDataset:
         return sample
 
     @classmethod
-    def _concat(cls, datasets: list[ROOTDataset]) -> ROOTDataset:
+    def _concat(cls, datasets: List[ROOTDataset]) -> ROOTDataset:
         for dataset in datasets:
             if dataset.variables != datasets[0].variables:
                 raise ValueError("Variables of datasets do not match")
@@ -92,7 +107,7 @@ class ROOTDataset:
         return cls(final_dataset, datasets[0].variables)
 
     @classmethod
-    def from_root_files(cls, filenames: list[str] | str) -> ROOTDataset:
+    def from_root_files(cls, filenames: Union[List[str], str]) -> ROOTDataset:
         if isinstance(filenames, str):
             filenames = [filenames]
         return cls._concat([cls.from_root_file(filename) for filename in filenames])

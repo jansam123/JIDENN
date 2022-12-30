@@ -1,0 +1,19 @@
+test_sample_cuts:
+  - "(jets_pt>20_000) && (jets_pt<30_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>30_000) && (jets_pt<40_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>40_000) && (jets_pt<50_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>50_000) && (jets_pt<60_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>60_000) && (jets_pt<160_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>160_000) && (jets_pt<400_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>400_000) && (jets_pt<800_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+  - "(jets_pt>800_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.95)"
+
+test_names:
+  - "20-30"
+  - "30-40"
+  - "40-50"
+  - "50-60"
+  - "60-160"
+  - "160-400"
+  - "400-800"
+  - "800+"

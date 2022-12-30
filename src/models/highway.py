@@ -1,11 +1,12 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
+from typing import Union
 #
 from src.config import config_subclasses as cfg
 from .HighwayModel import HighwayModel
 
 
-def create(args: cfg.Params, args_model: cfg.Highway, args_data: cfg.Data, preprocess: tf.keras.layers.Layer | None = None) -> HighwayModel:
+def create(args: cfg.Params, args_model: cfg.Highway, args_data: cfg.Data, preprocess: Union[tf.keras.layers.Layer, None] = None) -> HighwayModel:
     activations = {'relu': tf.nn.relu, 'elu': tf.nn.elu, 'gelu': tf.nn.gelu, 'silu': tf.nn.silu}
     activation = activations[args.activation]
     input_size = len(args_data.variables.perJet)

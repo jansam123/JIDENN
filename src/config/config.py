@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from .config_subclasses import *
+
+from .config_subclasses import BasicFC, Highway, BDT, Params, Data, Dataset, Preprocess, Transformer, DeParT, ParT
 
     
 @dataclass
@@ -13,5 +14,6 @@ class JIDENNConfig:
     bdt: BDT
     highway: Highway
     part: ParT
+    depart: DeParT
 
     

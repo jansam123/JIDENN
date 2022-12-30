@@ -4,10 +4,10 @@ from typing import Union
 
 from .optimizers import LinearWarmup
 from src.config import config_subclasses as cfg
-from .ParTModel import ParTModel
+from .DeParTModel import DeParTModel
 
 
-def create(args: cfg.Params, args_model: cfg.ParT, args_data: cfg.Data, preprocess: Union[tf.keras.layers.Layer, None] = None) -> ParTModel:
+def create(args: cfg.Params, args_model: cfg.DeParT, args_data: cfg.Data, preprocess: Union[tf.keras.layers.Layer, None] = None) -> DeParTModel:
 
     activations = {'relu': tf.nn.relu, 'elu': tf.nn.elu, 'gelu': tf.nn.gelu, 'silu': tf.nn.silu}
     activation = activations[args.activation]
@@ -39,22 +39,20 @@ def create(args: cfg.Params, args_model: cfg.ParT, args_data: cfg.Data, preproce
                                     epsilon=args.epsilon if args.epsilon is not None else 1e-6,
                                     clipnorm=args.clip_norm)
 
-    input_shape = (None, args_data.input_size) if not args_model.interaction else (
-        (None, args_data.input_size), (None, None, 4))
-    model = ParTModel(
-        input_shape=input_shape,
+    model = DeParTModel(
+        input_shape=(None, args_data.input_size),
         output_layer=output,
         #
         embedding_dim=args_model.embed_dim,
         num_embeding_layers=args_model.num_embed_layers,
-        particle_block_layers=args_model.particle_block_layers,
-        class_block_layers=args_model.class_block_layers,
-        transformer_expansion=args_model.transformer_expansion,
-        transformer_heads=args_model.transformer_heads,
-        particle_block_dropout=args_model.particle_block_dropout,
+        layers= args_model.layers,
+        class_layers=args_model.class_layers,
+        expansion=args_model.expansion,
+        heads=args_model.heads,
+        dropout=args_model.dropout,
         interaction=args_model.interaction,
-        interaction_embedding_num_layers=args_model.interaction_embedding_num_layers,
-        interaction_embedding_layer_size=args_model.interaction_embedding_layer_size,
+        layer_scale_init_value=args_model.layer_scale_init_value,
+        stochastic_depth_drop_rate=args_model.stochastic_depth_drop_rate,
         #
         preprocess=preprocess,
         activation=activation

@@ -1,11 +1,12 @@
 from dataclasses import dataclass
+from typing import List, Union
 
 
 @dataclass
 class BasicFC:
     layer_size: int    # Hidden layer sizes.
     num_layers: int    # Number of highway layers.
-    dropout: float | None    # Dropout after FC layers.
+    dropout: Union[float, None]    # Dropout after FC layers.
     rnn_dim: int  # dimesion of RNN cells
 
 
@@ -13,7 +14,7 @@ class BasicFC:
 class Highway:
     layer_size: int    # Hidden layer sizes.
     num_layers: int    # Number of highway layers.
-    dropout: float | None    # Dropout after FC layers.
+    dropout: Union[float, None]    # Dropout after FC layers.
 
 
 @dataclass
@@ -22,7 +23,6 @@ class BDT:
     growing_strategy: str
     max_depth: int
     split_axis: str
-    categorical_algorithm: str
     shrinkage: int
     min_examples: int
     num_threads: int
@@ -31,31 +31,31 @@ class BDT:
 
 @dataclass
 class Variables:
-    perJet: list[str]
-    perJetTuple: list[str]
-    perEvent: list[str]
+    perJet: List[str]
+    perJetTuple: List[str]
+    perEvent: List[str]
 
 
 @dataclass
 class Data:
-    labels: list[str]    # list of labels to use.
+    labels: List[str]    # list of labels to use.
     num_labels: int   # Number of labels to use.
     input_size: int    # Number of input features.
     target: str
     variables: Variables
-    weight: str | None
-    cut: str | None
+    weight: Union[str, None]
+    cut: Union[str, None]
     tttree_name: str  # Name of the tree in the root file.
     gluon: int
     quark: int
     raw_gluon: int
-    raw_quarks: list[int]
-    raw_unknown: list[int]
+    raw_quarks: List[int]
+    raw_unknown: List[int]
     path: str   # Path to data folder containing folder of *.root files.
-    JZ_slices: list[int] | None   # Slices of JZ to use.
-    JZ_cut: list[str] | None   # Cut to apply to JZ slices.
-    JZ_weights: list[float] | None   # Weights to apply to JZ slices.
-    cached: str | None   # Path to cached data.
+    JZ_slices: Union[List[int], None]   # Slices of JZ to use.
+    JZ_cut: Union[List[str], None]   # Cut to apply to JZ slices.
+    JZ_weights: Union[List[float], None]  # Weights to apply to JZ slices.
+    cached: Union[str, None]   # Path to cached data.
 
 
 @dataclass
@@ -64,8 +64,8 @@ class Dataset:
     validation_step: int   # Validation every n batches.
     dev_size: float   # Size of dev dataset.
     test_size: float  # Size of test dataset.
-    take: int | None   # Length of data to use.
-    shuffle_buffer: int | None   # Size of shuffler buffer.
+    take: Union[int, None]   # Length of data to use.
+    shuffle_buffer: Union[int, None]   # Size of shuffler buffer.
 
 
 @dataclass
@@ -79,17 +79,20 @@ class Params:
     debug: bool   # Debug mode.
     logdir: str   # Path to log directory.
     activation: str   # Activation function to use.
-    # TODO
     decay_steps: int  # Number of steps to decay for.
     weight_decay: float
+    beta_1: float
+    beta_2: float
+    epsilon: float
+    clip_norm: float
 
 
 @dataclass
 class Preprocess:
     normalize: bool  # Normalize data.
-    draw_distribution: int | None   # Number of events to draw distribution for.
-    normalization_size: int | None  # Size of normalization dataset.
-    min_max_path: str | None  # Path to min max values.
+    draw_distribution: Union[int, None]   # Number of events to draw distribution for.
+    normalization_size: Union[int, None]  # Size of normalization dataset.
+    min_max_path: Union[str, None]  # Path to min max values.
 
 
 @dataclass
@@ -101,7 +104,22 @@ class Transformer:
     transformer_layers: int  # 6,12
     embed_dim: int
     num_embed_layers: int
-    
+
+
+@dataclass
+class DeParT:
+    warmup_steps: int
+    embed_dim: int
+    num_embed_layers: int
+    expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
+    heads: int  # 12, must divide embed_dim
+    layers: int  # 6,12
+    class_layers: int
+    dropout: float  # Dropout after FFN layer.
+    layer_scale_init_value: float
+    stochastic_depth_drop_rate: float
+    interaction: bool
+
 
 @dataclass
 class ParT:
@@ -113,3 +131,6 @@ class ParT:
     class_block_layers: int
     embed_dim: int
     num_embed_layers: int
+    interaction: bool
+    interaction_embedding_num_layers: int
+    interaction_embedding_layer_size: int

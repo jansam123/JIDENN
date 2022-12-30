@@ -1,4 +1,4 @@
-tensorflow==2.9.1
+tensorflow==2.9.3
 tensorflow-addons==0.17.1
 tensorboard_plugin_profile==2.8.0
 tensorflow_decision_forests==0.2.7
