@@ -12,6 +12,7 @@ rc.cache.*
 *.swp
 *.txt
 *.ipynb
+*.out
 good_logs
 outputs
 output
