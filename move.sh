@@ -4,4 +4,4 @@
 #SBATCH --job-name="copy_data"                        # change to your job name
 #SBATCH --output=./out/%x.%j.%a.log               
 
-cp -R /troja/home/jankovys/JIDENN/data/dataset2_2 /home/jankovys/JIDENN/data/
+cp -R /home/jankovys/JIDENN/data/dataset2_3  /troja/home/jankovys/JIDENN/data/

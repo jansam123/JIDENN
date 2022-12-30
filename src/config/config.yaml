@@ -18,15 +18,19 @@ params:
   base_logdir: logs # Base log directory for all runs.
   model: transformer # Model to use, options:  transformer, basic_fc, BDT, highway.
   activation: gelu # Activation function to use (relu/elu/gelu/silu).
-  epochs: 10 # Number of epochs.
-  label_smoothing: 0 # Label smoothing.
-  learning_rate: 0.001
+  epochs: 7 # Number of epochs.
+  label_smoothing: 0. # Label smoothing.
+  learning_rate: 0.001 #0.0005 part
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
-  logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H_%M_%S} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
-  decay_steps: 98_000 #(10 * 50_000_000 / 1024) == (epochs * take / batch_size)
-  weight_decay:
+  logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
+  decay_steps: 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
+  weight_decay: #part: None
+  beta_1: #part: 0.95
+  beta_2: #part: 0.999
+  epsilon: #part : 0.0001
+  clip_norm: 1.0
 
 dataset:
   take: 5_000_000 # Length of data to use.
@@ -49,13 +53,13 @@ basic_fc:
   rnn_dim: 128
 
 highway:
-  layer_size: 1024 # Size of the highway layer.
+  layer_size: 640 # Size of the highway layer.
   num_layers: 10 # Number of highway layers.
   dropout: # Dropout after highway layers.
 
 transformer:
-  warmup_steps: 50 # Number of steps to warmup for
-  transformer_dropout: 0.1
+  warmup_steps: 100 # Number of steps to warmup for
+  transformer_dropout: 0.
   transformer_expansion: 4 #4,  number of hidden units in FFN is transformer_expansion * embed_dim
   transformer_heads: 8 #12, must divide embed_dim
   transformer_layers: 12 #,12
@@ -63,22 +67,37 @@ transformer:
   num_embed_layers: 3 # Number of embedding layers.
 
 part:
-  warmup_steps: 50 # Number of steps to warmup for
-  particle_block_dropout: 0.1
+  warmup_steps: 100 # Number of steps to warmup for
+  particle_block_dropout: 0.
   transformer_expansion: 4 #4,  number of hidden units in FFN is transformer_expansion * embed_dim
   transformer_heads: 8 #12, must divide embed_dim
-  particle_block_layers: 12 #,12
+  particle_block_layers: 11 #,12
   class_block_layers: 2
   embed_dim: 128 #256
   num_embed_layers: 3 # Number of embedding layers.
+  interaction: False
+  interaction_embedding_num_layers: 2 # Number of embedding layers. Last one must be transformer_heads
+  interaction_embedding_layer_size: 64 # Size of the embedding layer.
+
+depart:
+  warmup_steps: 100 # Number of steps to warmup for
+  embed_dim: 192
+  num_embed_layers: 3 # Number of embedding layers.
+  expansion: 3 # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
+  heads: 8 # 12, must divide embed_dim
+  layers: 12 # 6,12
+  class_layers: 2
+  dropout: 0. # Dropout after FFN layer.
+  layer_scale_init_value: 1.0e-05
+  stochastic_depth_drop_rate: 0.
+  interaction: False
 
 bdt:
-  num_trees: 600 #  Number of trees in the forest.
-  growing_strategy: LOCAL
-  max_depth: 10 #  Maximum depth of the tree.
+  num_trees: 1700 #  Number of trees in the forest.
+  growing_strategy: BEST_FIRST_GLOBAL
+  max_depth: 5 #  Maximum depth of the tree.
   split_axis: SPARSE_OBLIQUE
-  categorical_algorithm: CART
   shrinkage: 0.5 #learning rate
-  min_examples: 1_000
-  num_threads: 40
-  l2_regularization: 0.2
+  min_examples: 180 #  Minimum number of examples in a leaf.
+  num_threads: 64
+  l2_regularization: 0.

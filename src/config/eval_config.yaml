@@ -1,5 +1,6 @@
 defaults:
   - data: data2
+  - sub_eval: bdt
   - _self_
 
 hydra:
@@ -17,16 +18,10 @@ hydra:
 base_logdir: logs # Base log directory for all runs.
 logdir: ${base_logdir}/eval
 model_dir: ${base_logdir}/model
-draw_distribution: 100_000
+draw_distribution: 30_000
 feature_importance: False # Whether to draw feature importance.
 test_subfolder: test
 seed: 42
-test_sample_cuts:
-  - "(jets_pt>20_000) && (jets_pt<60_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)"
-  - "(jets_pt>60_000) && (jets_pt<160_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)"
-  - "(jets_pt>160_000) && (jets_pt<400_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)"
-  - "(jets_pt>400_000) && (jets_pt<800_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)"
-  - "(jets_pt>800_000) && (jets_pt<800_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)"
 batch_size: 256
-take: 100_000
-model: highway
+take: 30_000
+model: highway 

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_decision_forests as tfdf
 import numpy as np
 import os
 import logging
@@ -11,10 +12,10 @@ from hydra.core.config_store import ConfigStore
 import src.data.data_info as data_info
 from src.config import eval_config
 from src.postprocess.pipeline import postprocess_pipe
-from src.data.utils.CutV2 import Cut
+from src.data.utils.Cut import Cut
 from src.data.get_dataset import get_preprocessed_dataset
 from src.models.transformer import LinearWarmup
-from src.data.JIDENNDatasetV2 import get_constituents, get_high_level_variables
+from src.data.get_train_input import get_train_input
 
 
 cs = ConfigStore.instance()
@@ -35,9 +36,8 @@ def main(args: eval_config.EvalConfig) -> None:
 
     test = get_preprocessed_dataset(file, args.data)
 
-
-    args.test_sample_cuts = [] if args.test_sample_cuts is None else args.test_sample_cuts
-    sub_tests = [test.filter(lambda x, y, w: Cut(cut)(x['perJet'])) for cut in args.test_sample_cuts]
+    args.sub_eval.test_sample_cuts = [] if args.sub_eval.test_sample_cuts is None else args.sub_eval.test_sample_cuts
+    sub_tests = [test.filter(lambda x, y, w: Cut(cut)(x['perJet'])) for cut in args.sub_eval.test_sample_cuts]
 
     custom_objects = {'LinearWarmup': LinearWarmup}
     model: tf.keras.Model = tf.keras.models.load_model(args.model_dir, custom_objects=custom_objects)
@@ -45,20 +45,15 @@ def main(args: eval_config.EvalConfig) -> None:
 
     subsample_results = pd.DataFrame(columns=model.metrics_names+['cut'])
     naming_schema = {0: args.data.labels[0], 1: args.data.labels[1]}
-    model_to_data_mapping = {
-        "basic_fc": get_high_level_variables,
-        "transformer": get_constituents,
-        "highway": get_high_level_variables,
-        "BDT": get_high_level_variables,
-    }
-    for cut, dt in zip(['base'] + args.test_sample_cuts, [test] + sub_tests):
-        
+
+    for cut, dt, name in zip(['base'] + args.sub_eval.test_sample_cuts, [test] + sub_tests, ['base'] + args.sub_eval.test_names):
+        dt = dt.map_data(get_train_input(args.model))
         tf_dt = dt.get_dataset(batch_size=args.batch_size,
-                               map_func=model_to_data_mapping[args.model], 
                                take=args.take)
 
         sub_test_eval = model.evaluate(tf_dt, return_dict=True)
-        subsample_results = pd.concat([subsample_results, pd.DataFrame({**sub_test_eval, 'cut': cut}, index=[0])])
+        if cut != 'base':
+            subsample_results = pd.concat([subsample_results, pd.DataFrame({**sub_test_eval, 'cut': name}, index=[0])])
         score = model.predict(tf_dt).ravel()
 
         dir_name = os.path.join(args.logdir, cut)
@@ -66,11 +61,11 @@ def main(args: eval_config.EvalConfig) -> None:
         dist_dir = os.path.join(dir_name, 'dist')
         os.makedirs(dist_dir, exist_ok=True)
 
+        log.info(f"Convert to pandas for cut {cut}")
         df = dt.apply(lambda x: x.take(args.take)).to_pandas()
         if cut == 'base' and args.feature_importance:
             data_info.feature_importance(df, dir_name)
-        if 'perJetTuple.jets_PFO_pt' in df.columns:
-            df['perJet.jets_PFO_n'] = df['perJetTuple.jets_PFO_pt'].apply(lambda x: len(x))
+        log.info(f"rename labels")
         df['named_label'] = df['label'].replace(naming_schema)
 
         if args.draw_distribution is not None:
@@ -85,15 +80,16 @@ def main(args: eval_config.EvalConfig) -> None:
         results_df['named_prediction'] = results_df['prediction'].replace(naming_schema)
         postprocess_pipe(results_df, dir_name, log=log)
 
-    subsample_results = subsample_results.reset_index(drop=True)
-    subsample_results.index.name = 'id'
-    subsample_results = subsample_results.reset_index()
-    subsample_results['name'] = subsample_results['id'].astype(str) + ' ' + subsample_results['cut']
+    # save dataframe to csv
+    subsample_results.to_csv(os.path.join(args.logdir, 'results.csv'), index=False)
+
+    # plot the results
     for metric in model.metrics_names:
         log.info(f"Plotting {metric} for cuts")
-        sns.pointplot(x='id', y='loss', data=subsample_results, hue='name', join=False)
+        sns.pointplot(x='cut', y=metric, data=subsample_results, join=False)
         plt.xlabel('Cut')
         plt.ylabel(metric)
+        # put the legend out of the figure
         plt.savefig(os.path.join(args.logdir, f'{metric}.png'))
         plt.close()
 
