@@ -14,8 +14,8 @@ def create(args: cfg.Params, args_model: cfg.Highway, args_data: cfg.Data, prepr
 
     if args_data.num_labels == 2:
         output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
-        loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=args.label_smoothing, name='bce')
-        metrics = [tf.keras.metrics.BinaryAccuracy(name='accuracy'), tf.keras.metrics.AUC(name='auc')]
+        loss = tf.keras.losses.BinaryCrossentropy(label_smoothing=args.label_smoothing)
+        metrics = [tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC()]
 
     else:
         output = tf.keras.layers.Dense(args_data.num_labels, activation=tf.nn.softmax)
@@ -26,7 +26,7 @@ def create(args: cfg.Params, args_model: cfg.Highway, args_data: cfg.Data, prepr
         args.learning_rate, args.decay_steps) if args.decay_steps is not None else args.learning_rate
     if args.weight_decay is not None and args.weight_decay > 0:
         optimizer = tfa.optimizers.AdamW(learning_rate=l_r, weight_decay=args.weight_decay)
-    else:    
+    else:
         optimizer = tf.optimizers.Adam(learning_rate=l_r)
 
     model = HighwayModel(

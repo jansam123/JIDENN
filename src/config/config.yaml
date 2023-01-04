@@ -53,17 +53,17 @@ basic_fc:
   rnn_dim: 128
 
 highway:
-  layer_size: 640 # Size of the highway layer.
+  layer_size: 644 # Size of the highway layer.
   num_layers: 10 # Number of highway layers.
-  dropout: # Dropout after highway layers.
+  dropout: 0.2 # Dropout after highway layers.
 
 transformer:
   warmup_steps: 100 # Number of steps to warmup for
   transformer_dropout: 0.
   transformer_expansion: 4 #4,  number of hidden units in FFN is transformer_expansion * embed_dim
   transformer_heads: 8 #12, must divide embed_dim
-  transformer_layers: 12 #,12
-  embed_dim: 128 #256
+  transformer_layers: 13 #,12
+  embed_dim: 232 #256
   num_embed_layers: 3 # Number of embedding layers.
 
 part:
@@ -73,7 +73,7 @@ part:
   transformer_heads: 8 #12, must divide embed_dim
   particle_block_layers: 11 #,12
   class_block_layers: 2
-  embed_dim: 128 #256
+  embed_dim: 232 #256
   num_embed_layers: 3 # Number of embedding layers.
   interaction: False
   interaction_embedding_num_layers: 2 # Number of embedding layers. Last one must be transformer_heads
@@ -81,11 +81,11 @@ part:
 
 depart:
   warmup_steps: 100 # Number of steps to warmup for
-  embed_dim: 192
+  embed_dim: 232
   num_embed_layers: 3 # Number of embedding layers.
-  expansion: 3 # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
+  expansion: 4 # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
   heads: 8 # 12, must divide embed_dim
-  layers: 12 # 6,12
+  layers: 11 # 6,12
   class_layers: 2
   dropout: 0. # Dropout after FFN layer.
   layer_scale_init_value: 1.0e-05
@@ -93,11 +93,11 @@ depart:
   interaction: False
 
 bdt:
-  num_trees: 1700 #  Number of trees in the forest.
-  growing_strategy: BEST_FIRST_GLOBAL
+  num_trees: 600 #  Number of trees in the forest.
+  growing_strategy: BEST_FIRST_GLOBAL #  Growing strategy.
   max_depth: 5 #  Maximum depth of the tree.
-  split_axis: SPARSE_OBLIQUE
+  split_axis: SPARSE_OBLIQUE #  Split axis.
   shrinkage: 0.5 #learning rate
-  min_examples: 180 #  Minimum number of examples in a leaf.
-  num_threads: 64
-  l2_regularization: 0.
+  min_examples: 5000 #  Minimum number of examples in a leaf.
+  num_threads: 64 #  Number of threads to use.
+  l2_regularization: 0.1 #  L2 regularization.

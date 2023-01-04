@@ -3,7 +3,7 @@
 #SBATCH --mem=64G                                # memory resource per cpu
 #SBATCH --time=12:00:00					                # time limit
 #SBATCH --gpus=1                                        # num of gpus
-#SBATCH --cpus-per-task=64                              # cpus per tasks
+#SBATCH --cpus-per-task=16                              # cpus per tasks
 #SBATCH --job-name="jidenn_eval"                        # change to your job name
 #SBATCH --output=./out/%x.%A.%a.log          
 

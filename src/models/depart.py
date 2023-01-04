@@ -28,10 +28,16 @@ def create(args: cfg.Params, args_model: cfg.DeParT, args_data: cfg.Data, prepro
     # optimizer = tfa.optimizers.RectifiedAdam(learning_rate=l_r, weight_decay=args.weight_decay if args.weight_decay is not None else 0, beta_1=args.beta_1, beta_2=args.beta_2, epsilon=args.epsilon)
     # optimizer = tfa.optimizers.Lookahead(optimizer, sync_period=args_model.lookahead_sync_period, slow_step_size=args_model.lookahead_slow_step_size)
     # if args.weight_decay is not None and args.weight_decay > 0:
-    #     optimizer = tfa.optimizers.AdamW(learning_rate=l_r, weight_decay=args.weight_decay,
-    #                                      beta_1=args.beta_1, beta_2=args.beta_2, epsilon=args.epsilon if args.epsilon is not None else 1e-7)
+    #     optimizer = tfa.optimizers.AdamW(learning_rate=l_r,
+    #                                      weight_decay=args.weight_decay,
+    #                                      beta_1=args.beta_1 if args.beta_1 is not None else 0.9,
+    #                                      beta_2=args.beta_2 if args.beta_2 is not None else 0.999,
+    #                                      epsilon=args.epsilon if args.epsilon is not None else 1e-7)
     # else:
-    #     optimizer = tf.optimizers.Adam(learning_rate=l_r, beta_1=args.beta_1, beta_2=args.beta_2, epsilon=args.epsilon if args.epsilon is not None else 1e-7)
+    #     optimizer = tf.optimizers.Adam(learning_rate=l_r,
+    #                                    beta_1=args.beta_1 if args.beta_1 is not None else 0.9,
+    #                                    beta_2=args.beta_2 if args.beta_2 is not None else 0.999,
+    #                                    epsilon=args.epsilon if args.epsilon is not None else 1e-7)
     optimizer = tfa.optimizers.LAMB(learning_rate=l_r,
                                     weight_decay=args.weight_decay if args.weight_decay is not None else 0,
                                     beta_1=args.beta_1 if args.beta_1 is not None else 0.9,
@@ -45,7 +51,7 @@ def create(args: cfg.Params, args_model: cfg.DeParT, args_data: cfg.Data, prepro
         #
         embedding_dim=args_model.embed_dim,
         num_embeding_layers=args_model.num_embed_layers,
-        layers= args_model.layers,
+        layers=args_model.layers,
         class_layers=args_model.class_layers,
         expansion=args_model.expansion,
         heads=args_model.heads,

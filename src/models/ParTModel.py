@@ -75,7 +75,7 @@ class AttentionBlock(tf.keras.layers.Layer):
     def __init__(self, dim, heads, dropout, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim//heads, num_heads=heads)
         self.ln = tf.keras.layers.LayerNormalization()
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
@@ -106,7 +106,7 @@ class InteractionAttentionBlock(tf.keras.layers.Layer):
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
     def get_config(self):
-        config = super(SelfAttention, self).get_config()
+        config = super().get_config()
         config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout})
         return config
 
@@ -114,6 +114,7 @@ class InteractionAttentionBlock(tf.keras.layers.Layer):
         # Execute the Self-Attention Transformer layer.
         output = self.ln(inputs)
         output = self.mha(inputs=output, mask=mask, interaction=interaction)
+        # output = self.mha(query=output, value=output, key=output, attention_mask=mask)
         output = self.layer_dropout(output)
         return output
 
@@ -170,8 +171,8 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        layer_sizes = [embedding_dim, 4*embedding_dim, embedding_dim]
-        self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(size, activation=activation) for size in layer_sizes])
+        self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+                                        for _ in range(self.num_embeding_layers)])
 
     def get_config(self):
         config = super(ParticleEmbedding, self).get_config()
@@ -253,8 +254,13 @@ class ParTModel(tf.keras.Model):
             hidden = preprocess(hidden)
 
         hidden = ParticleEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
-        transformed = ParT(embedding_dim, particle_block_layers, class_block_layers, transformer_expansion,
-                           transformer_heads, particle_block_dropout, activation)(hidden, tf.sequence_mask(row_lengths), embed_interaction)
+        transformed = ParT(dim=embedding_dim,
+                           num_particle_layers=particle_block_layers,
+                           num_class_layers=class_block_layers,
+                           expansion=transformer_expansion,
+                           heads=transformer_heads,
+                           dropout=particle_block_dropout,
+                           activation=activation)(hidden, tf.sequence_mask(row_lengths), embed_interaction)
 
         transformed = tf.keras.layers.LayerNormalization()(transformed)
         output = output_layer(transformed[:, 0, :])

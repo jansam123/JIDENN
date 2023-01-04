@@ -10,10 +10,10 @@ class FFN(tf.keras.layers.Layer):
         # Create the required layers -- first a ReLU-activated dense
         # layer with `dim * expansion` units, followed by a dense layer
         # with `dim` units without an activation.
-        self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation, use_bias=False)
-        self.gate_dense = tf.keras.layers.Dense(dim * expansion, activation=None, use_bias=False)
+        self.wide_dense = tf.keras.layers.Dense(int(dim * expansion * 2/3), activation=tf.nn.relu, use_bias=False)
+        self.gate_dense = tf.keras.layers.Dense(int(dim * expansion * 2/3), activation=None, use_bias=False)
         self.dense = tf.keras.layers.Dense(dim, activation=None, use_bias=False)
-        self.layer_dropout = tf.keras.layers.Dropout(dropout     )
+        self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super().get_config()
@@ -27,7 +27,6 @@ class FFN(tf.keras.layers.Layer):
         output = self.dense(output)
         output = self.layer_dropout(output)
         return output
-
 
 # class FFN(tf.keras.layers.Layer):
 #     def __init__(self, dim, expansion, activation, dropout, *args, **kwargs):
@@ -183,7 +182,7 @@ class ClassAttention(tf.keras.layers.Layer):
     def __init__(self, dim, heads, dropout, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads, dropout=dropout)
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim//heads, num_heads=heads, dropout=dropout)
 
     def get_config(self):
         config = super(ClassAttention, self).get_config()

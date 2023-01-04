@@ -59,12 +59,10 @@ def main(args: config.JIDENNConfig) -> None:
 
     files = []
     for name in ["train", "test", "dev"]:
-        file = [f'{args.data.path}/{file}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
-            f'{args.data.path}/{file}/{name}' for file in os.listdir(args.data.path)]
+        file = [f'{args.data.path}/{jz_slice}/{name}' for jz_slice in args.data.JZ_slices] if args.data.JZ_slices is not None else [f'{args.data.path}/{name}']
         files.append(file)
 
     train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files]
-
 
     # pick input variables according to model
     interaction = args.part.interaction if args.params.model == 'part' else None
@@ -77,13 +75,12 @@ def main(args: config.JIDENNConfig) -> None:
         log.info(f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
         dir = os.path.join(args.params.logdir, 'dist')
         os.makedirs(dir, exist_ok=True)
-        
+
         dist_dataset = train.apply(lambda x: x.take(args.preprocess.draw_distribution))
         df = dist_dataset.to_pandas()
         df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-        
         data_info.generate_data_distributions(df=df, folder=dir)
-            
+
     # get proper dataset size
     if args.dataset.take is not None:
         train_size = 1 - args.dataset.dev_size + args.dataset.test_size
@@ -110,11 +107,11 @@ def main(args: config.JIDENNConfig) -> None:
             log.info(f"Subsample size: {args.preprocess.normalization_size}")
             if args.params.model in ['transformer', 'part', 'depart']:
                 if interaction:
-                    picker = lambda x: x[0][0].to_tensor()
+                    def picker(*x): return x[0][0].to_tensor()
                 else:
-                    picker = lambda x: x[0].to_tensor()
+                    def picker(*x): return x[0].to_tensor()
             elif args.params.model in ['basic_fc', 'highway', 'bdt']:
-                picker = lambda x: x[0]
+                def picker(*x): return x[0]
             else:
                 log.error(f"Unknown model {args.params.model}")
             try:
@@ -167,7 +164,8 @@ def main(args: config.JIDENNConfig) -> None:
     callbacks = get_callbacks(args.params, log, dev)
 
     # running training
-    history = model.fit(train, epochs=args.params.epochs, callbacks=callbacks, validation_data=dev, verbose=2 if args.params.model=='bdt' else 1)
+    history = model.fit(train, epochs=args.params.epochs, callbacks=callbacks,
+                        validation_data=dev, verbose=2 if args.params.model == 'bdt' else 1)
 
     model_dir = os.path.join(args.params.logdir, 'model')
     log.info(f"Saving model to {model_dir}")

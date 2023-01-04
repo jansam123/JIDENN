@@ -31,8 +31,8 @@ def main(args: eval_config.EvalConfig) -> None:
         np.random.seed(args.seed)
         tf.random.set_seed(args.seed)
 
-    file = [f'{args.data.path}/{file}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
-        f'{args.data.path}/{file}/train' for file in os.listdir(args.data.path)]
+    file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
+        f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
 
     test = get_preprocessed_dataset(file, args.data)
 

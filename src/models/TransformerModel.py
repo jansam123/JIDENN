@@ -33,7 +33,7 @@ class SelfAttention(tf.keras.layers.Layer):
     def __init__(self, dim, heads, dropout, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim//heads, num_heads=heads)
         self.ln = tf.keras.layers.LayerNormalization()
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
