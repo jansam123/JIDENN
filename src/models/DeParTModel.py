@@ -315,8 +315,20 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        fc_embedding_dim = self.embedding_dim // 2
+        self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(fc_embedding_dim, activation=self.activation)
                                         for _ in range(self.num_embeding_layers)])
+        # self.cnns = tf.keras.Sequential([tf.keras.layers.Conv1D(fc_embedding_dim*4, 3),
+        #                                  tf.keras.layers.BatchNormalization(),
+        #                                  tf.keras.layers.Activation(tf.nn.relu),
+        #                                  tf.keras.layers.Conv1D(fc_embedding_dim*2, 3),
+        #                                  tf.keras.layers.BatchNormalization(),
+        #                                  tf.keras.layers.Activation(tf.nn.relu),
+        #                                  tf.keras.layers.Conv1D(fc_embedding_dim, 3),
+        #                                  tf.keras.layers.BatchNormalization(),
+        #                                  tf.keras.layers.Activation(tf.nn.relu),
+        #                                  ])
+        # self.concat = tf.keras.layers.Concatenate(axis=-1)
 
     def get_config(self):
         config = super(ParticleEmbedding, self).get_config()
@@ -324,6 +336,7 @@ class ParticleEmbedding(tf.keras.layers.Layer):
         return config
 
     def call(self, inputs):
+        # hidden = self.concat([self.mlp(inputs), self.cnns(inputs)])
         hidden = self.mlp(inputs)
         return hidden
 
