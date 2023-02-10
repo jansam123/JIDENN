@@ -12,7 +12,7 @@ import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.postprocess.tb_plots import tb_postprocess
-from src.models import basicFC, transformer, highway, BDT, part, depart
+from src.models.get_model import get_compiled_model
 from src.data.get_train_input import get_train_input
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -65,10 +65,13 @@ def main(args: config.JIDENNConfig) -> None:
     train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files]
 
     # pick input variables according to model
-    interaction = args.part.interaction if args.params.model == 'part' else None
-    train = train.map_data(get_train_input(args.params.model, interaction))
-    dev = dev.map_data(get_train_input(args.params.model, interaction))
-    test = test.map_data(get_train_input(args.params.model, interaction))
+    interaction = args.models.part.interaction if args.params.model == 'part' else None
+    num_total_variables = len(args.data.variables.perJet) 
+    num_total_variables += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
+    model_input, input_size = get_train_input(args.params.model, num_total_variables, interaction,)
+    train = train.map_data(model_input)
+    dev = dev.map_data(model_input)
+    test = test.map_data(model_input)
 
     # draw input data distribution
     if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0:
@@ -123,33 +126,12 @@ def main(args: config.JIDENNConfig) -> None:
             normalizer = None
             log.warning("Normalization disabled.")
 
-        if args.params.model == "basic_fc":
-            model = basicFC.create(args.params, args.basic_fc, args.data, preprocess=normalizer)
-            model.summary(print_fn=log.info)
-
-        elif args.params.model == "highway":
-            model = highway.create(args.params, args.highway, args.data, preprocess=normalizer)
-            model.summary(print_fn=log.info)
-
-        elif args.params.model == "transformer":
-            model = transformer.create(args.params, args.transformer, args.data, preprocess=normalizer)
-            model.summary(print_fn=log.info)
-
-        elif args.params.model == "part":
-            model = part.create(args.params, args.part, args.data, preprocess=normalizer)
-            model.summary(print_fn=log.info)
-
-        elif args.params.model == "depart":
-            model = depart.create(args.params, args.depart, args.data, preprocess=normalizer)
-            model.summary(print_fn=log.info)
-
-        elif args.params.model == 'bdt':
-            args.params.epochs = 1
-            model = BDT.create(args.bdt)
-
-        else:
-            raise NotImplementedError("Model not implemented")
-
+        model = get_compiled_model(args.params.model, 
+                                   input_size=input_size,
+                                   args_models=args.models,
+                                   args_optimizer=args.optimizer,
+                                   num_labels=args.data.num_labels,
+                                   preprocess=normalizer)
         return model
 
     # creating model

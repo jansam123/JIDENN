@@ -11,7 +11,6 @@ import awkward as ak
 from .utils.conversions import pandas_to_tensor, awkward_to_tensor
 
 
-
 ROOTVariables = Dict[str, tf.RaggedTensor]
 
 
@@ -31,6 +30,7 @@ class ROOTDataset:
         save(save_path: str, element_spec_path: str, shard_func: Callable[[ROOTVariables], tf.Tensor]):
         Saves the ROOTDataset object to disk as a tensorflow dataset.
     """
+
     def __init__(self, dataset: tf.data.Dataset, variables: List[str]):
         # for dt in dataset.take(1):
         #     if not isinstance(dt, dict):
@@ -53,7 +53,7 @@ class ROOTDataset:
                        backend: str = 'pd') -> ROOTDataset:
         file = uproot.open(filename, object_cache=None, array_cache=None)
         tree = file[tree_name]
-        
+
         logging.info(f"Loading ROOT file {filename}")
         if backend == 'pd':
             sample = cls._read_tree_pandas_backend(tree)
@@ -66,7 +66,7 @@ class ROOTDataset:
             logging.info("Getting metadata")
             metadata = file[metadata_hist].values()
             sample['metadata'] = tf.tile(tf.constant(metadata)[tf.newaxis, :], [sample['eventNumber'].shape[0], 1])
-            
+
         logging.info(f'Done loading file:{filename}')
         dataset = tf.data.Dataset.from_tensor_slices(sample)
         return cls(dataset, list(sample.keys()))
@@ -83,7 +83,7 @@ class ROOTDataset:
             sample[var] = pandas_to_tensor(df['values'])
             logging.info(f'{var}: {sample[var].shape}')
         return sample
-    
+
     @classmethod
     def _read_tree_awkward_backend(cls, tree: uproot.TBranch) -> ROOTVariables:
         variables = tree.keys()

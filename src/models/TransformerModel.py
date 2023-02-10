@@ -118,10 +118,10 @@ class TransformerModel(tf.keras.Model):
                  input_shape: Tuple[int],
                  embedding_dim: int,
                  num_embeding_layers: int,
-                 transformer_layers: int,
-                 transformer_expansion: int,
-                 transformer_heads: int,
-                 transformer_dropout: float,
+                 layers: int,
+                 expansion: int,
+                 heads: int,
+                 dropout: float,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  preprocess: Union[tf.keras.layers.Layer, None] = None):
@@ -137,8 +137,8 @@ class TransformerModel(tf.keras.Model):
         hidden = ParticleEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
         row_lengths += 1
 
-        transformed = Transformer(transformer_layers, embedding_dim, transformer_expansion,
-                                  transformer_heads, transformer_dropout, activation)(hidden, mask=tf.sequence_mask(row_lengths))
+        transformed = Transformer(layers, embedding_dim, expansion,
+                                  heads, dropout, activation)(hidden, mask=tf.sequence_mask(row_lengths))
 
         transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
         output = output_layer(transformed)

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from .config_subclasses import BasicFC, Highway, BDT, Params, Data, Dataset, Preprocess, Transformer, DeParT, ParT
+from .config_subclasses import Params, Data, Dataset, Preprocess, Optimizer, Models
 
     
 @dataclass
@@ -9,11 +9,8 @@ class JIDENNConfig:
     data: Data
     dataset: Dataset
     preprocess: Preprocess
-    basic_fc: BasicFC
-    transformer: Transformer
-    bdt: BDT
-    highway: Highway
-    part: ParT
-    depart: DeParT
+    optimizer: Optimizer
+    models: Models
+
 
     

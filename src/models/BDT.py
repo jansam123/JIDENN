@@ -1,10 +1,8 @@
-import tensorflow as tf
-from src.config import config_subclasses as cfg
+from src.config.model_config import BDT as cfg_BDT
 import tensorflow_decision_forests as tfdf
 
 
-
-def create(args_model: cfg.BDT)->tfdf.keras.RandomForestModel:
+def get_BDT_model(args_model: cfg_BDT)->tfdf.keras.RandomForestModel:
     
     model = tfdf.keras.GradientBoostedTreesModel(
         num_trees=args_model.num_trees,
@@ -19,8 +17,6 @@ def create(args_model: cfg.BDT)->tfdf.keras.RandomForestModel:
         l2_regularization=args_model.l2_regularization,
         loss='BINOMIAL_LOG_LIKELIHOOD',
         )
-    model.compile(
-            weighted_metrics=[tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC(), tf.keras.metrics.Recall(class_id=0, name='gluon_efficiency'), tf.keras.metrics.Precision(class_id=0, name='gluon_purity')])
     
     return model
 

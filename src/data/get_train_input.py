@@ -100,19 +100,19 @@ def bdt_variables(sample: JIDENNVariables) -> ROOTVariables:
     return output_data
 
 
-def get_train_input(model: str, interaction: Optional[bool] = False) -> Callable:
+def get_train_input(model: str, total_variables, interaction: Optional[bool] = False) -> Tuple[Callable, Union[int, Tuple[Union[int, None]]]]:
     high_level_models = ['basic_fc', 'highway']
     PFO_based_models = ['transformer', 'part', 'depart']
     bdt_models = ['bdt']
 
     if model in high_level_models:
-        return jet_variables
+        return jet_variables, total_variables
     elif model in PFO_based_models:
         if interaction:
-            return PFOs_and_PFO_interactions_variables
+            return PFOs_and_PFO_interactions_variables, ((None, 8), (None, 8, 8))
         else:
-            return PGOs_variables
+            return PGOs_variables, (None, 8)
     elif model in bdt_models:
-        return bdt_variables
+        return bdt_variables, 5
     else:
         raise ValueError(f"Model {model} not supported pick from {high_level_models + PFO_based_models + bdt_models}")

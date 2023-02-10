@@ -223,8 +223,8 @@ class ParTModel(tf.keras.Model):
                  num_embeding_layers: int,
                  particle_block_layers: int,
                  class_block_layers: int,
-                 transformer_expansion: int,
-                 transformer_heads: int,
+                 expansion: int,
+                 heads: int,
                  particle_block_dropout: float,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
@@ -242,7 +242,7 @@ class ParTModel(tf.keras.Model):
             embed_interaction = InteractionEmbedding(
                 interaction_embedding_num_layers,
                 interaction_embedding_layer_size,
-                transformer_heads,
+                heads,
                 activation)(input[1].to_tensor())
         else:
             input = tf.keras.layers.Input(shape=input_shape, ragged=True)
@@ -257,8 +257,8 @@ class ParTModel(tf.keras.Model):
         transformed = ParT(dim=embedding_dim,
                            num_particle_layers=particle_block_layers,
                            num_class_layers=class_block_layers,
-                           expansion=transformer_expansion,
-                           heads=transformer_heads,
+                           expansion=expansion,
+                           heads=heads,
                            dropout=particle_block_dropout,
                            activation=activation)(hidden, tf.sequence_mask(row_lengths), embed_interaction)
 

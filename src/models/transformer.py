@@ -43,10 +43,10 @@ def create(args: cfg.Params, args_model: cfg.Transformer, args_data: cfg.Data, p
         #
         embedding_dim=args_model.embed_dim,
         num_embeding_layers=args_model.num_embed_layers,
-        transformer_layers=args_model.transformer_layers,
-        transformer_expansion=args_model.transformer_expansion,
-        transformer_heads=args_model.transformer_heads,
-        transformer_dropout=args_model.transformer_dropout,
+        layers=args_model.transformer_layers,
+        expansion=args_model.transformer_expansion,
+        heads=args_model.transformer_heads,
+        dropout=args_model.transformer_dropout,
         #
         preprocess=preprocess,
         activation=activation

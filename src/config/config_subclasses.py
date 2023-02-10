@@ -1,32 +1,7 @@
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Optional, Literal
 
-
-@dataclass
-class BasicFC:
-    layer_size: int    # Hidden layer sizes.
-    num_layers: int    # Number of highway layers.
-    dropout: Union[float, None]    # Dropout after FC layers.
-    rnn_dim: int  # dimesion of RNN cells
-
-
-@dataclass
-class Highway:
-    layer_size: int    # Hidden layer sizes.
-    num_layers: int    # Number of highway layers.
-    dropout: Union[float, None]    # Dropout after FC layers.
-
-
-@dataclass
-class BDT:
-    num_trees: int
-    growing_strategy: str
-    max_depth: int
-    split_axis: str
-    shrinkage: int
-    min_examples: int
-    num_threads: int
-    l2_regularization: float
+from .model_config import BasicFC, Highway, BDT, Transformer, DeParT, ParT
 
 
 @dataclass
@@ -34,7 +9,6 @@ class Variables:
     perJet: List[str]
     perJetTuple: List[str]
     perEvent: List[str]
-
 
 @dataclass
 class Data:
@@ -72,20 +46,10 @@ class Dataset:
 class Params:
     model: str  # Model to use, options: 'basic_fc', 'transformer'.
     epochs: int  # Number of epochs.
-    label_smoothing: float  # Label smoothing.
-    learning_rate: float
     seed: int   # Random seed.
     threads: int   # Maximum number of threads to use.
     debug: bool   # Debug mode.
     logdir: str   # Path to log directory.
-    activation: str   # Activation function to use.
-    decay_steps: int  # Number of steps to decay for.
-    weight_decay: float
-    beta_1: float
-    beta_2: float
-    epsilon: float
-    clip_norm: float
-
 
 @dataclass
 class Preprocess:
@@ -94,43 +58,24 @@ class Preprocess:
     normalization_size: Union[int, None]  # Size of normalization dataset.
     min_max_path: Union[str, None]  # Path to min max values.
 
-
 @dataclass
-class Transformer:
-    warmup_steps: int  # Number of steps to warmup for
-    transformer_dropout: float  # Dropout after FFN layer.
-    transformer_expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
-    transformer_heads: int  # 12, must divide embed_dim
-    transformer_layers: int  # 6,12
-    embed_dim: int
-    num_embed_layers: int
-
-
-@dataclass
-class DeParT:
+class Optimizer:
+    name: Literal['LAMB', 'Adam']
+    learning_rate: float
+    label_smoothing: float
+    decay_steps: int
     warmup_steps: int
-    embed_dim: int
-    num_embed_layers: int
-    expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
-    heads: int  # 12, must divide embed_dim
-    layers: int  # 6,12
-    class_layers: int
-    dropout: float  # Dropout after FFN layer.
-    layer_scale_init_value: float
-    stochastic_depth_drop_rate: float
-    interaction: bool
-
-
+    beta_1: float
+    beta_2: float
+    epsilon: float
+    clipnorm: Optional[float]
+    weight_decay: float
+    
 @dataclass
-class ParT:
-    warmup_steps: int  # Number of steps to warmup for
-    particle_block_dropout: float  # Dropout after FFN layer.
-    transformer_expansion: int  # 4,  number of hidden units in FFN is transformer_expansion * embed_dim
-    transformer_heads: int  # 12, must divide embed_dim
-    particle_block_layers: int  # 6,12
-    class_block_layers: int
-    embed_dim: int
-    num_embed_layers: int
-    interaction: bool
-    interaction_embedding_num_layers: int
-    interaction_embedding_layer_size: int
+class Models:
+    basic_fc: BasicFC
+    transformer: Transformer
+    bdt: BDT
+    highway: Highway
+    part: ParT
+    depart: DeParT
