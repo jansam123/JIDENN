@@ -142,7 +142,7 @@ def get_compiled_model(model_name: str,
                        args_models: cfg.Models,  
                        args_optimizer: cfg.Optimizer,
                        num_labels: int,
-                       preprocess: Union[tf.keras.layers.Layer, None] = None):
+                       preprocess: Union[tf.keras.layers.Layer, None] = None) -> tf.keras.Model:
     
     if model_name == 'basic_fc':
         model = get_FC_model(input_size,

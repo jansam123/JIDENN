@@ -11,7 +11,7 @@ hydra:
   job_logging:
     formatters:
       simple:
-        format: "[${now:%Y-%m-%d}  ${now:%H:%M:%S}][%(levelname)s] - %(message)s"
+        format: "[%(asctime)s][%(levelname)s] - %(message)s"
   output_subdir: config
 
 params:
@@ -24,14 +24,15 @@ params:
   logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
 
 optimizer:
-  name: Adam # Optimizer to use, options: Adam, LAMB.
+  name: LAMB # Optimizer to use, options: Adam, LAMB.
+  warmup_steps: 100
   learning_rate: 0.001 #0.0005 part
   label_smoothing: 0. # Label smoothing.
   decay_steps: 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
   beta_1: #part: 0.95
   beta_2: #part: 0.999
   epsilon: #part : 0.0001
-  clip_norm: 1.0
+  clipnorm:
   weight_decay: #part: None
 
 dataset:
@@ -47,33 +48,31 @@ preprocess:
   normalization_size: 500 # 100_000 is better Size of normalization dataset.
   draw_distribution: 5_000 # Size of the distribution to draw.
   min_max_path: #'min_max.csv'
-  
+
 models:
   basic_fc:
     layer_size: 512 # Hidden layer sizes.
     num_layers: 3
     dropout: # Dropout after FC layers.
     rnn_dim: 128
-    activation: gelu # Activation function to use (relu/elu/gelu/silu).
+    activation: swish # Activation function to use (relu/elu/gelu/silu).
 
   highway:
     layer_size: 644 # Size of the highway layer.
     num_layers: 10 # Number of highway layers.
     dropout: 0.2 # Dropout after highway layers.
-    activation: gelu # Activation function to use (relu/elu/gelu/silu).
+    activation: swish # Activation function to use (relu/elu/gelu/silu).
 
   transformer:
-    warmup_steps: 100 # Number of steps to warmup for
     dropout: 0.
     expansion: 4 #4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 #12, must divide embed_dim
     layers: 13 #,12
     embed_dim: 232 #256
     num_embed_layers: 3 # Number of embedding layers.
-    activation: relu # Activation function to use (relu/elu/gelu/silu).
+    activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
   part:
-    warmup_steps: 100 # Number of steps to warmup for
     particle_block_dropout: 0.
     expansion: 4 #4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 #12, must divide embed_dim
@@ -81,13 +80,12 @@ models:
     class_block_layers: 2
     embed_dim: 232 #256
     num_embed_layers: 3 # Number of embedding layers.
-    interaction: False
+    interaction: True
     interaction_embedding_num_layers: 2 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
-    activation: relu # Activation function to use (relu/elu/gelu/silu).
+    activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
   depart:
-    warmup_steps: 100 # Number of steps to warmup for
     embed_dim: 232
     num_embed_layers: 3 # Number of embedding layers.
     expansion: 4 # 4,  number of hidden units in FFN is expansion * embed_dim

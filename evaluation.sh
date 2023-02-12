@@ -7,7 +7,7 @@
 #SBATCH --job-name="jidenn_eval"                        # change to your job name
 #SBATCH --output=./out/%x.%A.%a.log          
 
-ch-run -w -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 evaluation.py "$@" 
+ch-run -w --bind=/home/jankovys/JIDENN -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 evaluation.py "$@" 
 
 
 # srun  --partition=gpu-ffa  --mem=64000 --gpus=1  --cpus-per-task=6  ch-run -w -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 runMe.py

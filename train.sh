@@ -12,7 +12,7 @@
 
 # export TF_CPP_MIN_LOG_LEVEL=2
 
-ch-run -w -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 train.py "$@"
+ch-run -w --bind=/home/jankovys/JIDENN -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 train.py "$@"
 
 
 

@@ -11,9 +11,9 @@ from src.data.get_dataset import get_preprocessed_dataset
 import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
-from src.postprocess.tb_plots import tb_postprocess
+from src.evaluation.train_history import plot_train_history
 from src.models.get_model import get_compiled_model
-from src.data.get_train_input import get_train_input
+from src.data.get_train_input import get_train_input, get_input_shape
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -66,9 +66,10 @@ def main(args: config.JIDENNConfig) -> None:
 
     # pick input variables according to model
     interaction = args.models.part.interaction if args.params.model == 'part' else None
-    num_total_variables = len(args.data.variables.perJet) 
+    num_total_variables = len(args.data.variables.perJet)
     num_total_variables += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
-    model_input, input_size = get_train_input(args.params.model, num_total_variables, interaction,)
+    model_input = get_train_input(args.params.model, interaction)
+    input_size = get_input_shape(args.params.model, num_total_variables, interaction)
     train = train.map_data(model_input)
     dev = dev.map_data(model_input)
     test = test.map_data(model_input)
@@ -126,12 +127,15 @@ def main(args: config.JIDENNConfig) -> None:
             normalizer = None
             log.warning("Normalization disabled.")
 
-        model = get_compiled_model(args.params.model, 
+        model = get_compiled_model(args.params.model,
                                    input_size=input_size,
                                    args_models=args.models,
                                    args_optimizer=args.optimizer,
                                    num_labels=args.data.num_labels,
                                    preprocess=normalizer)
+
+        model.summary(print_fn=log.info, expand_nested=True, line_length=120, show_trainable=True)
+
         return model
 
     # creating model
@@ -149,6 +153,7 @@ def main(args: config.JIDENNConfig) -> None:
     history = model.fit(train, epochs=args.params.epochs, callbacks=callbacks,
                         validation_data=dev, verbose=2 if args.params.model == 'bdt' else 1)
 
+    # saving model
     model_dir = os.path.join(args.params.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir, save_format='tf')
@@ -158,10 +163,8 @@ def main(args: config.JIDENNConfig) -> None:
         history_dir = os.path.join(args.params.logdir, 'history')
         os.makedirs(history_dir, exist_ok=True)
         for metric in [m for m in history.history.keys() if 'val' not in m]:
-            tb_postprocess(
+            plot_train_history(
                 {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.params.epochs)
-
-    # saving model
 
     if test is None:
         log.warning("No test dataset, skipping evaluation.")

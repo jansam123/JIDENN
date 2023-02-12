@@ -24,3 +24,4 @@ class EvalConfig:
     feature_importance: bool
     model: str
     sub_eval: SubEvalConfig
+    threshold: float
