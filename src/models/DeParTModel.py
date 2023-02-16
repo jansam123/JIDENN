@@ -1,6 +1,6 @@
 
 import tensorflow as tf
-from typing import Callable, Union, Tuple
+from typing import Callable, Union, Tuple, Optional
 
 
 class FFN(tf.keras.layers.Layer):
@@ -101,14 +101,10 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
             scores as well as the final projected outputs.
     """
 
-    def __init__(
-        self, dim: int, heads: int,  interaction: bool = True, **kwargs
-    ):
+    def __init__(self, dim: int, heads: int, **kwargs):
         super().__init__(**kwargs)
 
         self.num_heads = heads
-        self.interaction = interaction
-
         head_dim = dim // self.num_heads
 
         self.scale = head_dim**-0.5
@@ -121,12 +117,9 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         self.proj_l = tf.keras.layers.Dense(self.num_heads)
         self.proj_w = tf.keras.layers.Dense(self.num_heads)
 
-        if self.interaction:
-            self.interaction_matrix = self.add_weight(name="interaction_matrix", shape=(heads, head_dim, head_dim))
-
         # self.proj_drop = tf.keras.layers.Dropout(dropout)
 
-    def call(self, x, mask, training=False):
+    def call(self, x, mask, interaction=None, training=False):
         B, N, C = tf.shape(x)[0], tf.shape(x)[1], tf.shape(x)[2]
 
         # Project the inputs all at once.
@@ -142,24 +135,21 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         scale = tf.cast(self.scale, dtype=qkv.dtype)
         q, k, v = qkv[0] * scale, qkv[1], qkv[2]  # B, num_heads, N, C // num_heads
 
-        if self.interaction:
-            # self.interaction_matrix = tf.tile(tf.expand_dims(self.interaction_matrix, axis=0), (B, 1, 1, 1))
-            interaction_matrix = tf.tile(self.interaction_matrix[tf.newaxis, :, :, :], [
-                                         B, 1, 1, 1])
-            # Obtain the raw attention scores.
-            # Multiply the query and key utilizing the interaction matrix as a metric tensor.
-            attn = tf.einsum("bhni,bhij,bhdj->bhnd", q, interaction_matrix, k)  # B, num_heads, N, N
-        else:
-            # Permute the key to match the shape of the query.
-            k = tf.transpose(k, perm=[0, 1, 3, 2])  # B, num_heads, C // num_heads, N
-            # Obtain the raw attention scores.
-            attn = tf.matmul(q, k)  # B, num_heads, N, N
+        # Permute the key to match the shape of the query.
+        k = tf.transpose(k, perm=[0, 1, 3, 2])  # B, num_heads, C // num_heads, N
+        # Obtain the raw attention scores.
+        attn = tf.matmul(q, k)  # B, num_heads, N, N
 
         # Linear projection of the similarities between the query and key projections.
         attn = self.proj_l(tf.transpose(attn, perm=[0, 2, 3, 1]))
 
         # Normalize the attention scores.
         attn = tf.transpose(attn, perm=[0, 3, 1, 2])
+
+        if interaction is not None:
+            interaction = tf.transpose(interaction, perm=[0, 3, 1, 2])
+            attn += interaction
+
         attn = tf.keras.layers.Softmax()(attn, mask=mask)
 
         # Linear projection on the softmaxed scores.
@@ -233,37 +223,36 @@ class ClassBlock(tf.keras.layers.Layer):
 
 
 class SelfBlock(tf.keras.layers.Layer):
-    def __init__(self, dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion, interaction, *args, **kwargs):
+    def __init__(self, dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dim, self.heads, self.dropout, self.stochastic_depth_drop_rate, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion
-        self.interaction = interaction
         self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.attn = TalkingHeadAttention(dim, heads, interaction)
+        self.attn = TalkingHeadAttention(dim, heads)
         # self.attn = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
         self.stoch_depth1 = StochasticDepth(drop_prob=stochastic_depth_drop_rate)
         self.layer_scale1 = LayerScale(layer_scale_init_value, dim)
         self.stoch_depth2 = StochasticDepth(drop_prob=stochastic_depth_drop_rate)
         self.layer_scale2 = LayerScale(layer_scale_init_value, dim)
         self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.mlp = FFN(dim, expansion, activation, dropout)
+        self.ffn = FFN(dim, expansion, activation, dropout)
 
     def get_config(self):
         config = super(SelfBlock, self).get_config()
         config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout, "stochastic_depth_drop_rate": self.stochastic_depth_drop_rate,
-                      "layer_scale_init_value": self.layer_scale_init_value, "activation": self.activation, "expansion": self.expansion, "interaction": self.interaction})
+                      "layer_scale_init_value": self.layer_scale_init_value, "activation": self.activation, "expansion": self.expansion})
         return config
 
-    def call(self, inputs, mask):
+    def call(self, inputs, mask, interaction=None):
         # Execute the Self-Attention Transformer layer.
         output1 = self.norm1(inputs)
-        output1 = self.attn(output1, mask)
+        output1 = self.attn(output1, mask, interaction)
         # output1 = self.attn(output1, output1, output1, mask)
         output1 = self.layer_scale1(output1)
         output1 = self.stoch_depth1(output1)
         output1 = output1 + inputs
         # Execute the Feed-Forward Transformer layer.
         output2 = self.norm2(output1)
-        output2 = self.mlp(output2)
+        output2 = self.ffn(output2)
         output2 = self.layer_scale2(output2)
         output2 = self.stoch_depth2(output2)
         output2 = output2 + output1
@@ -272,19 +261,18 @@ class SelfBlock(tf.keras.layers.Layer):
 
 class DeParT(tf.keras.layers.Layer):
 
-    def __init__(self, layers, class_layers, dim, expansion, heads, dropout, activation, layer_scale_init_value, stochastic_depth_drop_rate, interaction, *args, **kwargs):
+    def __init__(self, layers, class_layers, dim, expansion, heads, dropout, activation, layer_scale_init_value, stochastic_depth_drop_rate, *args, **kwargs):
         # Make sure `dim` is even.
         assert dim % 2 == 0
 
         super().__init__(*args, **kwargs)
         self.layers, self.dim, self.expansion, self.heads, self.dropout, self.activation, self.class_layers = layers, dim, expansion, heads, dropout, activation, class_layers
         self.layer_scale_init_value, self.stochastic_depth_drop_rate = layer_scale_init_value, stochastic_depth_drop_rate
-        self.interaction = interaction
         # Create the required number of transformer layers, each consisting of
         # - a layer normalization and a self-attention layer followed by a dropout layer,
         # - a layer normalization and a FFN layer followed by a dropout layer.
         self.layers = [SelfBlock(dim, heads, dropout, stochastic_depth_drop_rate,
-                                 layer_scale_init_value, activation, expansion, interaction) for _ in range(layers)]
+                                 layer_scale_init_value, activation, expansion) for _ in range(layers)]
         self.class_layers = [ClassBlock(dim, heads, dropout, stochastic_depth_drop_rate,
                                         layer_scale_init_value, activation, expansion) for _ in range(class_layers)]
         self.cls_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
@@ -292,15 +280,15 @@ class DeParT(tf.keras.layers.Layer):
     def get_config(self):
         config = super(DeParT, self).get_config()
         config.update({name: getattr(self, name)
-                      for name in ["layers", "dim", "expansion", "heads", "dropout", "activation", "class_layers", "layer_scale_init_value", "stochastic_depth_drop_rate", "interaction"]})
+                      for name in ["layers", "dim", "expansion", "heads", "dropout", "activation", "class_layers", "layer_scale_init_value", "stochastic_depth_drop_rate"]})
         return config
 
-    def call(self, inputs, mask):
+    def call(self, inputs, mask, interaction=None):
         # Create a token for the class.
         # Execute the transformer layers.
         self_mask = mask[:, tf.newaxis, tf.newaxis, :] & mask[:, tf.newaxis, :, tf.newaxis]
         for layer in self.layers:
-            inputs = layer(inputs, self_mask)
+            inputs = layer(inputs, self_mask, interaction)
 
         cls_token = tf.tile(self.cls_token, (tf.shape(inputs)[0], 1, 1))
         class_mask = mask[:, tf.newaxis, :]
@@ -329,6 +317,48 @@ class ParticleEmbedding(tf.keras.layers.Layer):
         return hidden
 
 
+class InteractionEmbedding(tf.keras.layers.Layer):
+
+    def __init__(self, num_layers, layer_size, out_dim, activation, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.activation = activation
+        self.layer_size = layer_size
+        self.num_layers = num_layers
+        self.out_dim = out_dim
+        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
+        self.normlizations = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
+        self.activation_layer = tf.keras.layers.Activation(activation)
+
+    def get_config(self):
+        config = super(InteractionEmbedding, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in ["num_layers", "layer_size", "out_dim", "activation"]})
+        return config
+
+    def call(self, inputs):
+        # input shape (batch, num_particles, num_particles, feature_dim)
+        ones = tf.ones_like(inputs[0, :, :, 0])
+        upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
+        diag_mask = tf.linalg.band_part(ones, 0, 0)
+        upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
+        flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+
+        hidden = flattened_upper_triag
+        for conv, norm in zip(self.conv_layers, self.normlizations):
+            hidden = conv(hidden)
+            hidden = norm(hidden)
+            hidden = self.activation_layer(hidden)
+
+        true_mask = tf.cast(tf.where(upper_tril_mask), tf.int32)
+        out = tf.transpose(hidden, [1, 0, 2])
+        out = tf.scatter_nd(true_mask, out, shape=[tf.shape(inputs)[1],
+                            tf.shape(inputs)[2], tf.shape(inputs)[0], self.out_dim])
+        out = out + tf.transpose(out, [1, 0, 2, 3])
+        out = tf.transpose(out, [2, 0, 1, 3])
+        return out
+
+
 class DeParTModel(tf.keras.Model):
 
     def __init__(self,
@@ -340,17 +370,31 @@ class DeParTModel(tf.keras.Model):
                  expansion: int,
                  heads: int,
                  dropout: float,
-                 interaction: bool,
                  layer_scale_init_value: float,
                  stochastic_depth_drop_rate: float,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
-                 preprocess: Union[tf.keras.layers.Layer, None] = None):
+                 preprocess: Union[tf.keras.layers.Layer, None] = None,
+                 interaction: bool = True,
+                 interaction_embedding_num_layers: Optional[int] = None,
+                 interaction_embedding_layer_size: Optional[int] = None):
 
-        input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+        if interaction:
+            input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
+                     tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+            row_lengths = input[0].row_lengths()
+            hidden = input[0].to_tensor()
 
-        row_lengths = input.row_lengths()
-        hidden = input.to_tensor()
+            embed_interaction = InteractionEmbedding(
+                interaction_embedding_num_layers,
+                interaction_embedding_layer_size,
+                heads,
+                activation)(input[1].to_tensor())
+        else:
+            input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+            embed_interaction = None
+            row_lengths = input.row_lengths()
+            hidden = input.to_tensor()
 
         if preprocess is not None:
             hidden = preprocess(hidden)
@@ -365,8 +409,7 @@ class DeParTModel(tf.keras.Model):
                              dropout=dropout,
                              activation=activation,
                              layer_scale_init_value=layer_scale_init_value,
-                             stochastic_depth_drop_rate=stochastic_depth_drop_rate,
-                             interaction=interaction)(hidden, mask=tf.sequence_mask(row_lengths))
+                             stochastic_depth_drop_rate=stochastic_depth_drop_rate)(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction)
 
         transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
         output = output_layer(transformed)

@@ -129,9 +129,11 @@ def get_depart_model(input_size,
         expansion=args_model.expansion,
         heads=args_model.heads,
         dropout=args_model.dropout,
-        interaction=args_model.interaction,
         layer_scale_init_value=args_model.layer_scale_init_value,
         stochastic_depth_drop_rate=args_model.stochastic_depth_drop_rate,
+        interaction=args_model.interaction,
+        interaction_embedding_num_layers=args_model.interaction_embedding_num_layers,
+        interaction_embedding_layer_size=args_model.interaction_embedding_layer_size,
         #
         preprocess=preprocess,
         activation=get_activation(args_model.activation))
@@ -142,7 +144,7 @@ def get_compiled_model(model_name: str,
                        args_models: cfg.Models,  
                        args_optimizer: cfg.Optimizer,
                        num_labels: int,
-                       preprocess: Union[tf.keras.layers.Layer, None] = None) -> tf.keras.Model:
+                       preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None) -> tf.keras.Model:
     
     if model_name == 'basic_fc':
         model = get_FC_model(input_size,

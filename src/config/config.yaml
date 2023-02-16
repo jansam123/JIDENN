@@ -54,7 +54,6 @@ models:
     layer_size: 512 # Hidden layer sizes.
     num_layers: 3
     dropout: # Dropout after FC layers.
-    rnn_dim: 128
     activation: swish # Activation function to use (relu/elu/gelu/silu).
 
   highway:
@@ -73,7 +72,7 @@ models:
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
   part:
-    particle_block_dropout: 0.
+    particle_block_dropout: 0.1
     expansion: 4 #4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 #12, must divide embed_dim
     particle_block_layers: 11 #,12
@@ -81,7 +80,7 @@ models:
     embed_dim: 232 #256
     num_embed_layers: 3 # Number of embedding layers.
     interaction: True
-    interaction_embedding_num_layers: 2 # Number of embedding layers. Last one must be heads
+    interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
@@ -96,7 +95,9 @@ models:
     layer_scale_init_value: 1.0e-05
     stochastic_depth_drop_rate: 0.
     interaction: False
-    activation: relu # Activation function to use (relu/elu/gelu/silu).
+    interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
+    interaction_embedding_layer_size: 64 # Size of the embedding layer.
+    activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
   bdt:
     num_trees: 600 #  Number of trees in the forest.

@@ -1,5 +1,4 @@
 import tensorflow as tf
-import tensorflow_datasets as tfds
 import numpy as np
 import pandas as pd
 import os
@@ -13,6 +12,7 @@ from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.evaluation.train_history import plot_train_history
 from src.models.get_model import get_compiled_model
+from src.models.get_normalization import get_normalization
 from src.data.get_train_input import get_train_input, get_input_shape
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -25,9 +25,6 @@ cs.store(name="args", node=config.JIDENNConfig)
 @hydra.main(version_base="1.2", config_path="src/config", config_name="config")
 def main(args: config.JIDENNConfig) -> None:
     log = logging.getLogger(__name__)
-    # args.data.input_size = len(args.data.variables.perJet) if args.data.variables.perJet is not None else 0
-    # args.data.input_size += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
-    # args.data.input_size += len(args.data.variables.perJetTuple) if args.data.variables.perJetTuple is not None else 0
 
     # GPU logging
     gpus = tf.config.list_physical_devices("GPU")
@@ -55,17 +52,20 @@ def main(args: config.JIDENNConfig) -> None:
         tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
         tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
 
-    mirrored_strategy = tf.distribute.MirroredStrategy() if len(gpus) > 1 else None
-
-    files = []
+    files_per_JZ_slice = []
     for name in ["train", "test", "dev"]:
         file = [f'{args.data.path}/{jz_slice}/{name}' for jz_slice in args.data.JZ_slices] if args.data.JZ_slices is not None else [f'{args.data.path}/{name}']
-        files.append(file)
+        files_per_JZ_slice.append(file)
 
-    train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files]
+    train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files_per_JZ_slice]
 
     # pick input variables according to model
-    interaction = args.models.part.interaction if args.params.model == 'part' else None
+    if args.params.model == 'part':
+        interaction = args.models.part.interaction
+    elif args.params.model == 'depart':
+        interaction = args.models.depart.interaction
+    else:
+        interaction = None
     num_total_variables = len(args.data.variables.perJet)
     num_total_variables += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
     model_input = get_train_input(args.params.model, interaction)
@@ -104,25 +104,13 @@ def main(args: config.JIDENNConfig) -> None:
     test = test.get_dataset(batch_size=args.dataset.batch_size,
                             take=test_size)
 
-    def _model():
-        if args.preprocess.normalize and args.params.model != 'BDT':
-            normalizer = tf.keras.layers.Normalization(axis=-1)
-            log.info("Getting std and mean of the dataset...")
-            log.info(f"Subsample size: {args.preprocess.normalization_size}")
-            if args.params.model in ['transformer', 'part', 'depart']:
-                if interaction:
-                    def picker(*x): return x[0][0].to_tensor()
-                else:
-                    def picker(*x): return x[0].to_tensor()
-            elif args.params.model in ['basic_fc', 'highway', 'bdt']:
-                def picker(*x): return x[0]
-            else:
-                log.error(f"Unknown model {args.params.model}")
-            try:
-                normalizer.adapt(train.map(picker), steps=args.preprocess.normalization_size)
-            except Exception as e:
-                log.error(f"Normalization failed: {e}")
-                normalizer = None
+    def build_model():
+        if args.preprocess.normalize:
+            normalizer = get_normalization(model_name=args.params.model,
+                                           dataset=train,
+                                           normalization_steps=args.preprocess.normalization_size,
+                                           interaction=interaction,
+                                           log=log)
         else:
             normalizer = None
             log.warning("Normalization disabled.")
@@ -135,16 +123,15 @@ def main(args: config.JIDENNConfig) -> None:
                                    preprocess=normalizer)
 
         model.summary(print_fn=log.info, expand_nested=True, line_length=120, show_trainable=True)
-
         return model
 
     # creating model
     if len(gpus) < 2:
-        model = _model()
+        model = build_model()
     else:
         mirrored_strategy = tf.distribute.MirroredStrategy()
         with mirrored_strategy.scope():
-            model = _model()
+            model = build_model()
 
     # callbacks
     callbacks = get_callbacks(args.params, log, dev)
@@ -167,7 +154,7 @@ def main(args: config.JIDENNConfig) -> None:
                 {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.params.epochs)
 
     if test is None:
-        log.warning("No test dataset, skipping evaluation.")
+        log.error("No test dataset, skipping evaluation.")
         log.info("Done!")
         return
 

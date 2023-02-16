@@ -1,5 +1,5 @@
 import tensorflow as tf
-from typing import Callable, Union, Tuple, List, Optional
+from typing import Callable, Union, Tuple, Optional
 
 
 class FFN(tf.keras.layers.Layer):
@@ -25,7 +25,8 @@ class FFN(tf.keras.layers.Layer):
         output = self.ln(inputs)
         output = self.wide_dense(output)
         output = self.dense(output)
-        output = self.layer_dropout(output)
+        if self.dropout > 0 and self.dropout is not None:
+            output = self.layer_dropout(output)
         return output
 
 
@@ -93,7 +94,8 @@ class AttentionBlock(tf.keras.layers.Layer):
             output = tf.concat([class_token, inputs], axis=1)
             output = self.ln(output)
             output = self.mha(query=class_token, value=output, key=output, attention_mask=mask)
-        output = self.layer_dropout(output)
+        if self.dropout is not None and self.dropout > 0:
+            output = self.layer_dropout(output)
         return output
 
 
@@ -115,7 +117,8 @@ class InteractionAttentionBlock(tf.keras.layers.Layer):
         output = self.ln(inputs)
         output = self.mha(inputs=output, mask=mask, interaction=interaction)
         # output = self.mha(query=output, value=output, key=output, attention_mask=mask)
-        output = self.layer_dropout(output)
+        if self.dropout is not None and self.dropout > 0:
+            output = self.layer_dropout(output)
         return output
 
 
@@ -187,32 +190,42 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 class InteractionEmbedding(tf.keras.layers.Layer):
 
     def __init__(self, num_layers, layer_size, out_dim, activation, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
         self.activation = activation
         self.layer_size = layer_size
         self.num_layers = num_layers
         self.out_dim = out_dim
-        self.conv_layers = [tf.keras.layers.Conv2D(layer_size, 1) for _ in range(num_layers)]
-        self.conv_layers.append(tf.keras.layers.Conv2D(out_dim, 1))
+        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
         self.normlizations = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
         self.activation_layer = tf.keras.layers.Activation(activation)
 
-    def get_cofig(self):
-        config = super().get_config()
+    def get_config(self):
+        config = super(InteractionEmbedding, self).get_config()
         config.update({name: getattr(self, name)
                       for name in ["num_layers", "layer_size", "out_dim", "activation"]})
         return config
 
     def call(self, inputs):
-        hidden = inputs
+        # input shape (batch, num_particles, num_particles, feature_dim)
+        ones = tf.ones_like(inputs[0, :, :, 0])
+        upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
+        diag_mask = tf.linalg.band_part(ones, 0, 0)
+        upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
+        flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+
+        hidden = flattened_upper_triag
         for conv, norm in zip(self.conv_layers, self.normlizations):
-            res = hidden
             hidden = conv(hidden)
             hidden = norm(hidden)
             hidden = self.activation_layer(hidden)
-            # hidden += res
-        return hidden
+
+        true_mask = tf.cast(tf.where(upper_tril_mask), tf.int32)
+        out = tf.transpose(hidden, [1, 0, 2])
+        out = tf.scatter_nd(true_mask, out, shape=[tf.shape(inputs)[1], tf.shape(inputs)[2], tf.shape(inputs)[0], self.out_dim])
+        out = out + tf.transpose(out, [1, 0, 2, 3])
+        out = tf.transpose(out, [2, 0, 1, 3])
+        return out
 
 
 class ParTModel(tf.keras.Model):
@@ -231,19 +244,25 @@ class ParTModel(tf.keras.Model):
                  interaction: bool = True,
                  interaction_embedding_num_layers: Optional[int] = None,
                  interaction_embedding_layer_size: Optional[int] = None,
-                 preprocess: Union[tf.keras.layers.Layer, None] = None):
+                 preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None):
 
         if interaction:
             input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
                      tf.keras.layers.Input(shape=input_shape[1], ragged=True))
             row_lengths = input[0].row_lengths()
             hidden = input[0].to_tensor()
+            interaction_hidden = input[1].to_tensor()
+
+            if preprocess is not None:
+                preprocess, interaction_preprocess = preprocess
+                if interaction_preprocess is not None:
+                    interaction_hidden = interaction_preprocess(interaction_hidden)
 
             embed_interaction = InteractionEmbedding(
                 interaction_embedding_num_layers,
                 interaction_embedding_layer_size,
                 heads,
-                activation)(input[1].to_tensor())
+                activation)(interaction_hidden)
         else:
             input = tf.keras.layers.Input(shape=input_shape, ragged=True)
             embed_interaction = None
@@ -254,6 +273,7 @@ class ParTModel(tf.keras.Model):
             hidden = preprocess(hidden)
 
         hidden = ParticleEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
+
         transformed = ParT(dim=embedding_dim,
                            num_particle_layers=particle_block_layers,
                            num_class_layers=class_block_layers,

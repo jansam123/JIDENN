@@ -25,3 +25,4 @@ class EvalConfig:
     model: str
     sub_eval: SubEvalConfig
     threshold: float
+    interaction: bool

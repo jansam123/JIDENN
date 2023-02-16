@@ -54,6 +54,8 @@ class DeParT:
     layer_scale_init_value: float
     stochastic_depth_drop_rate: float
     interaction: bool
+    interaction_embedding_num_layers: int
+    interaction_embedding_layer_size: int
     activation: str
 
 

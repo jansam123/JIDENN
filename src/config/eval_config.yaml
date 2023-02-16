@@ -25,4 +25,5 @@ seed: 42
 batch_size: 256
 take: 30_000
 model: highway
+interaction: False
 threshold: 0.5
