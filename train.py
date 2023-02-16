@@ -121,8 +121,10 @@ def main(args: config.JIDENNConfig) -> None:
                                    args_optimizer=args.optimizer,
                                    num_labels=args.data.num_labels,
                                    preprocess=normalizer)
-
-        model.summary(print_fn=log.info, expand_nested=True, line_length=120, show_trainable=True)
+        if args.params.model != 'bdt':
+            model.summary(print_fn=log.info, line_length=120, show_trainable=True)
+        else:
+            log.warning("No model summary for BDT")
         return model
 
     # creating model
