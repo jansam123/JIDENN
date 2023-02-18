@@ -1,4 +1,6 @@
 import tensorflow as tf
+import tensorflow_addons as tfa # this is necessary for the LAMB optimizer to work
+import tensorflow_decision_forests as tfdf # this is necessary for the BDT model to work
 import numpy as np
 import os
 import logging
@@ -11,7 +13,7 @@ from src.config import eval_config
 from src.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
 from src.data.utils.Cut import Cut
 from src.data.get_dataset import get_preprocessed_dataset
-from src.models.optimizers import LinearWarmup
+from src.model_builders.LearningRateSchedulers import LinearWarmup
 from src.data.get_train_input import get_train_input
 from src.evaluation.evaluation_metrics import calculate_metrics
 

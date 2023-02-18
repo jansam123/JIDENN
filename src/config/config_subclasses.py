@@ -10,6 +10,7 @@ class Variables:
     perJetTuple: List[str]
     perEvent: List[str]
 
+
 @dataclass
 class Data:
     labels: List[str]    # list of labels to use.
@@ -50,6 +51,10 @@ class Params:
     threads: int   # Maximum number of threads to use.
     debug: bool   # Debug mode.
     logdir: str   # Path to log directory.
+    checkpoint: Optional[str]   # Make checkpoint.
+    backup: Optional[str]   # Backup model.
+    load_checkpoint_path: Union[str, None]   # Path to checkpoint to load.
+
 
 @dataclass
 class Preprocess:
@@ -57,6 +62,7 @@ class Preprocess:
     draw_distribution: Union[int, None]   # Number of events to draw distribution for.
     normalization_size: Union[int, None]  # Size of normalization dataset.
     min_max_path: Union[str, None]  # Path to min max values.
+
 
 @dataclass
 class Optimizer:
@@ -70,7 +76,8 @@ class Optimizer:
     epsilon: float
     clipnorm: Optional[float]
     weight_decay: float
-    
+
+
 @dataclass
 class Models:
     basic_fc: BasicFC

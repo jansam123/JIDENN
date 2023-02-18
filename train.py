@@ -4,6 +4,8 @@ import pandas as pd
 import os
 import logging
 import hydra
+import pickle
+from functools import partial
 from hydra.core.config_store import ConfigStore
 #
 from src.data.get_dataset import get_preprocessed_dataset
@@ -11,12 +13,10 @@ import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.evaluation.train_history import plot_train_history
-from src.models.get_model import get_compiled_model
-from src.models.get_normalization import get_normalization
+from src.model_builders.get_model import get_compiled_model
+from src.model_builders.get_normalization import get_normalization
 from src.data.get_train_input import get_train_input, get_input_shape
-# os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
+from src.model_builders.multi_gpu_strategies import choose_strategy
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
@@ -34,6 +34,8 @@ def main(args: config.JIDENNConfig) -> None:
         gpu_info = tf.config.experimental.get_device_details(gpu)
         log.info(
             f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+
+    gpu_strategy = partial(choose_strategy, num_gpus=len(gpus))
 
     # debug mode for tensorflow
     if args.params.debug:
@@ -104,10 +106,20 @@ def main(args: config.JIDENNConfig) -> None:
     test = test.get_dataset(batch_size=args.dataset.batch_size,
                             take=test_size)
 
-    def build_model():
+    options = tf.data.Options()
+    options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
+    train = train.with_options(options)
+    dev = dev.with_options(options)
+    test = test.with_options(options)
+
+    # build model
+    @gpu_strategy
+    def build_model() -> tf.keras.Model:
         if args.preprocess.normalize:
+            adapt = True if args.params.load_checkpoint_path is None else False
             normalizer = get_normalization(model_name=args.params.model,
                                            dataset=train,
+                                           adapt=adapt,
                                            normalization_steps=args.preprocess.normalization_size,
                                            interaction=interaction,
                                            log=log)
@@ -121,26 +133,26 @@ def main(args: config.JIDENNConfig) -> None:
                                    args_optimizer=args.optimizer,
                                    num_labels=args.data.num_labels,
                                    preprocess=normalizer)
+
         if args.params.model != 'bdt':
             model.summary(print_fn=log.info, line_length=120, show_trainable=True)
         else:
             log.warning("No model summary for BDT")
         return model
 
-    # creating model
-    if len(gpus) < 2:
-        model = build_model()
-    else:
-        mirrored_strategy = tf.distribute.MirroredStrategy()
-        with mirrored_strategy.scope():
-            model = build_model()
+    model = build_model()
+    if args.params.load_checkpoint_path is not None:
+        model.load_weights(args.params.load_checkpoint_path)
 
     # callbacks
-    callbacks = get_callbacks(args.params, log, dev)
+    callbacks = get_callbacks(args.params, log, args.params.checkpoint, args.params.backup)
 
     # running training
-    history = model.fit(train, epochs=args.params.epochs, callbacks=callbacks,
-                        validation_data=dev, verbose=2 if args.params.model == 'bdt' else 1)
+    history = model.fit(train,
+                        epochs=args.params.epochs,
+                        callbacks=callbacks,
+                        validation_data=dev,
+                        verbose=2 if args.params.model == 'bdt' else 1)
 
     # saving model
     model_dir = os.path.join(args.params.logdir, 'model')
@@ -160,7 +172,7 @@ def main(args: config.JIDENNConfig) -> None:
         log.info("Done!")
         return
 
-    print(model.evaluate(test, return_dict=True))
+    log.info(model.evaluate(test, return_dict=True))
 
     if args.params.model == 'bdt':
         model.summary(print_fn=log.info)

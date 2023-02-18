@@ -28,29 +28,6 @@ class FFN(tf.keras.layers.Layer):
         output = self.layer_dropout(output)
         return output
 
-# class FFN(tf.keras.layers.Layer):
-#     def __init__(self, dim, expansion, activation, dropout, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
-#         # Create the required layers -- first a ReLU-activated dense
-#         # layer with `dim * expansion` units, followed by a dense layer
-#         # with `dim` units without an activation.
-#         self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
-#         self.dense = tf.keras.layers.Dense(dim, activation=None)
-#         self.layer_dropout = tf.keras.layers.Dropout(dropout)
-
-#     def get_config(self):
-#         config = super(FFN, self).get_config()
-#         config.update({"dim": self.dim, "expansion": self.expansion,
-#                       "activation": self.activation, "dropout": self.dropout})
-#         return config
-
-#     def call(self, inputs):
-#         # Execute the FFN Transformer layer.
-#         output = self.wide_dense(inputs)
-#         output = self.dense(output)
-#         output = self.layer_dropout(output)
-#         return output
 
 
 class LayerScale(tf.keras.layers.Layer):
@@ -374,7 +351,8 @@ class DeParTModel(tf.keras.Model):
                  stochastic_depth_drop_rate: float,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
-                 preprocess: Union[tf.keras.layers.Layer, None] = None,
+                 preprocess: Union[tf.keras.layers.Layer,
+                                   Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer], None] = None,
                  interaction: bool = True,
                  interaction_embedding_num_layers: Optional[int] = None,
                  interaction_embedding_layer_size: Optional[int] = None):
@@ -384,12 +362,18 @@ class DeParTModel(tf.keras.Model):
                      tf.keras.layers.Input(shape=input_shape[1], ragged=True))
             row_lengths = input[0].row_lengths()
             hidden = input[0].to_tensor()
+            interaction_hidden = input[1].to_tensor()
+
+            if preprocess is not None:
+                preprocess, interaction_preprocess = preprocess
+                if interaction_preprocess is not None:
+                    interaction_hidden = interaction_preprocess(interaction_hidden)
 
             embed_interaction = InteractionEmbedding(
                 interaction_embedding_num_layers,
                 interaction_embedding_layer_size,
                 heads,
-                activation)(input[1].to_tensor())
+                activation)(interaction_hidden)
         else:
             input = tf.keras.layers.Input(shape=input_shape, ragged=True)
             embed_interaction = None

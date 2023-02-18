@@ -6,14 +6,17 @@
 #SBATCH --nodes=1                                       # num of nodes
 #SBATCH --cpus-per-task=16                              # cpus per tasks
 #SBATCH --job-name="jidenn_train"                        # change to your job name
-#SBATCH --output=./out/%x.%A.%a.log          
+#SBATCH --output=./out/%x.%A.%a.log     
+#SBATCH --open-mode=append     
 
 # -w volta05                             # partition you want to run job in
 
 # export TF_CPP_MIN_LOG_LEVEL=2
 
-ch-run -w --bind=/home/jankovys/JIDENN -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 train.py "$@"
+timeout 11.7h ch-run -w --bind=/home/jankovys/JIDENN -c /home/jankovys/JIDENN /home/jankovys/cuda -- python3 train.py "$@"
 
-
+if [[ $? == 124 ]]; then 
+  scontrol requeue $SLURM_JOB_ID
+fi
 
 

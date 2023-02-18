@@ -1,8 +1,11 @@
 import tensorflow as tf
+import os
 from datetime import datetime
-from src.config import config_subclasses as cfg
 from logging import Logger
-from typing import List
+from typing import List, Optional
+
+from src.config import config_subclasses as cfg
+from .BestNModelCheckpoint import BestNModelCheckpoint
 
 
 class LogCallback(tf.keras.callbacks.Callback):
@@ -25,27 +28,30 @@ class LogCallback(tf.keras.callbacks.Callback):
         self._log.info(log_str)
 
 
-class ValidationCallback(tf.keras.callbacks.Callback):
-    def __init__(self, validation_dataset: tf.data.Dataset, log: Logger):
-        self._validation_dataset = validation_dataset
-        self._log = log
+def get_callbacks(args: cfg.Params,
+                  log: Logger,
+                  checkpoint: Optional[str] = 'checkpoints',
+                  backup: Optional[str] = 'backup') -> List[tf.keras.callbacks.Callback]:
 
-    def on_batch_end(self, batch, logs=None):
-        if (batch + 1) % 1000 != 0:
-            return
-        metrics = self.model.evaluate(self._validation_dataset, verbose=0)
-        log_str = f"Validation: "
-        log_str += " - ".join([f"{k}: {v:.4}" for k, v in zip(self.model.metrics_names, metrics)])
-        self._log.info(log_str)
-        for k, v in zip(self.model.metrics_names, metrics):
-            logs[f'val_{k}'] = v
-
-
-def get_callbacks(args: cfg.Params, log: Logger, val_dataset: tf.data.Dataset) -> List[tf.keras.callbacks.Callback]:
-    callbacks = []
     tb_callback = tf.keras.callbacks.TensorBoard(log_dir=args.logdir)
-    callbacks += [tb_callback]
+    log_callback = LogCallback(args.epochs, log)
+    callbacks = [tb_callback, log_callback]
 
-    callbacks += [LogCallback(args.epochs, log)]  # , ValidationCallback(val_dataset, log)]
+    if checkpoint is not None:
+        os.makedirs(os.path.join(args.logdir, checkpoint), exist_ok=True)
+        base_checkpoints = BestNModelCheckpoint(filepath=os.path.join(args.logdir, checkpoint, 'model-{epoch:02d}-{val_binary_accuracy:.2f}.h5'),
+                                                max_to_keep=2,
+                                                monitor='val_binary_accuracy',
+                                                mode='max',
+                                                save_weights_only=True,
+                                                save_best_only=True,
+                                                save_freq='epoch',
+                                                verbose=1,)
+        callbacks.append(base_checkpoints)
+
+    if backup is not None:
+        os.makedirs(os.path.join(args.logdir, backup), exist_ok=True)
+        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(args.logdir, backup))
+        callbacks.append(backup_callback)
 
     return callbacks

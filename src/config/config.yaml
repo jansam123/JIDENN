@@ -17,18 +17,21 @@ hydra:
 params:
   base_logdir: logs # Base log directory for all runs.
   model: transformer # Model to use, options:  transformer, basic_fc, BDT, highway.
-  epochs: 5 # Number of epochs.
+  epochs: 25 # Number of epochs.
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
-  logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory, set automatically. CHANGE 'base_logdir' INSTEAD.
+  logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory.
+  checkpoint: # Path to checkpoint directory (inside logdir). If nothing is set (or null), no checkpoints are saved.
+  backup: "backup" # Path to backup directory (inside logdir). If nothing is set (or null), no backups are saved.
+  load_checkpoint_path:
 
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB.
-  warmup_steps: 100
+  warmup_steps: 500 # 100
   learning_rate: 0.001 #0.0005 part
   label_smoothing: 0. # Label smoothing.
-  decay_steps: 42_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
+  decay_steps: 824_000 # 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
   beta_1: #part: 0.95
   beta_2: #part: 0.999
   epsilon: #part : 0.0001
@@ -37,7 +40,7 @@ optimizer:
 
 dataset:
   take: 5_000_000 # Length of data to use.
-  batch_size: 640 # Batch size.
+  batch_size: 512 # Batch size.
   validation_step: 200 # Validation every n batches.
   dev_size: 0.1 # Size of dev dataset.
   test_size: 0.1 # Size of test dataset.
@@ -77,7 +80,7 @@ models:
     heads: 8 #12, must divide embed_dim
     particle_block_layers: 11 #,12
     class_block_layers: 2
-    embed_dim: 128 #256
+    embed_dim: 232 #256
     num_embed_layers: 3 # Number of embedding layers.
     interaction: False
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
@@ -85,15 +88,15 @@ models:
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
   depart:
-    embed_dim: 128
+    embed_dim: 512 #232
     num_embed_layers: 3 # Number of embedding layers.
     expansion: 4 # 4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 # 12, must divide embed_dim
     layers: 11 # 6,12
     class_layers: 2
-    dropout: 0. # Dropout after FFN layer.
+    dropout: 0.1 # Dropout after FFN layer.
     layer_scale_init_value: 1.0e-05
-    stochastic_depth_drop_rate: 0.1
+    stochastic_depth_drop_rate: 0.01
     interaction: False
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.

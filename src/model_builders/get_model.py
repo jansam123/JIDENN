@@ -6,12 +6,13 @@ from src.config import config_subclasses as cfg
 from src.config import model_config as model_cfg
 from .get_optimizer import get_optimizer
 
-from .BasicFCModel import BasicFCModel
-from .HighwayModel import HighwayModel
-from .TransformerModel import TransformerModel
-from .ParTModel import ParTModel
-from .DeParTModel import DeParTModel
-from .BDT import get_BDT_model
+from ..models.BasicFCModel import BasicFCModel
+from ..models.HighwayModel import HighwayModel
+from ..models.TransformerModel import TransformerModel
+from ..models.ParTModel import ParTModel
+from ..models.DeParTModel import DeParTModel
+from ..models.BDT import get_BDT_model
+
 
 def get_metrics(num_labels: int) -> List[tf.keras.metrics.Metric]:
     metrics = [tf.keras.metrics.CategoricalAccuracy() if num_labels > 2 else tf.keras.metrics.BinaryAccuracy(),

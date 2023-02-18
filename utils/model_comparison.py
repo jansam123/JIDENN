@@ -16,22 +16,28 @@ parser.add_argument("--save_dir", default=".", type=str, help="Directory to save
 parser.add_argument("--take", default=0, type=int, help="Directory to save the plots to.")
 
 
-
 def main(args: argparse.Namespace):
-    filenames = ['good_logs/comparison/depart/eval/results.csv', 'good_logs/comparison/gated_depart_GEGLU/eval/results.csv', 'good_logs/comparison/gated_depart_ReGLU/eval/results.csv',
-                 'good_logs/comparison/part/eval/results.csv', 'good_logs/comparison/highway/eval/results.csv', 'good_logs/comparison/transformer/eval/results.csv', 'good_logs/comparison/bdt/eval/results.csv']
-    model_names = ['depart', 'gated_depart_GEGLU', 'gated_depart_ReGLU', 'part', 'highway', 'transformer', 'bdt']
-    save_dir = 'good_logs/comparison/figs/'
+    logdir = 'good_logs/comparison_small/'
+    model_names = os.listdir(logdir)
+    if 'figs' in model_names:
+        model_names.remove('figs')
+
+    result_csvs = []
+    usable_models = []
+    for model in model_names:
+        csv_file = logdir+model+'/eval/results.csv'
+        if os.path.isfile(csv_file):
+            result_csvs.append(csv_file)
+            usable_models.append(model)
+
+    print(result_csvs)
+    save_dir = logdir+'figs/'
+    os.makedirs(save_dir, exist_ok=True)
     take = args.take
-    # filenames = args.files
-    # x_axis_labels = args.x_axis_labels
-    # model_names = args.model_names
-    # save_dir = args.save_dir
-    # define the labels for the columns in the CSV files
 
     # load the CSV files into a list of pandas DataFrames
     dataframes = []
-    for filename, model_name in zip(filenames, model_names):
+    for filename, model_name in zip(result_csvs, usable_models):
         df = pd.read_csv(filename)
         df['model'] = model_name
         if take > 0:
@@ -40,6 +46,7 @@ def main(args: argparse.Namespace):
 
     # concatenate the DataFrames into a single DataFrame
     df = pd.concat(dataframes)
+    print(df)
 
     os.makedirs(save_dir, exist_ok=True)
     for metric in df.columns.drop(['model', 'cut']):

@@ -7,11 +7,19 @@ from typing import Optional, Tuple, Union
 def get_normalization(model_name: str,
                       dataset: tf.data.Dataset,
                       log: logging.Logger,
+                      adapt: bool = True,
                       normalization_steps: Optional[int] = None,
-                      interaction: Optional[bool] = None) -> Union[tf.keras.layers.Normalization, Tuple[tf.keras.layers.Normalization, tf.keras.layers.Normalization], None]:
+                      interaction: Optional[bool] = None,) -> Union[tf.keras.layers.Normalization, Tuple[tf.keras.layers.Normalization, tf.keras.layers.Normalization], None]:
     if model_name == 'bdt':
         log.info("No normalization for BDT")
         return None
+
+    if not adapt:
+        log.info("Normalization not adapting. Loading weights expected.")
+        if not interaction:
+            return tf.keras.layers.Normalization(axis=-1)
+        else:
+            return tf.keras.layers.Normalization(axis=-1), tf.keras.layers.Normalization(axis=-1)
 
     normalizer = tf.keras.layers.Normalization(axis=-1)
 
