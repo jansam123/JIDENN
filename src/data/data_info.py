@@ -25,26 +25,28 @@ def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: List[str]) -> pd.D
 
 
 def generate_data_distributions(df: pd.DataFrame,
-                                folder: str,):
+                                folder: str,
+                                color_column: str = 'named_label') -> None:
     var_names = list(df.columns)
     corr_matrix = df.corr()
     # create distributions of data, labels and weights
     for var_name in var_names+['label', 'weight']:
         try:
-            sns.histplot(data=df, x=var_name, hue='named_label', stat='count')
+            sns.histplot(data=df, x=var_name, hue=color_column, stat='count')
         except TypeError:
             # logging.warning(f'Could not plot {var_name}, skipping')
-            small_df = df[[var_name, 'named_label']]
+            small_df = df[[var_name, color_column]]
             rows = len(df.index)
-            small_df = small_df.explode(var_name, ignore_index=True) 
+            small_df = small_df.explode(var_name, ignore_index=True)
             small_df = small_df.sample(n=rows).reset_index(drop=True)
             try:
-                sns.histplot(data=small_df, x=var_name, hue='named_label', stat='count')
+                sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
             except TypeError:
                 small_df = small_df.explode(var_name, ignore_index=True)
                 small_df = small_df.sample(n=rows).reset_index(drop=True)
-                sns.histplot(data=small_df, x=var_name, hue='named_label', stat='count')
-            
+                print(small_df)
+                sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
+
         plt.savefig(os.path.join(folder, f'{var_name}.png'))
         plt.close('all')
 

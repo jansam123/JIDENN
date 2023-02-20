@@ -28,15 +28,15 @@ params:
 
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB.
-  warmup_steps: 500 # 100
+  warmup_steps: 4000 # 100
   learning_rate: 0.001 #0.0005 part
   label_smoothing: 0. # Label smoothing.
-  decay_steps: 824_000 # 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
-  beta_1: #part: 0.95
+  decay_steps: 245_000 # 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
+  beta_1: 0.9 #part: 0.95
   beta_2: #part: 0.999
   epsilon: #part : 0.0001
-  clipnorm:
-  weight_decay: #part: None
+  clipnorm: 1.0 # Gradient clipping.
+  weight_decay: 0.02 #part: None
 
 dataset:
   take: 5_000_000 # Length of data to use.
@@ -94,8 +94,8 @@ models:
     heads: 8 # 12, must divide embed_dim
     layers: 11 # 6,12
     class_layers: 2
-    dropout: 0.1 # Dropout after FFN layer.
-    layer_scale_init_value: 1.0e-05
+    dropout: 0. # Dropout after FFN layer.
+    layer_scale_init_value: 1.0e-04
     stochastic_depth_drop_rate: 0.01
     interaction: False
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads

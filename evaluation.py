@@ -1,6 +1,6 @@
 import tensorflow as tf
-import tensorflow_addons as tfa # this is necessary for the LAMB optimizer to work
-import tensorflow_decision_forests as tfdf # this is necessary for the BDT model to work
+import tensorflow_addons as tfa  # this is necessary for the LAMB optimizer to work
+import tensorflow_decision_forests as tfdf  # this is necessary for the BDT model to work
 import numpy as np
 import os
 import logging
@@ -67,6 +67,12 @@ def main(args: eval_config.EvalConfig) -> None:
         if cut == 'base' and args.feature_importance:
             data_info.feature_importance(df, dir_name)
         df['named_label'] = df['label'].replace(naming_schema)
+        # df['prediction'] = prediction
+        # df['cm'] = '---'
+        # df.loc[(df['label'] == 1) & (df['prediction'] == 1), 'cm'] = 'q to q'
+        # df.loc[(df['label'] == 1) & (df['prediction'] == 0), 'cm'] = 'q to g'
+        # df.loc[(df['label'] == 0) & (df['prediction'] == 1), 'cm'] = 'g to q'
+        # df.loc[(df['label'] == 0) & (df['prediction'] == 0), 'cm'] = 'g to g'
 
         # calculate metrics
         metrics = calculate_metrics(y_true=df['label'].to_numpy(), y_pred=prediction)
@@ -75,8 +81,9 @@ def main(args: eval_config.EvalConfig) -> None:
             metrics_per_cut = pd.concat([metrics_per_cut, pd.DataFrame({**metrics, 'cut': cut_alias}, index=[0])])
 
         if args.draw_distribution is not None:
-            data_info.generate_data_distributions(df=df.head(args.draw_distribution)
-                                                  if args.draw_distribution != 0 else df, folder=dist_dir)
+            data_info.generate_data_distributions(df=df.head(args.draw_distribution) if args.draw_distribution != 0 else df,
+                                                  folder=dist_dir,
+                                                  color_column='named_label')
 
         results_df = pd.DataFrame({'score': score,
                                    'label': df['label'],

@@ -4,7 +4,6 @@ import pandas as pd
 import os
 import logging
 import hydra
-import pickle
 from functools import partial
 from hydra.core.config_store import ConfigStore
 #
@@ -141,6 +140,10 @@ def main(args: config.JIDENNConfig) -> None:
         return model
 
     model = build_model()
+
+    # TODO1: rename load_checkpoint_path to load_weights_path for clarity
+    # TODO2: add option to load model instead of weights
+
     if args.params.load_checkpoint_path is not None:
         model.load_weights(args.params.load_checkpoint_path)
 
