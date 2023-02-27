@@ -17,7 +17,7 @@ hydra:
 params:
   base_logdir: logs # Base log directory for all runs.
   model: transformer # Model to use, options:  transformer, basic_fc, BDT, highway.
-  epochs: 25 # Number of epochs.
+  epochs: 50 # Number of epochs.
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
@@ -28,10 +28,10 @@ params:
 
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB.
-  warmup_steps: 4000 # 100
+  warmup_steps: 10_000 # 100
   learning_rate: 0.001 #0.0005 part
   label_smoothing: 0. # Label smoothing.
-  decay_steps: 245_000 # 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
+  decay_steps: 966_000 # 98_000 #(10 * 5_000_000 / 512 - 10_000) == (epochs * take / batch_size - warmup_steps)
   beta_1: 0.9 #part: 0.95
   beta_2: #part: 0.999
   epsilon: #part : 0.0001
@@ -39,7 +39,7 @@ optimizer:
   weight_decay: 0.02 #part: None
 
 dataset:
-  take: 5_000_000 # Length of data to use.
+  take: 10_000_000 # Length of data to use.
   batch_size: 512 # Batch size.
   validation_step: 200 # Validation every n batches.
   dev_size: 0.1 # Size of dev dataset.
@@ -47,7 +47,7 @@ dataset:
   shuffle_buffer: 1000 # Size of shuffler buffer.
 
 preprocess:
-  normalize: True # Normalize data. max size 146208768
+  normalize: False # Normalize data. max size 146208768
   normalization_size: 500 # 100_000 is better Size of normalization dataset.
   draw_distribution: 5_000 # Size of the distribution to draw.
   min_max_path: #'min_max.csv'
@@ -80,7 +80,7 @@ models:
     heads: 8 #12, must divide embed_dim
     particle_block_layers: 11 #,12
     class_block_layers: 2
-    embed_dim: 232 #256
+    embed_dim: 512 #256
     num_embed_layers: 3 # Number of embedding layers.
     interaction: False
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
@@ -96,8 +96,8 @@ models:
     class_layers: 2
     dropout: 0. # Dropout after FFN layer.
     layer_scale_init_value: 1.0e-04
-    stochastic_depth_drop_rate: 0.01
-    interaction: False
+    stochastic_depth_drop_rate: 0.2
+    interaction: True
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).

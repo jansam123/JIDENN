@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from typing import Union, Literal, Callable, Dict, Tuple, List, Optional
 #
 from .utils.transformations import to_e_px_py_pz
@@ -36,13 +37,17 @@ def PFO_interactions(sample: JIDENNVariables) -> ROOTVariables:
     z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
     m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
         tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
-    delta = tf.math.log(delta)
+    delta = -tf.math.log(delta)
+    delta = delta/(2*np.pi)
     delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
     k_t = tf.math.log(k_t)
     k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+    k_t = (k_t - 6.0)/4.0
     z = tf.linalg.set_diag(z, tf.zeros_like(m))
+    z = z/0.5
     m2 = tf.math.log(m2)
     m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+    m2 = (m2-14.0)/4.0
     return {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
 
@@ -54,14 +59,23 @@ def PGOs_variables(sample: JIDENNVariables) -> ROOTVariables:
     jet_E = tf.math.sqrt(jet_pt**2 + jet_m**2)
     deltaEta = PFO_eta - jet_eta
     deltaPhi = PFO_phi - jet_phi
+
+    deltaPhi = deltaPhi/(2*np.pi)
+    deltaEta = deltaEta/0.5
     deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+    deltaR = deltaR/(2*np.pi)
 
     logPT = tf.math.log(PFO_pt)
+    logPT = (logPT - 9.0)/5.0
 
     logPT_PTjet = tf.math.log(PFO_pt/jet_pt)
+    logPT_PTjet = (-logPT_PTjet - 4.0)/5.0
     logE = tf.math.log(PFO_E)
+    logE = (logE - 9.0) / 5.0
+
     logE_Ejet = tf.math.log(PFO_E/jet_E)
-    m = PFO_m
+    logE_Ejet = (-logE_Ejet - 4.0)/3.0
+    m = PFO_m/140.0
     # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
     data = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
             'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
@@ -116,6 +130,7 @@ def get_train_input(model: str, interaction: Optional[bool] = False) -> Callable
         return bdt_variables
     else:
         raise ValueError(f"Model {model} not supported pick from {high_level_models + PFO_based_models + bdt_models}")
+
 
 def get_input_shape(model: str, total_variables, interaction: Optional[bool] = False) -> Union[int, Tuple[Union[int, None]]]:
     high_level_models = ['basic_fc', 'highway']
