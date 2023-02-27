@@ -32,7 +32,7 @@ class ValidationFigure:
         "Method that creates matplotlib figure."
 
     def save_fig(self, path: str, format: str = 'png'):
-        self._fig.savefig(os.path.join(path, self._name + f".{format}"))
+        self._fig.savefig(os.path.join(path, self._name + f".{format}"), dpi=300)
 
     def to_tensorboard(self, path: str):
         with tf.summary.create_file_writer(path).as_default():
@@ -68,7 +68,9 @@ class ValidationROC(ValidationFigure):
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         sns.lineplot(x=100*fp, y=100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
-        sns.lineplot(x=100*fp, y=100*fp, label=f'Random', linewidth=1, linestyle='--', color='gray')
+        sns.lineplot(x=[0, 50, 100], y=[0, 50, 100], label=f'Random',
+                     linewidth=1, linestyle='--', color='darkred', alpha=0.5)
+        plt.plot([0, 0, 100], [0, 100, 100], color='darkgreen', linestyle='-.', label='Ideal', alpha=0.5)
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
         plt.grid(True)
@@ -98,7 +100,7 @@ class ValidationScoreHistogram(ValidationFigure):
     def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
-        sns.histplot(self._df, x='score', hue='named_label', stat='count')
+        sns.kdeplot(data=self._df, x='score', hue='named_label', fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
         plt.xlabel('Score')
         return fig
 

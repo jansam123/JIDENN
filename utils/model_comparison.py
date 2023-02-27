@@ -51,12 +51,37 @@ def main(args: argparse.Namespace):
     os.makedirs(save_dir, exist_ok=True)
     for metric in df.columns.drop(['model', 'cut']):
         fig = plt.figure(figsize=(14, 9))
-        plot_ = sns.pointplot(x='cut', y=metric, data=df, hue='model', ci=95)
+        plot_ = sns.pointplot(x='cut', y=metric, data=df, hue='model', ci=95, palette='Set1')
         plt.xlabel('$p_{\mathrm{T}}$ [GeV]')
         plt.ylabel(metric)
 
-        plt.savefig(save_dir + f'{metric}.{take}.jpg')
+        plt.savefig(save_dir + f'{metric}.{take}.jpg', dpi=300)
         plt.close()
+
+    sns.set_theme(style="dark")
+    fig = plt.figure(figsize=(10, 6))
+    new_df = df[['cut', 'binary_accuracy', 'model']]
+    new_df = new_df.set_index('cut')
+    new_df = new_df.pivot(columns=['model'])
+    new_df = new_df.loc[:, 'binary_accuracy']
+    err_name = '$p_{\mathrm{T}}$ Average Accuracy Error'
+    rel_err = {'model': [], err_name: []}
+    base = 'transformer'
+    for col in new_df.columns:
+        if col == 'bdt':
+            continue
+        delta = (new_df[col]-new_df[base])
+        delta = delta.mean()
+        rel_err['model'].append(col)
+        rel_err[err_name].append(delta)
+
+    rel_err = pd.DataFrame(rel_err)
+    rel_err = rel_err.sort_values(err_name, ascending=False)
+    max_delta = abs(rel_err[err_name]).max()
+    p = sns.barplot(data=rel_err, x=err_name, y='model', palette='coolwarm', dodge=False)
+    p.axes.set_xlim(-max_delta, max_delta)
+    plt.savefig(save_dir + f'relative_error.jpg', dpi=300)
+    plt.close()
 
 
 if __name__ == "__main__":

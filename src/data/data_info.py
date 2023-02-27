@@ -4,7 +4,6 @@ import os
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-import logging
 from typing import Union, List
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import mutual_info_classif, f_classif
@@ -24,33 +23,19 @@ def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: List[str]) -> pd.D
     return df
 
 
-def generate_data_distributions(df: pd.DataFrame,
-                                folder: str,
-                                color_column: str = 'named_label') -> None:
-    var_names = list(df.columns)
-    corr_matrix = df.corr()
-    # create distributions of data, labels and weights
-    for var_name in var_names+['label', 'weight']:
+def explode_nested_variables(df: pd.DataFrame, exploding_column: str, max_iterations: int = 5) -> pd.DataFrame:
+    for _ in range(max_iterations):
         try:
-            sns.histplot(data=df, x=var_name, hue=color_column, stat='count')
-        except TypeError:
-            # logging.warning(f'Could not plot {var_name}, skipping')
-            small_df = df[[var_name, color_column]]
-            rows = len(df.index)
-            small_df = small_df.explode(var_name, ignore_index=True)
-            small_df = small_df.sample(n=rows).reset_index(drop=True)
-            try:
-                sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
-            except TypeError:
-                small_df = small_df.explode(var_name, ignore_index=True)
-                small_df = small_df.sample(n=rows).reset_index(drop=True)
-                print(small_df)
-                sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
+            df[exploding_column] = pd.to_numeric(df[exploding_column])
+            break
+        except (ValueError, TypeError):
+            df = df.explode(exploding_column, ignore_index=True)
+            df = df.sample(n=len(df.index)).reset_index(drop=True)
+            continue
+    return df
 
-        plt.savefig(os.path.join(folder, f'{var_name}.png'))
-        plt.close('all')
 
-    # Generate a custom diverging colormap
+def plot_corrolation_matrix(corr_matrix: pd.DataFrame, save_path: str) -> None:
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
 
     # create correlation matrix of data without label
@@ -62,11 +47,36 @@ def generate_data_distributions(df: pd.DataFrame,
     sns.heatmap(corr_matrix, cmap=cmap, center=0, square=True, linewidths=.5,
                 annot=True, fmt='.1f', cbar_kws={'shrink': .8})
     # plt.xticks(rotation=40)
-    plt.savefig(os.path.join(folder, 'correlation_matrix.png'))
+    plt.savefig(save_path, dpi=300)
     plt.close('all')
 
 
-def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name: str = 'score', variable_name: str = 'variable'):
+def generate_data_distributions(df: pd.DataFrame,
+                                folder: str,
+                                color_column: str = 'named_label') -> None:
+    corr_matrix = df.corr()
+    plot_corrolation_matrix(corr_matrix, os.path.join(folder, 'correlation_matrix.png'))
+
+    var_names = list(df.columns)
+    var_names.remove(color_column)
+    for var_name in var_names+['label', 'weight']:
+        small_df = df[[var_name, color_column]].copy()
+        dtype = small_df[var_name].dtype
+
+        if dtype == 'object':
+            small_df = explode_nested_variables(small_df, var_name)
+
+        if dtype == 'category':
+            sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
+        else:
+            sns.kdeplot(data=small_df, x=var_name, hue=color_column,
+                        fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
+
+        plt.savefig(os.path.join(folder, f'{var_name}.png'), dpi=300)
+        plt.close('all')
+
+
+def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name: str = 'score', variable_name: str = 'variable') -> None:
     feature_scores = df.sort_values(score_name, ascending=False).reset_index(drop=True)
     fig = plt.figure(figsize=(10, 15))
     # [x0, y0, width, height]
@@ -74,13 +84,13 @@ def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name: str = '
     sns.barplot(x=score_name, y=variable_name, data=feature_scores)
     ax.set_ylabel(ylabel="")
     ax.set_xlabel(xlabel="Score")
-    plt.savefig(fig_path)
+    plt.savefig(fig_path, dpi=300)
     plt.close('all')
 
 
 def feature_importance(df: pd.DataFrame,
                        folder: str,
-                       k: Union[int, None] = None):
+                       k: Union[int, None] = None) -> None:
     X = df.drop(['label', 'weight'], axis=1)
     y = df['label']
     k = len(list(X.columns)) if k is None else k
