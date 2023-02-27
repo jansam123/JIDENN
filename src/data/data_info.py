@@ -26,22 +26,13 @@ def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: List[str]) -> pd.D
 def explode_nested_variables(df: pd.DataFrame, exploding_column: str, max_iterations: int = 5) -> pd.DataFrame:
     for _ in range(max_iterations):
         try:
-            sns.histplot(data=df, x=var_name, hue=color_column, stat='count')
-        except TypeError:
-            # logging.warning(f'Could not plot {var_name}, skipping')
-            small_df = df[[var_name, color_column]]
-            rows = len(df.index)
-            small_df = small_df.explode(var_name, ignore_index=True)
-            small_df = small_df.sample(n=rows).reset_index(drop=True)
-            try:
-                sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
-            except TypeError:
-                small_df = small_df.explode(var_name, ignore_index=True)
-                small_df = small_df.sample(n=rows).reset_index(drop=True)
-                sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
-
-        plt.savefig(os.path.join(folder, f'{var_name}.png'))
-        plt.close('all')
+            df[exploding_column] = pd.to_numeric(df[exploding_column])
+            break
+        except (ValueError, TypeError):
+            df = df.explode(exploding_column, ignore_index=True)
+            df = df.sample(n=len(df.index)).reset_index(drop=True)
+            continue
+    return df
 
 def plot_corrolation_matrix(corr_matrix: pd.DataFrame, save_path: str) -> None:
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
