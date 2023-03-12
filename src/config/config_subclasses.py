@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Union, Optional, Literal
 
-from .model_config import BasicFC, Highway, BDT, Transformer, DeParT, ParT
+from .model_config import BasicFC, Highway, BDT, Transformer, DeParT, ParT, PFN
 
 
 @dataclass
@@ -41,6 +41,7 @@ class Dataset:
     test_size: float  # Size of test dataset.
     take: Union[int, None]   # Length of data to use.
     shuffle_buffer: Union[int, None]   # Size of shuffler buffer.
+    epochs: int
 
 
 @dataclass
@@ -69,7 +70,7 @@ class Optimizer:
     name: Literal['LAMB', 'Adam']
     learning_rate: float
     label_smoothing: float
-    decay_steps: int
+    decay_steps: Optional[int]
     warmup_steps: int
     beta_1: float
     beta_2: float
@@ -86,3 +87,4 @@ class Models:
     highway: Highway
     part: ParT
     depart: DeParT
+    pfn: PFN

@@ -14,7 +14,7 @@ from src.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
 from src.data.utils.Cut import Cut
 from src.data.get_dataset import get_preprocessed_dataset
 from src.model_builders.LearningRateSchedulers import LinearWarmup
-from src.data.get_train_input import get_train_input
+from src.data.get_train_input import get_train_input, get_train_input_old
 from src.evaluation.evaluation_metrics import calculate_metrics
 
 
@@ -38,15 +38,26 @@ def main(args: eval_config.EvalConfig) -> None:
     metrics_per_cut = pd.DataFrame(columns=['cut'])
     naming_schema = {0: args.data.labels[0], 1: args.data.labels[1]}
     interaction = args.interaction if args.model == 'depart' or args.model == 'part' else None
-    train_input = get_train_input(args.model, interaction=interaction)
+    relative = args.relative if args.model == 'depart' else False
+
+    if args.old:
+        train_input = get_train_input_old(args.model, interaction=interaction)
+    else:
+        train_input = get_train_input(args.model, interaction=interaction, relative=relative)
 
     file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
         f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
     test_ds = get_preprocessed_dataset(file, args.data)
-    args.sub_eval.test_sample_cuts = [] if args.sub_eval.test_sample_cuts is None else args.sub_eval.test_sample_cuts
+    args.binning.test_sample_cuts = [] if args.binning.test_sample_cuts is None else args.binning.test_sample_cuts
 
-    for cut, cut_alias in zip(['base'] + args.sub_eval.test_sample_cuts, ['base'] + args.sub_eval.test_names):
-        ds = test_ds.filter(lambda x, y, w: Cut(cut)(x['perJet'])) if cut != 'base' else test_ds
+    names = args.binning.test_names if args.binning.test_names is not None else []
+    names = ['base'] + names if args.include_base else names
+    cuts = args.binning.test_sample_cuts if args.binning.test_sample_cuts is not None else []
+    cuts = ['base'] + cuts if args.include_base else cuts
+
+    for cut, cut_alias in zip(cuts, names):
+        ds = test_ds.filter(lambda x, y, w: Cut(cut)(x[args.binning.type])) if cut != 'base' else test_ds
+        label = ds.get_dataset(batch_size=args.take, take=args.take, map_func=lambda *d: d[1])
         ds = ds.map_data(train_input)
         tf_ds = ds.get_dataset(batch_size=args.batch_size,
                                take=args.take)
@@ -63,25 +74,27 @@ def main(args: eval_config.EvalConfig) -> None:
 
         # convert to pandas
         log.info(f"Convert to pandas for cut {cut}")
-        df = ds.apply(lambda x: x.take(args.take)).to_pandas()
-        if cut == 'base' and args.feature_importance:
-            data_info.feature_importance(df, dir_name)
+        label = label.as_numpy_iterator().next()
+        df = pd.DataFrame({'label': label, 'weight': np.ones_like(label)})
         df['named_label'] = df['label'].replace(naming_schema)
-        # df['prediction'] = prediction
-        # df['cm'] = '---'
-        # df.loc[(df['label'] == 1) & (df['prediction'] == 1), 'cm'] = 'q to q'
-        # df.loc[(df['label'] == 1) & (df['prediction'] == 0), 'cm'] = 'q to g'
-        # df.loc[(df['label'] == 0) & (df['prediction'] == 1), 'cm'] = 'g to q'
-        # df.loc[(df['label'] == 0) & (df['prediction'] == 0), 'cm'] = 'g to g'
 
         # calculate metrics
-        metrics = calculate_metrics(y_true=df['label'].to_numpy(), y_pred=prediction)
+        metrics = calculate_metrics(y_true=df['label'].to_numpy(), score=score)
         log.info(f"Test evaluation for cut {cut}: {metrics}")
         if cut != 'base':
-            metrics_per_cut = pd.concat([metrics_per_cut, pd.DataFrame({**metrics, 'cut': cut_alias}, index=[0])])
+            new = pd.DataFrame({**metrics, 'cut': cut_alias}, index=[0])
+            metrics_per_cut = pd.concat([metrics_per_cut, new])
+            if not os.path.isfile(os.path.join(args.logdir, 'results.csv')):
+                new.to_csv(os.path.join(args.logdir, 'results.csv'), index=False)
+            else:
+                new.to_csv(os.path.join(args.logdir, 'results.csv'), mode='a', header=False, index=False)
 
         if args.draw_distribution is not None:
-            data_info.generate_data_distributions(df=df.head(args.draw_distribution) if args.draw_distribution != 0 else df,
+            draw_df = ds.apply(lambda x: x.take(args.draw_distribution)).to_pandas()
+            if cut == 'base' and args.feature_importance:
+                data_info.feature_importance(draw_df, dir_name)
+            draw_df['named_label'] = draw_df['label'].replace(naming_schema)
+            data_info.generate_data_distributions(df=draw_df,
                                                   folder=dist_dir,
                                                   color_column='named_label')
 
@@ -92,9 +105,9 @@ def main(args: eval_config.EvalConfig) -> None:
                                    'prediction': prediction, })
 
         results_df['named_prediction'] = results_df['prediction'].replace(naming_schema)
+
         plot_validation_figs(results_df, dir_name, log=log)
 
-    metrics_per_cut.to_csv(os.path.join(args.logdir, 'results.csv'), index=False)
     plot_metrics_per_cut(metrics_per_cut, args.logdir, log=log)
 
 

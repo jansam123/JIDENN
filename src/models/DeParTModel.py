@@ -4,14 +4,14 @@ from typing import Callable, Union, Tuple, Optional
 
 
 class FFN(tf.keras.layers.Layer):
-    def __init__(self, dim, expansion, activation, dropout, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, dim, expansion, activation, dropout, **kwargs):
+        super().__init__(**kwargs)
         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
         # Create the required layers -- first a ReLU-activated dense
         # layer with `dim * expansion` units, followed by a dense layer
         # with `dim` units without an activation.
-        self.wide_dense = tf.keras.layers.Dense(int(dim * expansion * 2/3), activation=tf.nn.relu, use_bias=False)
-        self.gate_dense = tf.keras.layers.Dense(int(dim * expansion * 2/3), activation=None, use_bias=False)
+        self.wide_dense = tf.keras.layers.Dense(int(dim * expansion * 2 / 3), activation=tf.nn.relu, use_bias=False)
+        self.gate_dense = tf.keras.layers.Dense(int(dim * expansion * 2 / 3), activation=None, use_bias=False)
         self.dense = tf.keras.layers.Dense(dim, activation=None, use_bias=False)
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
@@ -23,11 +23,10 @@ class FFN(tf.keras.layers.Layer):
 
     def call(self, inputs):
         # Execute the FFN Transformer layer.
-        output = self.wide_dense(inputs)*self.gate_dense(inputs)
+        output = self.wide_dense(inputs) * self.gate_dense(inputs)
         output = self.dense(output)
         output = self.layer_dropout(output)
         return output
-
 
 
 class LayerScale(tf.keras.layers.Layer):
@@ -36,6 +35,8 @@ class LayerScale(tf.keras.layers.Layer):
     Args:
         init_values (float): value to initialize the diagonal matrix of LayerScale.
         projection_dim (int): projection dimension used in LayerScale.
+    Reference:
+        https://keras.io/examples/vision/deit
     """
 
     def __init__(self, init_values: float, projection_dim: int, **kwargs):
@@ -51,6 +52,7 @@ class StochasticDepth(tf.keras.layers.Layer):
 
     Reference:
         https://github.com/rwightman/pytorch-image-models
+        https://keras.io/examples/vision/deit
     """
 
     def __init__(self, drop_prob: float, **kwargs):
@@ -76,6 +78,8 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         num_heads (int): number of attention heads.
         dropout_rate (float): dropout rate to be used for dropout in the attention
             scores as well as the final projected outputs.
+    Reference:
+        https://keras.io/examples/vision/deit
     """
 
     def __init__(self, dim: int, heads: int, **kwargs):
@@ -146,10 +150,10 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
 
 
 class ClassAttention(tf.keras.layers.Layer):
-    def __init__(self, dim, heads, dropout, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, dim, heads, dropout, **kwargs):
+        super().__init__(**kwargs)
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim//heads, num_heads=heads, dropout=dropout)
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads, dropout=dropout)
 
     def get_config(self):
         config = super(ClassAttention, self).get_config()
@@ -162,22 +166,22 @@ class ClassAttention(tf.keras.layers.Layer):
         return output
 
 
-class ClassBlock(tf.keras.layers.Layer):
-    def __init__(self, dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.dim, self.heads, self.dropout, self.stochastic_depth_drop_rate, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion
+class ClassAttentionBlock(tf.keras.layers.Layer):
+    def __init__(self, dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion, **kwargs):
+        super().__init__(**kwargs)
+        self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
         self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         self.attn = ClassAttention(dim, heads, dropout)
-        self.stoch_depth1 = StochasticDepth(drop_prob=stochastic_depth_drop_rate)
+        self.stoch_depth1 = StochasticDepth(drop_prob=stoch_drop_prob)
         self.layer_scale1 = LayerScale(layer_scale_init_value, dim)
-        self.stoch_depth2 = StochasticDepth(drop_prob=stochastic_depth_drop_rate)
+        self.stoch_depth2 = StochasticDepth(drop_prob=stoch_drop_prob)
         self.layer_scale2 = LayerScale(layer_scale_init_value, dim)
         self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         self.mlp = FFN(dim, expansion, activation, dropout)
 
     def get_config(self):
-        config = super(ClassBlock, self).get_config()
-        config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout, "stochastic_depth_drop_rate": self.stochastic_depth_drop_rate,
+        config = super(ClassAttentionBlock, self).get_config()
+        config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout, "stoch_drop_prob": self.stoch_drop_prob,
                       "layer_scale_init_value": self.layer_scale_init_value, "activation": self.activation, "expansion": self.expansion})
         return config
 
@@ -199,23 +203,23 @@ class ClassBlock(tf.keras.layers.Layer):
         return output2
 
 
-class SelfBlock(tf.keras.layers.Layer):
-    def __init__(self, dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.dim, self.heads, self.dropout, self.stochastic_depth_drop_rate, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stochastic_depth_drop_rate, layer_scale_init_value, activation, expansion
+class SelfAttentionBlock(tf.keras.layers.Layer):
+    def __init__(self, dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion, **kwargs):
+        super().__init__(**kwargs)
+        self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
         self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         self.attn = TalkingHeadAttention(dim, heads)
         # self.attn = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
-        self.stoch_depth1 = StochasticDepth(drop_prob=stochastic_depth_drop_rate)
+        self.stoch_depth1 = StochasticDepth(drop_prob=stoch_drop_prob)
         self.layer_scale1 = LayerScale(layer_scale_init_value, dim)
-        self.stoch_depth2 = StochasticDepth(drop_prob=stochastic_depth_drop_rate)
+        self.stoch_depth2 = StochasticDepth(drop_prob=stoch_drop_prob)
         self.layer_scale2 = LayerScale(layer_scale_init_value, dim)
         self.norm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
         self.ffn = FFN(dim, expansion, activation, dropout)
 
     def get_config(self):
-        config = super(SelfBlock, self).get_config()
-        config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout, "stochastic_depth_drop_rate": self.stochastic_depth_drop_rate,
+        config = super(SelfAttentionBlock, self).get_config()
+        config.update({"dim": self.dim, "heads": self.heads, "dropout": self.dropout, "stoch_drop_prob": self.stoch_drop_prob,
                       "layer_scale_init_value": self.layer_scale_init_value, "activation": self.activation, "expansion": self.expansion})
         return config
 
@@ -237,27 +241,44 @@ class SelfBlock(tf.keras.layers.Layer):
 
 
 class DeParT(tf.keras.layers.Layer):
-
-    def __init__(self, layers, class_layers, dim, expansion, heads, dropout, activation, layer_scale_init_value, stochastic_depth_drop_rate, *args, **kwargs):
+    def __init__(self,
+                 layers: int,
+                 class_layers: int,
+                 dim: int,
+                 expansion: int,
+                 heads: int,
+                 dropout: float,
+                 class_dropout: float,
+                 activation: Callable,
+                 layer_scale_init_value: float,
+                 stochastic_depth_drop_rate: float,
+                 class_stochastic_depth_drop_rate: float,
+                 * args, **kwargs):
         # Make sure `dim` is even.
         assert dim % 2 == 0
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.layers, self.dim, self.expansion, self.heads, self.dropout, self.activation, self.class_layers = layers, dim, expansion, heads, dropout, activation, class_layers
-        self.layer_scale_init_value, self.stochastic_depth_drop_rate = layer_scale_init_value, stochastic_depth_drop_rate
+        self.layer_scale_init_value, self.stochastic_depth_drop_rate, self.class_stochastic_depth_drop_rate = layer_scale_init_value, stochastic_depth_drop_rate, class_stochastic_depth_drop_rate
+        self.class_dropout = class_dropout
         # Create the required number of transformer layers, each consisting of
         # - a layer normalization and a self-attention layer followed by a dropout layer,
         # - a layer normalization and a FFN layer followed by a dropout layer.
-        self.layers = [SelfBlock(dim, heads, dropout, stochastic_depth_drop_rate,
-                                 layer_scale_init_value, activation, expansion) for _ in range(layers)]
-        self.class_layers = [ClassBlock(dim, heads, dropout, stochastic_depth_drop_rate,
-                                        layer_scale_init_value, activation, expansion) for _ in range(class_layers)]
+        self.layers = [SelfAttentionBlock(dim, heads, dropout, self.stochastic_prob(i, layers - 1, stochastic_depth_drop_rate),
+                                          layer_scale_init_value, activation, expansion) for i in range(layers)]
+
+        self.class_layers = [ClassAttentionBlock(dim, heads, class_dropout, self.stochastic_prob(i, class_layers - 1, class_stochastic_depth_drop_rate),
+                                                 layer_scale_init_value, activation, expansion) for i in range(class_layers)]
         self.cls_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+
+    def stochastic_prob(self, step, total_steps, drop_rate):
+        return drop_rate * step / total_steps
 
     def get_config(self):
         config = super(DeParT, self).get_config()
         config.update({name: getattr(self, name)
-                      for name in ["layers", "dim", "expansion", "heads", "dropout", "activation", "class_layers", "layer_scale_init_value", "stochastic_depth_drop_rate"]})
+                      for name in ["layers", "dim", "expansion", "heads", "dropout", "activation", "class_layers",
+                                   "layer_scale_init_value", "stochastic_depth_drop_rate", "class_stochastic_depth_drop_rate", "class_dropout"]})
         return config
 
     def call(self, inputs, mask, interaction=None):
@@ -276,16 +297,16 @@ class DeParT(tf.keras.layers.Layer):
 
 class ParticleEmbedding(tf.keras.layers.Layer):
 
-    def __init__(self, embedding_dim, num_embeding_layers, activation, *args, **kwargs):
+    def __init__(self, embedding_dim, num_embeding_layers, activation, **kwargs):
 
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
         self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
                                         for _ in range(self.num_embeding_layers)])
 
     def get_config(self):
         config = super(ParticleEmbedding, self).get_config()
-        config.update({name: getattr(self, name) for name in ["embedding_dim",  "num_embeding_layers", "activation"]})
+        config.update({name: getattr(self, name) for name in ["embedding_dim", "num_embeding_layers", "activation"]})
         return config
 
     def call(self, inputs):
@@ -296,8 +317,8 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 
 class InteractionEmbedding(tf.keras.layers.Layer):
 
-    def __init__(self, num_layers, layer_size, out_dim, activation, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, num_layers, layer_size, out_dim, activation, **kwargs):
+        super().__init__(**kwargs)
         self.activation = activation
         self.layer_size = layer_size
         self.num_layers = num_layers
@@ -347,8 +368,10 @@ class DeParTModel(tf.keras.Model):
                  expansion: int,
                  heads: int,
                  dropout: float,
+                 class_dropout: float,
                  layer_scale_init_value: float,
                  stochastic_depth_drop_rate: float,
+                 class_stochastic_depth_drop_rate: float,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  preprocess: Union[tf.keras.layers.Layer,
@@ -391,9 +414,11 @@ class DeParTModel(tf.keras.Model):
                              expansion=expansion,
                              heads=heads,
                              dropout=dropout,
+                             class_dropout=class_dropout,
                              activation=activation,
                              layer_scale_init_value=layer_scale_init_value,
-                             stochastic_depth_drop_rate=stochastic_depth_drop_rate)(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction)
+                             stochastic_depth_drop_rate=stochastic_depth_drop_rate,
+                             class_stochastic_depth_drop_rate=class_stochastic_depth_drop_rate)(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction)
 
         transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
         output = output_layer(transformed)

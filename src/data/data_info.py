@@ -34,6 +34,7 @@ def explode_nested_variables(df: pd.DataFrame, exploding_column: str, max_iterat
             continue
     return df
 
+
 def plot_corrolation_matrix(corr_matrix: pd.DataFrame, save_path: str) -> None:
     cmap = sns.diverging_palette(230, 20, as_cmap=True)
 
@@ -58,18 +59,19 @@ def generate_data_distributions(df: pd.DataFrame,
 
     var_names = list(df.columns)
     var_names.remove(color_column)
-    for var_name in var_names+['label', 'weight']:
+    for var_name in var_names + ['label', 'weight']:
         small_df = df[[var_name, color_column]].copy()
         dtype = small_df[var_name].dtype
 
         if dtype == 'object':
             small_df = explode_nested_variables(small_df, var_name)
 
-        if dtype == 'category':
-            sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
-        else:
-            sns.kdeplot(data=small_df, x=var_name, hue=color_column,
-                        fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
+        sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
+        # if dtype == 'category':
+        #     sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
+        # else:
+        #     sns.kdeplot(data=small_df, x=var_name, hue=color_column,
+        #                 fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
 
         plt.savefig(os.path.join(folder, f'{var_name}.png'), dpi=300)
         plt.close('all')
@@ -80,7 +82,7 @@ def plot_feature_importance(df: pd.DataFrame, fig_path: str, score_name: str = '
     fig = plt.figure(figsize=(10, 15))
     # [x0, y0, width, height]
     ax = fig.add_axes([0.33, 0.05, 0.6, 0.92])
-    sns.barplot(x=score_name, y=variable_name, data=feature_scores)
+    sns.barplot(x=score_name, y=variable_name, data=feature_scores, orient='h')
     ax.set_ylabel(ylabel="")
     ax.set_xlabel(xlabel="Score")
     plt.savefig(fig_path, dpi=300)

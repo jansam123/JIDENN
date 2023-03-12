@@ -24,12 +24,12 @@ def get_normalization(model_name: str,
     normalizer = tf.keras.layers.Normalization(axis=-1)
 
     log.info("Getting std and mean of the dataset...")
-    log.info(f"Subsample size: {normalization_steps}")
+    log.info(f"Subsample size (num of batches): {normalization_steps}")
 
     if model_name in ['basic_fc', 'highway']:
         def picker(*x): return x[0]
 
-    elif model_name in ['transformer', 'part', 'depart']:
+    elif model_name in ['transformer', 'part', 'depart', 'pfn']:
         if interaction:
             def picker(*x): return x[0][0].to_tensor()
         else:

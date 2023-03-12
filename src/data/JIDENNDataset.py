@@ -173,13 +173,13 @@ class JIDENNDataset:
                 return new_sample, Expression(self.target)(sample), Expression(self.weight)(sample)
         return _pick_variables
 
-    def resample_by_label(self, label_func: Callable[[JIDENNVariables, int, float], int], target_dist: List[float]):
+    def resample_dataset(self, resampling_func: Callable[[JIDENNVariables, int, float], int], target_dist: List[float]):
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
-        dataset = self.dataset.rejection_resample(label_func, target_dist=target_dist).map(lambda _, data: data)
+        dataset = self.dataset.rejection_resample(resampling_func, target_dist=target_dist).map(lambda _, data: data)
         return self._set_dataset(dataset)
 
-    @ staticmethod
+    @staticmethod
     def combine(datasets: List[JIDENNDataset], weights: List[float]) -> JIDENNDataset:
         dataset = tf.data.Dataset.sample_from_datasets([dataset.dataset for dataset in datasets], weights=weights)
         jidenn_dataset = JIDENNDataset(datasets[0].variables, datasets[0].target, datasets[0].weight)
@@ -230,8 +230,10 @@ class JIDENNDataset:
 
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
-        dataset = self.dataset.map(map_func) if map_func is not None else self.dataset
-        dataset = dataset.map(dict_to_stacked_array)
+        if map_func is not None:
+            dataset = self.dataset.map(map_func)
+        else:
+            dataset = self.dataset.map(dict_to_stacked_array)
         dataset = dataset.shuffle(shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
         if take is not None:
             dataset = dataset.take(take)

@@ -5,8 +5,14 @@ from typing import Union, Literal, Callable, Dict, Tuple, List, Optional
 from .utils.transformations import to_e_px_py_pz
 
 
-ROOTVariables = Dict[str, Union[tf.RaggedTensor, tf.Tensor]]
-JIDENNVariables = Dict[str, ROOTVariables]
+PFOVariables = Dict[str, tf.RaggedTensor]
+InteractionVariables = Dict[str, tf.RaggedTensor]
+InteractingPFOVariables = Tuple[PFOVariables, PFOVariables]
+JetVariables = Dict[str, tf.Tensor]
+
+ROOTVariables = Dict[str, Union[tf.Tensor, tf.RaggedTensor]]
+JIDENNVariables = Dict[Literal['perJet', 'perJetTuple', 'perEvent'], ROOTVariables]
+JetVariableMapper = Callable[[JIDENNVariables], JetVariables]
 
 
 @tf.function
@@ -28,7 +34,27 @@ def pick_jet_kinematics(sample: JIDENNVariables) -> Tuple[tf.Tensor, tf.Tensor, 
 
 
 @tf.function
-def PFO_interactions(sample: JIDENNVariables) -> ROOTVariables:
+def PFO_interactions(sample: JIDENNVariables) -> PFOVariables:
+    m, pt, eta, phi = pick_PFO_kinematics(sample)
+    E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+    delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                         tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+    k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+    z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+    m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+        tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+    delta = tf.math.log(delta)
+    delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+    k_t = tf.math.log(k_t)
+    k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+    z = tf.linalg.set_diag(z, tf.zeros_like(m))
+    m2 = tf.math.log(m2)
+    m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+    return {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+
+
+@tf.function
+def PFO_interactions_old(sample: JIDENNVariables) -> PFOVariables:
     m, pt, eta, phi = pick_PFO_kinematics(sample)
     E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
     delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
@@ -38,21 +64,21 @@ def PFO_interactions(sample: JIDENNVariables) -> ROOTVariables:
     m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
         tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
     delta = -tf.math.log(delta)
-    delta = delta/(2*np.pi)
+    delta = delta / (2 * np.pi)
     delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
     k_t = tf.math.log(k_t)
     k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
-    k_t = (k_t - 6.0)/4.0
+    k_t = (k_t - 6.0) / 4.0
     z = tf.linalg.set_diag(z, tf.zeros_like(m))
-    z = z/0.5
+    z = z / 0.5
     m2 = tf.math.log(m2)
     m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
-    m2 = (m2-14.0)/4.0
+    m2 = (m2 - 14.0) / 4.0
     return {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
 
 @tf.function
-def PGOs_variables(sample: JIDENNVariables) -> ROOTVariables:
+def PFOs_variables_old(sample: JIDENNVariables) -> PFOVariables:
     PFO_m, PFO_pt, PFO_eta, PFO_phi = pick_PFO_kinematics(sample)
     jet_m, jet_pt, jet_eta, jet_phi = pick_jet_kinematics(sample)
     PFO_E = tf.math.sqrt(PFO_pt**2 + PFO_m**2)
@@ -60,22 +86,22 @@ def PGOs_variables(sample: JIDENNVariables) -> ROOTVariables:
     deltaEta = PFO_eta - jet_eta
     deltaPhi = PFO_phi - jet_phi
 
-    deltaPhi = deltaPhi/(2*np.pi)
-    deltaEta = deltaEta/0.5
+    deltaPhi = deltaPhi / (2 * np.pi)
+    deltaEta = deltaEta / 0.5
     deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
-    deltaR = deltaR/(2*np.pi)
+    deltaR = deltaR / (2 * np.pi)
 
     logPT = tf.math.log(PFO_pt)
-    logPT = (logPT - 9.0)/5.0
+    logPT = (logPT - 9.0) / 5.0
 
-    logPT_PTjet = tf.math.log(PFO_pt/jet_pt)
-    logPT_PTjet = (-logPT_PTjet - 4.0)/5.0
+    logPT_PTjet = tf.math.log(PFO_pt / jet_pt)
+    logPT_PTjet = (-logPT_PTjet - 4.0) / 5.0
     logE = tf.math.log(PFO_E)
     logE = (logE - 9.0) / 5.0
 
-    logE_Ejet = tf.math.log(PFO_E/jet_E)
-    logE_Ejet = (-logE_Ejet - 4.0)/3.0
-    m = PFO_m/140.0
+    logE_Ejet = tf.math.log(PFO_E / jet_E)
+    logE_Ejet = (-logE_Ejet - 4.0) / 3.0
+    m = PFO_m / 140.0
     # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
     data = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
             'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
@@ -83,9 +109,60 @@ def PGOs_variables(sample: JIDENNVariables) -> ROOTVariables:
 
 
 @tf.function
-def PFOs_and_PFO_interactions_variables(sample: JIDENNVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+def PFOs_variables(sample: JIDENNVariables) -> PFOVariables:
+    PFO_m, PFO_pt, PFO_eta, PFO_phi = pick_PFO_kinematics(sample)
+    jet_m, jet_pt, jet_eta, jet_phi = pick_jet_kinematics(sample)
+    PFO_E = tf.math.sqrt(PFO_pt**2 + PFO_m**2)
+    jet_E = tf.math.sqrt(jet_pt**2 + jet_m**2)
+    deltaEta = PFO_eta - jet_eta
+    deltaPhi = PFO_phi - jet_phi
+    deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+    logPT = tf.math.log(PFO_pt)
+
+    logPT_PTjet = tf.math.log(PFO_pt / jet_pt)
+    logE = tf.math.log(PFO_E)
+    logE_Ejet = tf.math.log(PFO_E / jet_E)
+    m = PFO_m
+    # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+    data = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+            'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+    return data
+
+
+@tf.function
+def relative_PFOs_variables(sample: JIDENNVariables) -> PFOVariables:
+    PFO_m, PFO_pt, PFO_eta, PFO_phi = pick_PFO_kinematics(sample)
+    jet_m, jet_pt, jet_eta, jet_phi = pick_jet_kinematics(sample)
+    PFO_E = tf.math.sqrt(PFO_pt**2 + PFO_m**2)
+    jet_E = tf.math.sqrt(jet_pt**2 + jet_m**2)
+    deltaEta = PFO_eta - jet_eta
+    deltaPhi = PFO_phi - jet_phi
+    deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+    logPT = tf.math.log(PFO_pt)
+
+    logPT_PTjet = tf.math.log(PFO_pt / jet_pt)
+    logE = tf.math.log(PFO_E)
+    logE_Ejet = tf.math.log(PFO_E / jet_E)
+    m = PFO_m
+    # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+    data = {'log_PT|PTjet': logPT_PTjet, 'log_E|Ejet': logE_Ejet, 'm': m,
+            'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+    return data
+
+
+@tf.function
+def PFOs_and_PFO_interactions_variables(sample: JIDENNVariables) -> Tuple[PFOVariables, PFOVariables]:
     interaction = PFO_interactions(sample)
-    variables = PGOs_variables(sample)
+    variables = PFOs_variables(sample)
+    return variables, interaction
+
+
+@tf.function
+def PFOs_and_PFO_interactions_variables_old(sample: JIDENNVariables) -> Tuple[PFOVariables, PFOVariables]:
+    interaction = PFO_interactions_old(sample)
+    variables = PFOs_variables_old(sample)
     return variables, interaction
 
 
@@ -104,7 +181,7 @@ def bdt_variables(sample: JIDENNVariables) -> ROOTVariables:
     delta_R_PFO_jet = tf.math.sqrt(tf.math.square(eta_jet - eta_const) +
                                    tf.math.square(phi_jet - phi_const))
 
-    W_PFO_jet = tf.math.reduce_sum(pt_const * delta_R_PFO_jet, axis=-1)/tf.math.reduce_sum(pt_const, axis=-1)
+    W_PFO_jet = tf.math.reduce_sum(pt_const * delta_R_PFO_jet, axis=-1) / tf.math.reduce_sum(pt_const, axis=-1)
     delta_R_PFOs = tf.math.sqrt(tf.math.square(
         eta_const[:, tf.newaxis] - eta_const[tf.newaxis, :]) + tf.math.square(phi_const[:, tf.newaxis] - phi_const[tf.newaxis, :]))
     C1_PFO_jet = tf.einsum('i,ij,j', pt_const, tf.linalg.set_diag(
@@ -114,7 +191,27 @@ def bdt_variables(sample: JIDENNVariables) -> ROOTVariables:
     return output_data
 
 
-def get_train_input(model: str, interaction: Optional[bool] = False) -> Callable:
+def get_train_input(model: str, interaction: Optional[bool] = False, relative: Optional[bool] = False) -> Callable:
+    high_level_models = ['basic_fc', 'highway']
+    PFO_based_models = ['transformer', 'part', 'depart', 'pfn']
+    bdt_models = ['bdt']
+
+    if model in high_level_models:
+        return jet_variables
+    elif model in PFO_based_models:
+        if interaction:
+            return PFOs_and_PFO_interactions_variables
+        elif relative:
+            return relative_PFOs_variables
+        else:
+            return PFOs_variables
+    elif model in bdt_models:
+        return bdt_variables
+    else:
+        raise ValueError(f"Model {model} not supported pick from {high_level_models + PFO_based_models + bdt_models}")
+
+
+def get_train_input_old(model: str, interaction: Optional[bool] = False) -> Callable:
     high_level_models = ['basic_fc', 'highway']
     PFO_based_models = ['transformer', 'part', 'depart']
     bdt_models = ['bdt']
@@ -123,18 +220,18 @@ def get_train_input(model: str, interaction: Optional[bool] = False) -> Callable
         return jet_variables
     elif model in PFO_based_models:
         if interaction:
-            return PFOs_and_PFO_interactions_variables
+            return PFOs_and_PFO_interactions_variables_old
         else:
-            return PGOs_variables
+            return PFOs_variables_old
     elif model in bdt_models:
         return bdt_variables
     else:
         raise ValueError(f"Model {model} not supported pick from {high_level_models + PFO_based_models + bdt_models}")
 
 
-def get_input_shape(model: str, total_variables, interaction: Optional[bool] = False) -> Union[int, Tuple[Union[int, None]]]:
+def get_input_shape(model: str, total_variables, interaction: Optional[bool] = False, relative: Optional[bool] = False) -> Union[int, Tuple[Union[int, None]]]:
     high_level_models = ['basic_fc', 'highway']
-    PFO_based_models = ['transformer', 'part', 'depart']
+    PFO_based_models = ['transformer', 'part', 'depart', 'pfn']
     bdt_models = ['bdt']
 
     if model in high_level_models:
@@ -142,6 +239,8 @@ def get_input_shape(model: str, total_variables, interaction: Optional[bool] = F
     elif model in PFO_based_models:
         if interaction:
             return ((None, 8), (None, None, 4))
+        elif relative:
+            return (None, 6)
         else:
             return (None, 8)
     elif model in bdt_models:

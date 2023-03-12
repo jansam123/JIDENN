@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Union, Optional, Literal
 
+
 @dataclass
 class BasicFC:
     layer_size: int    # Hidden layer sizes.
@@ -18,6 +19,14 @@ class Highway:
 
 
 @dataclass
+class PFN:
+    Phi_sizes: List[int]    # Hidden layer sizes.
+    F_sizes: List[int]    # Number of highway layers.
+    Phi_backbone: Literal["cnn", "fc"]
+    batch_norm: bool
+
+
+@dataclass
 class BDT:
     num_trees: int
     growing_strategy: str
@@ -28,7 +37,10 @@ class BDT:
     num_threads: int
     l2_regularization: float
     activation: str
-    
+    max_num_nodes: int
+    tmp_dir: str
+
+
 @dataclass
 class Transformer:
     warmup_steps: int  # Number of steps to warmup for
@@ -51,8 +63,11 @@ class DeParT:
     layers: int  # 6,12
     class_layers: int
     dropout: float  # Dropout after FFN layer.
+    class_dropout: float
     layer_scale_init_value: float
     stochastic_depth_drop_rate: float
+    class_stochastic_depth_drop_rate: float
+    relative: bool
     interaction: bool
     interaction_embedding_num_layers: int
     interaction_embedding_layer_size: int
@@ -73,6 +88,3 @@ class ParT:
     interaction_embedding_num_layers: int
     interaction_embedding_layer_size: int
     activation: str
-
-
-    

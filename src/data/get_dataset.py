@@ -38,7 +38,22 @@ def get_preprocessed_dataset(files: List[str],
         else:
             return -999
 
-    JZ_cuts = args_data.JZ_cut if args_data.JZ_cut is not None else [None]*len(files)
+    # p_t_ranges = [100_000, 200_000, 300_000, 400_000, 500_000, 600_000,
+    #               700_000, 800_000, 900_000, 1_000_000, 1_200_000]
+    # total_bins = (len(p_t_ranges) + 1) * 2
+
+    # @tf.function
+    # def p_T_resample(x: JIDENNVariables, l: int, w: float) -> int:
+    #     p_t = x['perJet']['jets_pt']
+    #     p_t_bin = tf.reduce_sum(tf.cast(tf.less_equal(p_t, p_t_ranges), tf.int32))
+    #     if tf.equal(l, args_data.raw_gluon):
+    #         return p_t_bin
+    #     elif tf.reduce_any(tf.equal(l, raw_quarks)):
+    #         return p_t_bin + len(p_t_ranges) + 1
+    #     else:
+    #         return -999
+
+    JZ_cuts = args_data.JZ_cut if args_data.JZ_cut is not None else [None] * len(files)
 
     datasets = []
     for jz_cut, jz_file in zip(JZ_cuts, files):
@@ -49,7 +64,8 @@ def get_preprocessed_dataset(files: List[str],
         jidenn_dataset = jidenn_dataset.load_dataset(jz_file)
         jidenn_dataset = jidenn_dataset.process(cut=Cut(jz_cut) & Cut(
             args_data.cut) if args_data.cut is not None else Cut(jz_cut))
-        jidenn_dataset = jidenn_dataset.resample_by_label(resample_g_q, [0.5, 0.5])
+        jidenn_dataset = jidenn_dataset.resample_dataset(resample_g_q, [0.5, 0.5])
+        # jidenn_dataset = jidenn_dataset.resample_dataset(p_T_resample, [1 / total_bins] * total_bins)
         jidenn_dataset = jidenn_dataset.remap_labels(label_mapping)
         datasets.append(jidenn_dataset)
 

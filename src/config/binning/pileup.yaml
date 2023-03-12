@@ -1,0 +1,22 @@
+type: perEvent
+test_sample_cuts:
+  - "(corrected_averageInteractionsPerCrossing[0]<20)"
+  - "(corrected_averageInteractionsPerCrossing[0]>20) && (corrected_averageInteractionsPerCrossing[0]<25)"
+  - "(corrected_averageInteractionsPerCrossing[0]>25) && (corrected_averageInteractionsPerCrossing[0]<30)"
+  - "(corrected_averageInteractionsPerCrossing[0]>30) && (corrected_averageInteractionsPerCrossing[0]<35)"
+  - "(corrected_averageInteractionsPerCrossing[0]>35) && (corrected_averageInteractionsPerCrossing[0]<40)"
+  - "(corrected_averageInteractionsPerCrossing[0]>40) && (corrected_averageInteractionsPerCrossing[0]<50)"
+  - "(corrected_averageInteractionsPerCrossing[0]>50) && (corrected_averageInteractionsPerCrossing[0]<55)"
+  - "(corrected_averageInteractionsPerCrossing[0]>55) && (corrected_averageInteractionsPerCrossing[0]<60)"
+  - "(corrected_averageInteractionsPerCrossing[0]>60)"
+
+test_names:
+  - "0-20"
+  - "20-25"
+  - "25-30"
+  - "30-35"
+  - "35-40"
+  - "40-50"
+  - "50-55"
+  - "55-60"
+  - "60+"

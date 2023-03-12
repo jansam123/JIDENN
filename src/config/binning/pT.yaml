@@ -1,3 +1,5 @@
+type: perJet
+
 test_sample_cuts:
   - "(jets_pt>20_000) && (jets_pt<30_000) && (jets_eta<2.1) && (jets_eta>-2.1)"
   - "(jets_pt>30_000) && (jets_pt<40_000) && (jets_eta<2.1) && (jets_eta>-2.1)"

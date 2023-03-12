@@ -2,8 +2,8 @@ from src.config.model_config import BDT as cfg_BDT
 import tensorflow_decision_forests as tfdf
 
 
-def get_BDT_model(args_model: cfg_BDT)->tfdf.keras.RandomForestModel:
-    
+def get_BDT_model(args_model: cfg_BDT) -> tfdf.keras.RandomForestModel:
+
     model = tfdf.keras.GradientBoostedTreesModel(
         num_trees=args_model.num_trees,
         growing_strategy=args_model.growing_strategy,
@@ -16,7 +16,8 @@ def get_BDT_model(args_model: cfg_BDT)->tfdf.keras.RandomForestModel:
         num_threads=args_model.num_threads,
         l2_regularization=args_model.l2_regularization,
         loss='BINOMIAL_LOG_LIKELIHOOD',
-        )
-    
-    return model
+        max_num_nodes=args_model.max_num_nodes,
+        temp_directory=args_model.tmp_dir,
+    )
 
+    return model

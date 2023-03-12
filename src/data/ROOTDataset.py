@@ -1,6 +1,6 @@
 from __future__ import annotations
 import tensorflow as tf
-from typing import Callable, List, Union, Dict
+from typing import Callable, List, Union, Dict, Optional
 import pickle
 import os
 import uproot
@@ -113,14 +113,14 @@ class ROOTDataset:
         return cls._concat([cls.from_root_file(filename) for filename in filenames])
 
     @classmethod
-    def load(cls, file: str, element_spec_path: str = None) -> ROOTDataset:
+    def load(cls, file: str, element_spec_path: Optional[str] = None) -> ROOTDataset:
         element_spec_path = os.path.join(file, 'element_spec') if element_spec_path is None else element_spec_path
         with open(element_spec_path, 'rb') as f:
             element_spec = pickle.load(f)
         dataset = tf.data.experimental.load(file, compression='GZIP', element_spec=element_spec)
         return cls(dataset, list(element_spec.keys()))
 
-    def save(self, save_path: str, element_spec_path: str = None, shard_func: Callable[[ROOTVariables], tf.Tensor] = None) -> None:
+    def save(self, save_path: str, element_spec_path: Optional[str] = None, shard_func: Optional[Callable[[ROOTVariables], tf.Tensor]] = None) -> None:
         element_spec_path = os.path.join(save_path, 'element_spec') if element_spec_path is None else element_spec_path
         element_spec = self._dataset.element_spec
         tf.data.experimental.save(self._dataset, save_path, compression='GZIP', shard_func=shard_func)

@@ -11,6 +11,7 @@ from ..models.HighwayModel import HighwayModel
 from ..models.TransformerModel import TransformerModel
 from ..models.ParTModel import ParTModel
 from ..models.DeParTModel import DeParTModel
+from ..models.PFNModel import PFNModel
 from ..models.BDT import get_BDT_model
 
 
@@ -32,6 +33,7 @@ def get_output_layer(num_labels: int) -> tf.keras.layers.Layer:
         return tf.keras.layers.Dense(num_labels, activation=tf.nn.softmax)
     else:
         return tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
+
 
 def get_activation(activation: str) -> Callable:
     if activation == 'relu':
@@ -60,10 +62,11 @@ def get_FC_model(input_size,
         activation=get_activation(args_model.activation),
         preprocess=preprocess)
 
+
 def get_highway_model(input_size,
-                 output_layer,
-                 args_model: model_cfg.Highway,
-                 preprocess: Optional[tf.keras.layers.Layer] = None):
+                      output_layer: tf.keras.layers.Layer,
+                      args_model: model_cfg.Highway,
+                      preprocess: Optional[tf.keras.layers.Layer] = None):
 
     return HighwayModel(
         layer_size=args_model.layer_size,
@@ -74,11 +77,27 @@ def get_highway_model(input_size,
         activation=get_activation(args_model.activation),
         preprocess=preprocess)
 
-def get_transformer_model(input_size,
-                          output_layer,
+
+def get_pfn_model(input_size,
+                  output_layer: tf.keras.layers.Layer,
+                  args_model: model_cfg.PFN,
+                  preprocess: Optional[tf.keras.layers.Layer] = None):
+
+    return PFNModel(
+        input_shape=input_size,
+        Phi_sizes=args_model.Phi_sizes,
+        F_sizes=args_model.F_sizes,
+        backbone=args_model.Phi_backbone,
+        batch_norm=args_model.batch_norm,
+        preprocess=preprocess,
+        output_layer=output_layer)
+
+
+def get_transformer_model(input_size: Tuple[int],
+                          output_layer: tf.keras.layers.Layer,
                           args_model: model_cfg.Transformer,
                           preprocess: Optional[tf.keras.layers.Layer] = None):
-    
+
     return TransformerModel(
         embedding_dim=args_model.embed_dim,
         num_embeding_layers=args_model.num_embed_layers,
@@ -91,11 +110,12 @@ def get_transformer_model(input_size,
         output_layer=output_layer,
         preprocess=preprocess)
 
+
 def get_part_model(input_size,
-                   output_layer,
+                   output_layer: tf.keras.layers.Layer,
                    args_model: model_cfg.ParT,
                    preprocess: Optional[tf.keras.layers.Layer] = None):
-    
+
     return ParTModel(
         input_shape=input_size,
         output_layer=output_layer,
@@ -114,11 +134,12 @@ def get_part_model(input_size,
         preprocess=preprocess,
         activation=get_activation(args_model.activation))
 
+
 def get_depart_model(input_size,
-                     output_layer,
+                     output_layer: tf.keras.layers.Layer,
                      args_model: model_cfg.DeParT,
                      preprocess: Optional[tf.keras.layers.Layer] = None):
-    
+
     return DeParTModel(
         input_shape=input_size,
         output_layer=output_layer,
@@ -132,32 +153,40 @@ def get_depart_model(input_size,
         dropout=args_model.dropout,
         layer_scale_init_value=args_model.layer_scale_init_value,
         stochastic_depth_drop_rate=args_model.stochastic_depth_drop_rate,
+        class_dropout=args_model.class_dropout,
+        class_stochastic_depth_drop_rate=args_model.class_stochastic_depth_drop_rate,
         interaction=args_model.interaction,
         interaction_embedding_num_layers=args_model.interaction_embedding_num_layers,
         interaction_embedding_layer_size=args_model.interaction_embedding_layer_size,
         #
         preprocess=preprocess,
         activation=get_activation(args_model.activation))
-    
 
-def get_compiled_model(model_name: str, 
+
+def get_compiled_model(model_name: str,
                        input_size: Union[int, Tuple[int]],
-                       args_models: cfg.Models,  
+                       args_models: cfg.Models,
                        args_optimizer: cfg.Optimizer,
                        num_labels: int,
                        preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None) -> tf.keras.Model:
-    
+
     if model_name == 'basic_fc':
         model = get_FC_model(input_size,
                              get_output_layer(num_labels),
                              args_models.basic_fc,
                              preprocess)
-        
+
     elif model_name == 'highway':
         model = get_highway_model(input_size,
                                   get_output_layer(num_labels),
                                   args_models.highway,
                                   preprocess)
+    elif model_name == 'pfn':
+        model = get_pfn_model(input_size,
+                              get_output_layer(num_labels),
+                              args_models.pfn,
+                              preprocess)
+
     elif model_name == 'transformer':
         model = get_transformer_model(input_size,
                                       get_output_layer(num_labels),
@@ -174,23 +203,15 @@ def get_compiled_model(model_name: str,
                                  args_models.depart,
                                  preprocess)
     elif model_name == 'bdt':
-        model = get_BDT_model(args_models.bdt)    
+        model = get_BDT_model(args_models.bdt)
         model.compile(weighted_metrics=get_metrics(num_labels))
         return model
-    
+
     else:
         raise NotImplementedError(f'Model {model_name} not supported.')
-    
+
     model.compile(optimizer=get_optimizer(args_optimizer),
                   loss=get_loss(num_labels, args_optimizer.label_smoothing),
                   weighted_metrics=get_metrics(num_labels))
 
     return model
-                         
-    
-    
-    
-        
-
-
-

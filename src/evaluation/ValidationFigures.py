@@ -9,7 +9,7 @@ from sklearn.metrics import roc_curve, confusion_matrix, auc
 from io import BytesIO
 from typing import List, Union
 
-sns.set_theme(style="dark")
+sns.set_theme(style="ticks")
 
 
 class ValidationFigure:
@@ -17,6 +17,7 @@ class ValidationFigure:
         self._df = df
         self._name = name
         self._class_names = class_names
+        self._data = None
         self._fig = self._get_fig()
 
     @property
@@ -33,6 +34,11 @@ class ValidationFigure:
 
     def save_fig(self, path: str, format: str = 'png'):
         self._fig.savefig(os.path.join(path, self._name + f".{format}"), dpi=300)
+
+    def save_data(self, path: str):
+        if self._data is None:
+            return
+        self._data.to_csv(os.path.join(path, self._name + ".csv"))
 
     def to_tensorboard(self, path: str):
         with tf.summary.create_file_writer(path).as_default():
@@ -62,12 +68,13 @@ class ValidationFigure:
 
 class ValidationROC(ValidationFigure):
     def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
-        fp, tp, _ = roc_curve(self._df['label'].values, self._df['score'].values)
+        fp, tp, th = roc_curve(self._df['label'].values, self._df['score'].values)
+        self._data = pd.DataFrame({'FPR': fp, 'TPR': tp, 'threshold': th})
         auc_score = auc(fp, tp)
 
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
-        sns.lineplot(x=100*fp, y=100*tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
+        sns.lineplot(x=100 * fp, y=100 * tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
         sns.lineplot(x=[0, 50, 100], y=[0, 50, 100], label=f'Random',
                      linewidth=1, linestyle='--', color='darkred', alpha=0.5)
         plt.plot([0, 0, 100], [0, 100, 100], color='darkgreen', linestyle='-.', label='Ideal', alpha=0.5)
@@ -89,6 +96,7 @@ class ValidationCM(ValidationFigure):
 
         cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 1000, decimals=0).astype(int)
         df_cm = pd.DataFrame(cm, index=self._class_names, columns=self._class_names)
+        self._data = df_cm
         sns.heatmap(df_cm, annot=True, fmt='4d', cmap=plt.cm.Blues, cbar=False)
         plt.title("Confusion matrix")
         plt.ylabel('True label')
@@ -100,6 +108,7 @@ class ValidationScoreHistogram(ValidationFigure):
     def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
+        self._data = self._df[['score', 'named_label']]
         sns.kdeplot(data=self._df, x='score', hue='named_label', fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
         plt.xlabel('Score')
         return fig
@@ -109,6 +118,7 @@ class ValidationLabelHistogram(ValidationFigure):
     def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
+        self._data = self._df[['named_label', 'named_prediction']]
         sns.histplot(self._df, x='named_prediction', hue='named_label', stat='count', multiple='stack')
         plt.xlabel('Predicted Tag')
         return fig

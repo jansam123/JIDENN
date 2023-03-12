@@ -1,13 +1,14 @@
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Literal
 
 from .config_subclasses import Data
 
 
 @dataclass
-class SubEvalConfig:
+class Binning:
     test_sample_cuts: List[str]
     test_names: List[str]
+    type: Literal["perJet", "perJetTuple", "perEvent"]
 
 
 @dataclass
@@ -23,6 +24,9 @@ class EvalConfig:
     take: int
     feature_importance: bool
     model: str
-    sub_eval: SubEvalConfig
+    binning: Binning
     threshold: float
     interaction: bool
+    relative: bool
+    old: bool
+    include_base: bool

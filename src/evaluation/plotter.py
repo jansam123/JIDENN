@@ -10,7 +10,10 @@ from .ValidationFigures import ValidationROC, ValidationCM, ValidationScoreHisto
 def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats=['png', 'pdf']):
     base_path = os.path.join(logdir, "figs")
     tb_base_path = os.path.join(logdir, "plots")
+    csv_path = os.path.join(base_path, 'csv')
     os.makedirs(base_path, exist_ok=True)
+    os.makedirs(tb_base_path, exist_ok=True)
+    os.makedirs(csv_path, exist_ok=True)
     format_path = []
     for format in formats:
         format_path.append(os.path.join(base_path, format))
@@ -24,8 +27,10 @@ def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats=['p
         val_fig = validation_fig(df, name, ['gluon', 'quark'])
         for fmt, path in zip(formats, format_path):
             val_fig.save_fig(path, fmt)
+        val_fig.save_data(csv_path)
         val_fig.to_tensorboard(tb_base_path)
     plt.close('all')
+
 
 def plot_metrics_per_cut(df: pd.DataFrame, logdir: str, log: Logger, formats=['png', 'pdf']):
     base_path = os.path.join(logdir, "metrics")

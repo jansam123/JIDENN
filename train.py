@@ -53,6 +53,16 @@ def main(args: config.JIDENNConfig) -> None:
         tf.config.threading.set_inter_op_parallelism_threads(args.params.threads)
         tf.config.threading.set_intra_op_parallelism_threads(args.params.threads)
 
+    # set decay steps
+    if args.optimizer.decay_steps is None and args.dataset.take is not None:
+        args.optimizer.decay_steps = int(args.params.epochs * args.dataset.take /
+                                         args.dataset.batch_size) - args.optimizer.warmup_steps
+        log.info(f"Setting decay steps to {args.optimizer.decay_steps}")
+    elif args.optimizer.decay_steps is None and args.dataset.take is None:
+        raise ValueError("Cannot set decay steps if dataset.take is None")
+    else:
+        log.info(f"Decay steps set to {args.optimizer.decay_steps}")
+
     files_per_JZ_slice = []
     for name in ["train", "test", "dev"]:
         file = [f'{args.data.path}/{jz_slice}/{name}' for jz_slice in args.data.JZ_slices] if args.data.JZ_slices is not None else [f'{args.data.path}/{name}']
@@ -61,16 +71,18 @@ def main(args: config.JIDENNConfig) -> None:
     train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files_per_JZ_slice]
 
     # pick input variables according to model
+    relative = False
     if args.params.model == 'part':
         interaction = args.models.part.interaction
     elif args.params.model == 'depart':
         interaction = args.models.depart.interaction
+        relative = args.models.depart.relative
     else:
         interaction = None
     num_total_variables = len(args.data.variables.perJet)
     num_total_variables += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
-    model_input = get_train_input(args.params.model, interaction)
-    input_size = get_input_shape(args.params.model, num_total_variables, interaction)
+    model_input = get_train_input(args.params.model, interaction, relative)
+    input_size = get_input_shape(args.params.model, num_total_variables, interaction, relative)
     train = train.map_data(model_input)
     dev = dev.map_data(model_input)
     test = test.map_data(model_input)
