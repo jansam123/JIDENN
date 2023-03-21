@@ -196,7 +196,7 @@ class JIDENNDataset:
             raise ValueError('Dataset not loaded yet.')
 
         @tf.function
-        def input_wrapper(data, label, w):
+        def input_wrapper(data, label, w=None):
             return func(data), label
         dataset = self.dataset.map(input_wrapper)
         return self._set_dataset(dataset)

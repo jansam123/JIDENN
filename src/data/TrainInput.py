@@ -93,15 +93,15 @@ class ConstituentVariables(TrainInput):
 
         PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
-        deltaEta = eta_const - eta_jet
-        deltaPhi = phi_const - phi_jet
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
         deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
 
         logPT = tf.math.log(pt_const)
 
-        logPT_PTjet = tf.math.log(pt_const / pt_jet)
         logE = tf.math.log(PFO_E)
-        logE_Ejet = tf.math.log(PFO_E / jet_E)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
         m = m_const
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
         return {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
@@ -127,15 +127,15 @@ class RelativeConstituentVariables(TrainInput):
 
         PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
-        deltaEta = eta_const - eta_jet
-        deltaPhi = phi_const - phi_jet
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
         deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
 
         logPT = tf.math.log(pt_const)
 
-        logPT_PTjet = tf.math.log(pt_const / pt_jet)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
         logE = tf.math.log(PFO_E)
-        logE_Ejet = tf.math.log(PFO_E / jet_E)
         m = m_const
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
         return {'log_PT|PTjet': logPT_PTjet, 'log_E|Ejet': logE_Ejet,
@@ -178,15 +178,15 @@ class InteractionConstituentVariables(TrainInput):
 
         PFO_E = tf.math.sqrt(pt**2 + m**2)
         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
-        deltaEta = eta - eta_jet
-        deltaPhi = phi - phi_jet
+        deltaEta = eta - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi - tf.math.reduce_mean(phi_jet)
         deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
 
         logPT = tf.math.log(pt)
 
-        logPT_PTjet = tf.math.log(pt / pt_jet)
+        logPT_PTjet = tf.math.log(pt / tf.math.reduce_sum(pt_jet))
         logE = tf.math.log(PFO_E)
-        logE_Ejet = tf.math.log(PFO_E / jet_E)
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
 
         const_vars = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
                       'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
@@ -210,8 +210,8 @@ class DeepSetConstituentVariables(TrainInput):
 
         logPT_PTjet = - tf.math.log(pt_const / tf.math.reduce_sum(pt_const))
 
-        eta = eta_const - eta_jet
-        phi = phi_const - phi_jet
+        eta = eta_const - tf.math.reduce_mean(eta_jet)
+        phi = phi_const - tf.math.reduce_mean(phi_jet)
 
         return {'log_pT': logPT_PTjet, 'deltaEta': eta, 'deltaPhi': phi}
 
