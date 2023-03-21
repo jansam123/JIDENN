@@ -1,6 +1,0 @@
-{
-    "editor.formatOnPaste": true,
-    "editor.formatOnSave": true,
-    "editor.formatOnType": false,
-    "python.analysis.typeCheckingMode": "basic"
-}
