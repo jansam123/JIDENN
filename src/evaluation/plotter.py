@@ -7,7 +7,7 @@ import seaborn as sns
 from .ValidationFigures import ValidationROC, ValidationCM, ValidationScoreHistogram, ValidationLabelHistogram
 
 
-def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats=['png', 'pdf']):
+def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats=['jpg', 'pdf']):
     base_path = os.path.join(logdir, "figs")
     tb_base_path = os.path.join(logdir, "plots")
     csv_path = os.path.join(base_path, 'csv')

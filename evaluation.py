@@ -6,6 +6,7 @@ import os
 import logging
 import hydra
 import pandas as pd
+import time
 from hydra.core.config_store import ConfigStore
 #
 import src.data.data_info as data_info
@@ -14,8 +15,9 @@ from src.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
 from src.data.utils.Cut import Cut
 from src.data.get_dataset import get_preprocessed_dataset
 from src.model_builders.LearningRateSchedulers import LinearWarmup
-from src.data.get_train_input import get_train_input, get_train_input_old
+from src.data.TrainInput import input_classes_lookup
 from src.evaluation.evaluation_metrics import calculate_metrics
+from src.evaluation.variable_latex_names import LATEX_NAMING_CONVENTION
 
 
 cs = ConfigStore.instance()
@@ -37,33 +39,39 @@ def main(args: eval_config.EvalConfig) -> None:
 
     metrics_per_cut = pd.DataFrame(columns=['cut'])
     naming_schema = {0: args.data.labels[0], 1: args.data.labels[1]}
-    interaction = args.interaction if args.model == 'depart' or args.model == 'part' else None
-    relative = args.relative if args.model == 'depart' else False
 
-    if args.old:
-        train_input = get_train_input_old(args.model, interaction=interaction)
-    else:
-        train_input = get_train_input(args.model, interaction=interaction, relative=relative)
+    train_input_class = input_classes_lookup(args.input_type)
+    train_input_class = train_input_class(per_jet_variables=args.data.variables.perJet,
+                                          per_event_variables=args.data.variables.perEvent,
+                                          per_jet_tuple_variables=args.data.variables.perJetTuple)
+    model_input = tf.function(func=train_input_class)
 
     file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
         f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
     test_ds = get_preprocessed_dataset(file, args.data)
-    args.binning.test_sample_cuts = [] if args.binning.test_sample_cuts is None else args.binning.test_sample_cuts
+    args.binning.test_sample_cuts = [] if args.binning is None else args.binning.test_sample_cuts
 
-    names = args.binning.test_names if args.binning.test_names is not None else []
+    names = args.binning.test_names if args.binning is not None else []
     names = ['base'] + names if args.include_base else names
-    cuts = args.binning.test_sample_cuts if args.binning.test_sample_cuts is not None else []
+    cuts = args.binning.test_sample_cuts if args.binning is not None else []
     cuts = ['base'] + cuts if args.include_base else cuts
 
     for cut, cut_alias in zip(cuts, names):
         ds = test_ds.filter(lambda x, y, w: Cut(cut)(x[args.binning.type])) if cut != 'base' else test_ds
         label = ds.get_dataset(batch_size=args.take, take=args.take, map_func=lambda *d: d[1])
-        ds = ds.map_data(train_input)
+        ds = ds.map_data(model_input)
         tf_ds = ds.get_dataset(batch_size=args.batch_size,
                                take=args.take)
 
         # get model predictions
+        start = time.time()
         score = model.predict(tf_ds).ravel()
+        end = time.time()
+        inferendce_time = end - start
+        log.info(f"Total prediction time for cut {cut}: {inferendce_time:.2f} s (batch size: {args.batch_size})")
+        log.info(
+            f"Per Jet Prediction time for cut {cut}: {10**3 * inferendce_time / args.take:.2f} ms (batch size: {args.batch_size})")
+
         prediction = np.where(score > args.threshold, 1, 0)
 
         # dir creation
@@ -76,7 +84,7 @@ def main(args: eval_config.EvalConfig) -> None:
         log.info(f"Convert to pandas for cut {cut}")
         label = label.as_numpy_iterator().next()
         df = pd.DataFrame({'label': label, 'weight': np.ones_like(label)})
-        df['named_label'] = df['label'].replace(naming_schema)
+        df['Truth Label'] = df['label'].replace(naming_schema)
 
         # calculate metrics
         metrics = calculate_metrics(y_true=df['label'].to_numpy(), score=score)
@@ -93,15 +101,17 @@ def main(args: eval_config.EvalConfig) -> None:
             draw_df = ds.apply(lambda x: x.take(args.draw_distribution)).to_pandas()
             if cut == 'base' and args.feature_importance:
                 data_info.feature_importance(draw_df, dir_name)
-            draw_df['named_label'] = draw_df['label'].replace(naming_schema)
+            draw_df['Truth Label'] = draw_df['label'].replace(naming_schema)
+            draw_df.to_csv(os.path.join(dir_name, 'distributions.csv'), index=False)
             data_info.generate_data_distributions(df=draw_df,
                                                   folder=dist_dir,
-                                                  color_column='named_label')
+                                                  color_column='Truth Label',
+                                                  xlabel_mapper=LATEX_NAMING_CONVENTION)
 
         results_df = pd.DataFrame({'score': score,
                                    'label': df['label'],
                                    'weight': df['weight'],
-                                   'named_label': df['named_label'],
+                                   'Truth Label': df['Truth Label'],
                                    'prediction': prediction, })
 
         results_df['named_prediction'] = results_df['prediction'].replace(naming_schema)

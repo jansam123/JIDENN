@@ -4,9 +4,11 @@ import os
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from typing import Union, List
+from typing import Union, List, Dict, Optional
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import mutual_info_classif, f_classif
+
+sns.set_theme(style="ticks")
 
 
 def tf_dataset_to_pandas(dataset: tf.data.Dataset, var_names: List[str]) -> pd.DataFrame:
@@ -53,27 +55,35 @@ def plot_corrolation_matrix(corr_matrix: pd.DataFrame, save_path: str) -> None:
 
 def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,
-                                color_column: str = 'named_label') -> None:
+                                color_column: str = 'named_label',
+                                xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
     corr_matrix = df.corr()
-    plot_corrolation_matrix(corr_matrix, os.path.join(folder, 'correlation_matrix.png'))
+    plot_corrolation_matrix(corr_matrix, os.path.join(folder, 'correlation_matrix.jpg'))
 
     var_names = list(df.columns)
     var_names.remove(color_column)
+    os.makedirs(os.path.join(folder, 'jpg'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'pdf'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'jpg_log'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'pdf_log'), exist_ok=True)
     for var_name in var_names + ['label', 'weight']:
         small_df = df[[var_name, color_column]].copy()
         dtype = small_df[var_name].dtype
 
         if dtype == 'object':
             small_df = explode_nested_variables(small_df, var_name)
+            small_df = small_df.loc[small_df[var_name] != 0]
 
-        sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
-        # if dtype == 'category':
-        #     sns.histplot(data=small_df, x=var_name, hue=color_column, stat='count')
-        # else:
-        #     sns.kdeplot(data=small_df, x=var_name, hue=color_column,
-        #                 fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
+        ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                          stat='density', element="step", fill=False, palette='Set1', common_norm=False)
+        plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
-        plt.savefig(os.path.join(folder, f'{var_name}.png'), dpi=300)
+        plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(folder, 'pdf', f'{var_name}.pdf'), bbox_inches='tight')
+        plt.yscale('log')
+        plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
+
         plt.close('all')
 
 

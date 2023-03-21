@@ -25,7 +25,7 @@ class BinaryRejection(tf.keras.metrics.Metric):
         self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
-        return 1 - self.tpr
+        return 1 / self.tpr
 
     def reset_states(self):
         self.tpr.assign(0.)
@@ -85,7 +85,7 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
         return config
 
     def result(self):
-        return 1 - super(RejectionAtEfficiency, self).result()
+        return 1 / super(RejectionAtEfficiency, self).result()
 
 
 def get_metrics(threshold=0.5) -> List[tf.keras.metrics.Metric]:

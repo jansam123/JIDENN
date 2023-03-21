@@ -26,7 +26,11 @@ class EvalConfig:
     model: str
     binning: Binning
     threshold: float
-    interaction: bool
-    relative: bool
     old: bool
     include_base: bool
+    input_type = Literal['highlevel',
+                         'highlevel_constituents',
+                         'constituents',
+                         'relative_constituents',
+                         'interaction_constituents',
+                         'deepset_constituents']

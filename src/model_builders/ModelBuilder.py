@@ -1,51 +1,70 @@
 import tensorflow as tf
-import tensorflow_addons as tfa
 from typing import Union, Tuple, Optional, Callable, List
 
 from src.config import config_subclasses as cfg
-from src.config import model_config as model_cfg
 from .get_optimizer import get_optimizer
 
-from ..models.BasicFCModel import BasicFCModel
-from ..models.HighwayModel import HighwayModel
-from ..models.TransformerModel import TransformerModel
-from ..models.ParTModel import ParTModel
-from ..models.DeParTModel import DeParTModel
-from ..models.PFNModel import PFNModel
-from ..models.BDT import get_BDT_model
+from .get_model import model_getter_lookup
 
 
 class ModelBuilder:
-    def __init__(self, args_model: model_cfg.ModelConfig, input_size: int, num_labels: int):
-        self.args_model = args_model
+    def __init__(self,
+                 model_name: str,
+                 args_model: cfg.Models,
+                 input_size: Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
+                 num_labels: int,
+                 args_optimizer: cfg.Optimizer,
+                 preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None):
+
+        self.preprocess = preprocess
+        self.args_models = args_model
+        self.args_optimizer = args_optimizer
         self.input_size = input_size
         self.num_labels = num_labels
+        self.model_name = model_name
 
+    @property
+    def model(self) -> tf.keras.Model:
+        model_getter = model_getter_lookup(self.model_name)
+        model = model_getter(input_size=self.input_size,
+                             output_layer=self.output_layer,
+                             args_model=getattr(self.args_models, self.model_name),
+                             preprocess=self.preprocess)
+        return model
+
+    @property
+    def compiled_model(self) -> tf.keras.Model:
+        model = self.model
+
+        if self.model_name == 'bdt':
+            model.compile(weighted_metrics=self.metrics)
+            return model
+
+        model.compile(optimizer=self.optimizer,
+                      loss=self.loss,
+                      weighted_metrics=self.metrics)
+        return model
+
+    @property
+    def optimizer(self) -> tf.keras.optimizers.Optimizer:
+        return get_optimizer(self.args_optimizer)
+
+    @property
     def metrics(self) -> List[tf.keras.metrics.Metric]:
         metrics = [tf.keras.metrics.CategoricalAccuracy() if self.num_labels > 2 else tf.keras.metrics.BinaryAccuracy(),
                    tf.keras.metrics.AUC()]
         return metrics
 
-    def loss(self, label_smoothing: float) -> tf.keras.losses.Loss:
+    @property
+    def loss(self) -> tf.keras.losses.Loss:
         if self.num_labels > 2:
-            return tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing)
+            return tf.keras.losses.CategoricalCrossentropy(label_smoothing=self.args_optimizer.label_smoothing)
         else:
-            return tf.keras.losses.BinaryCrossentropy(label_smoothing=label_smoothing)
+            return tf.keras.losses.BinaryCrossentropy(label_smoothing=self.args_optimizer.label_smoothing)
 
+    @property
     def output_layer(self) -> tf.keras.layers.Layer:
         if self.num_labels > 2:
             return tf.keras.layers.Dense(self.num_labels, activation=tf.nn.softmax)
         else:
             return tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
-
-    def activation(self, activation: str) -> Callable:
-        if activation == 'relu':
-            return tf.nn.relu
-        elif activation == 'gelu':
-            return tfa.activations.gelu
-        elif activation == 'tanh':
-            return tf.nn.tanh
-        elif activation == 'swish':
-            return tf.keras.activations.swish
-        else:
-            raise NotImplementedError(f'Activation {activation} not supported.')

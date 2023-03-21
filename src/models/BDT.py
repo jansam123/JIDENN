@@ -2,7 +2,7 @@ from src.config.model_config import BDT as cfg_BDT
 import tensorflow_decision_forests as tfdf
 
 
-def get_BDT_model(args_model: cfg_BDT) -> tfdf.keras.RandomForestModel:
+def bdt_model(args_model: cfg_BDT) -> tfdf.keras.RandomForestModel:
 
     model = tfdf.keras.GradientBoostedTreesModel(
         num_trees=args_model.num_trees,

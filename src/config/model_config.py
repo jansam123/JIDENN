@@ -1,33 +1,54 @@
 from dataclasses import dataclass
-from typing import List, Union, Optional, Literal
+from typing import List, Optional, Literal
 
 
 @dataclass
-class BasicFC:
+class Model:
+    train_input = Literal['highlevel',
+                          'highlevel_constituents',
+                          'constituents',
+                          'relative_constituents',
+                          'interaction_constituents',
+                          'deepset_constituents']
+    activation: Literal['relu', 'gelu', 'tanh', 'swish']
+
+
+@dataclass
+class BasicFC(Model):
     layer_size: int    # Hidden layer sizes.
     num_layers: int    # Number of highway layers.
-    dropout: Union[float, None]    # Dropout after FC layers.
-    activation: str
+    dropout: Optional[float]    # Dropout after FC layers.
 
 
 @dataclass
-class Highway:
+class Highway(Model):
     layer_size: int    # Hidden layer sizes.
     num_layers: int    # Number of highway layers.
-    dropout: Union[float, None]    # Dropout after FC layers.
-    activation: str
+    dropout: Optional[float]    # Dropout after FC layers.
 
 
 @dataclass
-class PFN:
+class PFN(Model):
     Phi_sizes: List[int]    # Hidden layer sizes.
     F_sizes: List[int]    # Number of highway layers.
     Phi_backbone: Literal["cnn", "fc"]
     batch_norm: bool
+    Phi_dropout: Optional[float]    # Dropout after FC layers.
+    F_dropout: Optional[float]    # Dropout after FC layers.
 
 
 @dataclass
-class BDT:
+class EFN(Model):
+    Phi_sizes: List[int]    # Hidden layer sizes.
+    F_sizes: List[int]    # Number of highway layers.
+    Phi_backbone: Literal["cnn", "fc"]
+    batch_norm: bool
+    Phi_dropout: Optional[float]    # Dropout after FC layers.
+    F_dropout: Optional[float]    # Dropout after FC layers.
+
+
+@dataclass
+class BDT(Model):
     num_trees: int
     growing_strategy: str
     max_depth: int
@@ -36,13 +57,12 @@ class BDT:
     min_examples: int
     num_threads: int
     l2_regularization: float
-    activation: str
     max_num_nodes: int
     tmp_dir: str
 
 
 @dataclass
-class Transformer:
+class Transformer(Model):
     warmup_steps: int  # Number of steps to warmup for
     dropout: float  # Dropout after FFN layer.
     expansion: int  # 4,  number of hidden units in FFN is expansion * embed_dim
@@ -50,11 +70,10 @@ class Transformer:
     layers: int  # 6,12
     embed_dim: int
     num_embed_layers: int
-    activation: str
 
 
 @dataclass
-class DeParT:
+class DeParT(Model):
     warmup_steps: int
     embed_dim: int
     num_embed_layers: int
@@ -68,14 +87,12 @@ class DeParT:
     stochastic_depth_drop_rate: float
     class_stochastic_depth_drop_rate: float
     relative: bool
-    interaction: bool
     interaction_embedding_num_layers: int
     interaction_embedding_layer_size: int
-    activation: str
 
 
 @dataclass
-class ParT:
+class ParT(Model):
     warmup_steps: int  # Number of steps to warmup for
     particle_block_dropout: float  # Dropout after FFN layer.
     expansion: int  # 4,  number of hidden units in FFN is expansion * embed_dim
@@ -84,7 +101,5 @@ class ParT:
     class_block_layers: int
     embed_dim: int
     num_embed_layers: int
-    interaction: bool
     interaction_embedding_num_layers: int
     interaction_embedding_layer_size: int
-    activation: str

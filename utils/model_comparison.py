@@ -7,6 +7,7 @@ import os
 import numpy as np
 import os
 # import atlas_mpl_style as ampl
+from const import MODEL_NAMING_SCHEMA
 # ampl.use_atlas_style()
 sns.set_theme(style="ticks")
 # sns.set_context(rc={"grid.linecolor": "black"})
@@ -17,39 +18,42 @@ parser.add_argument("--model_names", nargs='*', type=str, help="names of the mod
 parser.add_argument("--x_axis_labels", nargs='*', type=str, help="labels for the x axis.")
 parser.add_argument("--save_dir", default=".", type=str, help="Directory to save the plots to.")
 parser.add_argument("--take", default=0, type=int, help="Directory to save the plots to.")
+parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 
 
 def main(args: argparse.Namespace):
-    logdir = 'good_logs/comparison_small/'
-    eval_dir = 'eval'
-
-    ylabel = 'corrected_averageInteractionsPerCrossing[0]'
-    ylabel_averaged = 'corrected_averageInteractionsPerCrossing[0] Averaged Accuracy Difference'
-
-    ylabel = '$|\eta|$'
-    ylabel_averaged = '$|\eta|$ Averaged Accuracy Difference'
-    
-    ylabel = '$p_{\mathrm{T}}$ [GeV]'
-    ylabel_averaged = '$p_{\mathrm{T}}$ Averaged Accuracy Difference'
-
+    logdir = 'good_logs/comparison_12e/'
     model_names = ['interacting_depart', 'interacting_part', 'highway',
-                   'basic_fc', 'transformer', 'part', 'depart', 'interacting_depart_40M', 'pfn']
+                   'basic_fc', 'transformer', 'part', 'depart', 'depart_rel', 'pfn', 'efn']
     # model_names += ['bdt']
     # used_models = ['interacting_part', 'basic_fc', 'bdt']
-    used_models = model_names
-    base = 'transformer'
+    base = 'Transformer'
     # save_dir = logdir + 'figs/' + str(args.take) + '/'
 
-    save_dir = logdir + 'figs/' + 'pT_' + str(args.take) + '/'
+    save_dir = logdir + 'figs/'
 
-    cut = ["0-20", "20-25", "25-30", "30-35", "35-40", "40-50", "50-55", "55-60", "60+"]
-
-
-    cut = ["0.0-0.1", "0.1-0.3", "0.3-0.5", "0.5-0.7", "0.7-0.9", "0.9-1.1",
-           "1.1-1.3", "1.3-1.5", "1.5-1.7", "1.7-1.9", "1.9-2.1", "2.1+"]
-    
-    cut = ['20-30', '30-40', '40-60', '60-100', '100-150', '150-200', '200-300',
-           '300-400', '400-500', '500-600', '600-800', '800-1000', '1000-1200', '1200+']
+    if args.type == 'pT':
+        eval_dir = 'eval_pT'
+        ylabel = '$p_{\mathrm{T}}$ [GeV]'
+        ylabel_averaged = '$p_{\mathrm{T}}$ Averaged Accuracy Difference'
+        cut = ['20-30', '30-40', '40-60', '60-100', '100-150', '150-200', '200-300',
+               '300-400', '400-500', '500-600', '600-800', '800-1000', '1000-1200', '1200+']
+        save_dir += f'pT_{args.take}/'
+    elif args.type == 'eta':
+        eval_dir = 'eval_eta'
+        cut = ["0.0-0.1", "0.1-0.3", "0.3-0.5", "0.5-0.7", "0.7-0.9", "0.9-1.1",
+               "1.1-1.3", "1.3-1.5", "1.5-1.7", "1.7-1.9", "1.9-2.1", "2.1+"]
+        ylabel = '$|\eta|$'
+        ylabel_averaged = '$|\eta|$ Averaged Accuracy Difference'
+        save_dir += f'eta_{args.take}/'
+    elif args.type == 'pileup':
+        eval_dir = 'eval_pileup'
+        cut = ["0-20", "20-25", "25-30", "30-35", "35-40", "40-50", "50-55", "55-60", "60+"]
+        ylabel = 'corrected_averageInteractionsPerCrossing[0]'
+        ylabel_averaged = 'corrected_averageInteractionsPerCrossing[0] Averaged Accuracy Difference'
+        save_dir += f'pileup_{args.take}/'
+    else:
+        raise ValueError('Unknown type')
 
     palette = 'coolwarm'  # sns.diverging_palette(250, 30, l=65, center="dark",n=len(model_names))
     cmap = 'coolwarm'  # sns.diverging_palette(250, 30, l=65, center="dark", as_cmap=True)
@@ -67,6 +71,7 @@ def main(args: argparse.Namespace):
 
     os.makedirs(save_dir, exist_ok=True)
     take = args.take
+    print(f'Using {usable_models} models')
 
     # load the CSV files into a list of pandas DataFrames
     dataframes = []
@@ -80,7 +85,7 @@ def main(args: argparse.Namespace):
         except FileNotFoundError:
             roc_df = pd.DataFrame()
             print(f'No ROC file for {model_name}')
-        df['model'] = model_name
+        df['model'] = MODEL_NAMING_SCHEMA[model_name] if model_name in MODEL_NAMING_SCHEMA else model_name
         # roc_df['model'] = roc_df['model'] + ' (AUC = ' + auc(roc_df['FPR'], roc_df['TPR']).round(3).astype(str) + ')'
         if take > 0:
             df = df.iloc[take:]
@@ -110,9 +115,9 @@ def main(args: argparse.Namespace):
     rel_err = pd.DataFrame(rel_err)
     rel_err = rel_err.sort_values(err_name, ascending=False)
 
-    rel_err = rel_err[rel_err['model'].isin(used_models)]
-    df = df[df['model'].isin(used_models)]
-    roc_df = roc_df[roc_df['model'].isin(used_models)]
+    # rel_err = rel_err[rel_err['model'].isin(used_models)]
+    # df = df[df['model'].isin(used_models)]
+    # roc_df = roc_df[roc_df['model'].isin(used_models)]
 
     for metric in df.columns.drop(['model', 'cut']):
         fig = plt.figure(figsize=(15, 9))
@@ -121,14 +126,14 @@ def main(args: argparse.Namespace):
 
         plt.xlabel(ylabel)
         plt.ylabel(metric)
-        plt.savefig(save_dir + f'{metric}.jpg', dpi=300)
+        plt.savefig(save_dir + f'{metric}.jpg', dpi=300, bbox_inches='tight')
         plt.close()
 
     fig = plt.figure(figsize=(14, 9))
     max_delta = abs(rel_err[err_name]).max()
     p = sns.barplot(data=rel_err, x=err_name, y='model', palette=palette, dodge=False)
     p.axes.set_xlim(-max_delta, max_delta)
-    plt.savefig(save_dir + f'relative_error.jpg', dpi=300)
+    plt.savefig(save_dir + f'relative_error.jpg', dpi=300, bbox_inches='tight')
     plt.close()
 
     new_df = new_df.set_index(pd.Index(cut))
@@ -138,7 +143,7 @@ def main(args: argparse.Namespace):
     sns.heatmap(new_df, annot=True, fmt='.3f', cmap=cmap + '_r', cbar=False)
     plt.xlabel('Model')
     plt.ylabel(ylabel)
-    plt.savefig(save_dir + f'heatmap.jpg', dpi=300)
+    plt.savefig(save_dir + f'heatmap.jpg', dpi=300, bbox_inches='tight')
     plt.close()
 
     new_df['metric'] = 'Relative Accuracy'
@@ -149,20 +154,19 @@ def main(args: argparse.Namespace):
     sns.pointplot(data=new_df, x='index', y='value', hue='model', ci=95, palette=palette)
     plt.xlabel(ylabel)
     plt.ylabel('Relative Accuracy')
-    plt.savefig(save_dir + f'relative_accuracy.jpg', dpi=300)
+    plt.savefig(save_dir + f'relative_accuracy.jpg', dpi=300, bbox_inches='tight')
     plt.close()
 
     roc_df['FPR'] = roc_df['FPR'] * 100
     roc_df['TPR'] = roc_df['TPR'] * 100
     fig = plt.figure(figsize=(8, 8))
-    sns.lineplot(data=roc_df, x='FPR', y='TPR', hue='model', palette=palette,
-                 linewidth=2)  # , hue_order=rel_err['model'])
+    sns.lineplot(data=roc_df, x='FPR', y='TPR', hue='model', palette=palette, linewidth=2)
     sns.lineplot(x=[0, 50, 100], y=[0, 50, 100], label=f'Random',
                  linewidth=1, linestyle='--', color='darkred', alpha=0.5)
     plt.plot([0, 0, 100], [0, 100, 100], color='darkgreen', linestyle='-.', label='Ideal', alpha=0.5)
     plt.xlabel('False positives [%]')
     plt.ylabel('True positives [%]')
-    plt.savefig(save_dir + f'roc.jpg', dpi=300)
+    plt.savefig(save_dir + f'roc.jpg', dpi=300, bbox_inches='tight')
     plt.close()
 
 

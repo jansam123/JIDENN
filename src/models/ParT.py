@@ -241,12 +241,11 @@ class ParTModel(tf.keras.Model):
                  particle_block_dropout: float,
                  output_layer: tf.keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
-                 interaction: bool = True,
                  interaction_embedding_num_layers: Optional[int] = None,
                  interaction_embedding_layer_size: Optional[int] = None,
                  preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None):
 
-        if interaction:
+        if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
             input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
                      tf.keras.layers.Input(shape=input_shape[1], ragged=True))
             row_lengths = input[0].row_lengths()

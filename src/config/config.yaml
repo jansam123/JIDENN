@@ -58,12 +58,14 @@ models:
     num_layers: 11
     dropout: 0.2 # Dropout after FC layers.
     activation: swish # Activation function to use (relu/elu/gelu/silu).
+    train_input: highlevel
 
   highway:
     layer_size: 344 # Size of the highway layer.
     num_layers: 11 # Number of highway layers.
     dropout: 0.2 # Dropout after highway layers.
     activation: swish # Activation function to use (relu/elu/gelu/silu).
+    train_input: highlevel
 
   transformer:
     dropout: 0.
@@ -73,44 +75,57 @@ models:
     embed_dim: 128 #232
     num_embed_layers: 3 # Number of embedding layers.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
+    train_input: constituents
 
   part:
-    particle_block_dropout: 0.1
+    embed_dim: 128 #256
+    class_block_layers: 2
+    particle_block_layers: 11 #,12
     expansion: 4 #4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 #12, must divide embed_dim
-    particle_block_layers: 11 #,12
-    class_block_layers: 2
-    embed_dim: 512 #256
+    particle_block_dropout: 0.1
     num_embed_layers: 3 # Number of embedding layers.
-    interaction: False
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
+    train_input: constituents
 
   depart:
-    embed_dim: 128 #232
+    embed_dim: 512 #232
     num_embed_layers: 3 # Number of embedding layers.
     expansion: 4 # 4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 # 12, must divide embed_dim
     layers: 11 # 6,12
     class_layers: 2
-    dropout: 0. # Dropout after FFN layer.
+    dropout: 0.1 # Dropout after FFN layer.
     class_dropout: 0. # Dropout after FFN layer.
     layer_scale_init_value: 1.0e-05
-    stochastic_depth_drop_rate: 0.1
-    class_stochastic_depth_drop_rate: 0.
-    interaction: False
-    relative: False
+    stochastic_depth_drop_rate: 0.5
+    class_stochastic_depth_drop_rate: 0.1
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
+    train_input: constituents
 
   pfn:
-    # https://arxiv.org/abs/1810.05165
-    Phi_sizes: [128, 128, 128] # Sizes of the per particle mapping.
-    F_sizes: [128, 128, 128] # Sizes of jet mapping.
+    Phi_sizes: [512, 512, 512, 512, 512] # Sizes of the per particle mapping.
+    F_sizes: [512, 512, 512, 512, 512, 512] # Sizes of jet mapping.
     Phi_backbone: cnn #  Backbone network to use, options: cnn, fc.
     batch_norm: False #  Use batch normalization before PHI.
+    activation: relu #  Activation function to use (relu/elu/gelu/silu).
+    Phi_dropout: #  Dropout after PHI.
+    F_dropout: #  Dropout after F.
+    train_input: constituents
+
+  efn:
+    Phi_sizes: [512, 512, 512, 512, 136] # Sizes of the per particle mapping.
+    F_sizes: [512, 512, 512, 512, 512, 512] # Sizes of jet mapping.
+    Phi_backbone: cnn #  Backbone network to use, options: cnn, fc.
+    batch_norm: False #  Use batch normalization before PHI.
+    activation: relu #  Activation function to use (relu/elu/gelu/silu).
+    Phi_dropout: #  Dropout after PHI.
+    F_dropout: #  Dropout after F.
+    train_input: constituents
 
   bdt:
     num_trees: 1000 #  Number of trees in the forest.
@@ -123,3 +138,4 @@ models:
     num_threads: 64 #  Number of threads to use.
     l2_regularization: 0.1 #  L2 regularization.
     tmp_dir: ${params.logdir}/backup #  Temporary directory for BDT.
+    train_input: highlevel_constituents

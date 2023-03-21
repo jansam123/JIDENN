@@ -12,9 +12,9 @@ import src.data.data_info as data_info
 from src.callbacks.get_callbacks import get_callbacks
 from src.config import config
 from src.evaluation.train_history import plot_train_history
-from src.model_builders.get_model import get_compiled_model
+from src.model_builders.ModelBuilder import ModelBuilder
 from src.model_builders.get_normalization import get_normalization
-from src.data.get_train_input import get_train_input, get_input_shape
+from src.data.TrainInput import input_classes_lookup
 from src.model_builders.multi_gpu_strategies import choose_strategy
 
 cs = ConfigStore.instance()
@@ -71,18 +71,14 @@ def main(args: config.JIDENNConfig) -> None:
     train, test, dev = [get_preprocessed_dataset(file, args.data) for file in files_per_JZ_slice]
 
     # pick input variables according to model
-    relative = False
-    if args.params.model == 'part':
-        interaction = args.models.part.interaction
-    elif args.params.model == 'depart':
-        interaction = args.models.depart.interaction
-        relative = args.models.depart.relative
-    else:
-        interaction = None
-    num_total_variables = len(args.data.variables.perJet)
-    num_total_variables += len(args.data.variables.perEvent) if args.data.variables.perEvent is not None else 0
-    model_input = get_train_input(args.params.model, interaction, relative)
-    input_size = get_input_shape(args.params.model, num_total_variables, interaction, relative)
+
+    train_input_class = input_classes_lookup(getattr(args.models, args.params.model).train_input)
+    train_input_class = train_input_class(per_jet_variables=args.data.variables.perJet,
+                                          per_event_variables=args.data.variables.perEvent,
+                                          per_jet_tuple_variables=args.data.variables.perJetTuple)
+    model_input = tf.function(func=train_input_class)
+    input_size = train_input_class.input_shape
+
     train = train.map_data(model_input)
     dev = dev.map_data(model_input)
     test = test.map_data(model_input)
@@ -132,18 +128,22 @@ def main(args: config.JIDENNConfig) -> None:
                                            dataset=train,
                                            adapt=adapt,
                                            normalization_steps=args.preprocess.normalization_size,
-                                           interaction=interaction,
+                                           interaction=isinstance(input_size, tuple) and isinstance(
+                                               input_size[0], tuple),
                                            log=log)
         else:
             normalizer = None
             log.warning("Normalization disabled.")
 
-        model = get_compiled_model(args.params.model,
-                                   input_size=input_size,
-                                   args_models=args.models,
-                                   args_optimizer=args.optimizer,
-                                   num_labels=args.data.num_labels,
-                                   preprocess=normalizer)
+        model_builder = ModelBuilder(model_name=args.params.model,
+                                     args_model=args.models,
+                                     input_size=input_size,
+                                     num_labels=args.data.num_labels,
+                                     args_optimizer=args.optimizer,
+                                     preprocess=normalizer,
+                                     )
+
+        model = model_builder.compiled_model
 
         if args.params.model != 'bdt':
             model.summary(print_fn=log.info, line_length=120, show_trainable=True)

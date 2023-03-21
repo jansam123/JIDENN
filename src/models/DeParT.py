@@ -376,11 +376,11 @@ class DeParTModel(tf.keras.Model):
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  preprocess: Union[tf.keras.layers.Layer,
                                    Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer], None] = None,
-                 interaction: bool = True,
                  interaction_embedding_num_layers: Optional[int] = None,
                  interaction_embedding_layer_size: Optional[int] = None):
+        
 
-        if interaction:
+        if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
             input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
                      tf.keras.layers.Input(shape=input_shape[1], ragged=True))
             row_lengths = input[0].row_lengths()

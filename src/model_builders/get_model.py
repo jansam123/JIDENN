@@ -2,17 +2,16 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from typing import Union, Tuple, Optional, Callable, List
 
-from src.config import config_subclasses as cfg
 from src.config import model_config as model_cfg
-from .get_optimizer import get_optimizer
 
-from ..models.BasicFCModel import BasicFCModel
-from ..models.HighwayModel import HighwayModel
-from ..models.TransformerModel import TransformerModel
-from ..models.ParTModel import ParTModel
-from ..models.DeParTModel import DeParTModel
-from ..models.PFNModel import PFNModel
-from ..models.BDT import get_BDT_model
+from ..models.BasicFC import BasicFCModel
+from ..models.Highway import HighwayModel
+from ..models.Transformer import TransformerModel
+from ..models.ParT import ParTModel
+from ..models.DeParT import DeParTModel
+from ..models.PFN import PFNModel
+from ..models.EFN import EFNModel
+from ..models.BDT import bdt_model
 
 
 def get_metrics(num_labels: int) -> List[tf.keras.metrics.Metric]:
@@ -93,6 +92,21 @@ def get_pfn_model(input_size,
         output_layer=output_layer)
 
 
+def get_efn_model(input_size,
+                  output_layer: tf.keras.layers.Layer,
+                  args_model: model_cfg.EFN,
+                  preprocess: Optional[tf.keras.layers.Layer] = None):
+
+    return EFNModel(
+        input_shape=input_size,
+        Phi_sizes=args_model.Phi_sizes,
+        F_sizes=args_model.F_sizes,
+        backbone=args_model.Phi_backbone,
+        batch_norm=args_model.batch_norm,
+        preprocess=preprocess,
+        output_layer=output_layer)
+
+
 def get_transformer_model(input_size: Tuple[int],
                           output_layer: tf.keras.layers.Layer,
                           args_model: model_cfg.Transformer,
@@ -127,7 +141,6 @@ def get_part_model(input_size,
         expansion=args_model.expansion,
         heads=args_model.heads,
         particle_block_dropout=args_model.particle_block_dropout,
-        interaction=args_model.interaction,
         interaction_embedding_num_layers=args_model.interaction_embedding_num_layers,
         interaction_embedding_layer_size=args_model.interaction_embedding_layer_size,
         #
@@ -155,7 +168,6 @@ def get_depart_model(input_size,
         stochastic_depth_drop_rate=args_model.stochastic_depth_drop_rate,
         class_dropout=args_model.class_dropout,
         class_stochastic_depth_drop_rate=args_model.class_stochastic_depth_drop_rate,
-        interaction=args_model.interaction,
         interaction_embedding_num_layers=args_model.interaction_embedding_num_layers,
         interaction_embedding_layer_size=args_model.interaction_embedding_layer_size,
         #
@@ -163,55 +175,28 @@ def get_depart_model(input_size,
         activation=get_activation(args_model.activation))
 
 
-def get_compiled_model(model_name: str,
-                       input_size: Union[int, Tuple[int]],
-                       args_models: cfg.Models,
-                       args_optimizer: cfg.Optimizer,
-                       num_labels: int,
-                       preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None) -> tf.keras.Model:
+def get_bdt_model(input_size,
+                  output_layer: tf.keras.layers.Layer,
+                  args_model: model_cfg.BDT,
+                  preprocess: Optional[tf.keras.layers.Layer] = None):
 
-    if model_name == 'basic_fc':
-        model = get_FC_model(input_size,
-                             get_output_layer(num_labels),
-                             args_models.basic_fc,
-                             preprocess)
+    return bdt_model(args_model)
 
-    elif model_name == 'highway':
-        model = get_highway_model(input_size,
-                                  get_output_layer(num_labels),
-                                  args_models.highway,
-                                  preprocess)
-    elif model_name == 'pfn':
-        model = get_pfn_model(input_size,
-                              get_output_layer(num_labels),
-                              args_models.pfn,
-                              preprocess)
 
-    elif model_name == 'transformer':
-        model = get_transformer_model(input_size,
-                                      get_output_layer(num_labels),
-                                      args_models.transformer,
-                                      preprocess)
-    elif model_name == 'part':
-        model = get_part_model(input_size,
-                               get_output_layer(num_labels),
-                               args_models.part,
-                               preprocess)
-    elif model_name == 'depart':
-        model = get_depart_model(input_size,
-                                 get_output_layer(num_labels),
-                                 args_models.depart,
-                                 preprocess)
-    elif model_name == 'bdt':
-        model = get_BDT_model(args_models.bdt)
-        model.compile(weighted_metrics=get_metrics(num_labels))
-        return model
+def model_getter_lookup(model_name: str) -> Callable:
 
-    else:
-        raise NotImplementedError(f'Model {model_name} not supported.')
+    lookup_model = {'basic_fc': get_FC_model,
+                    'highway': get_highway_model,
+                    'pfn': get_pfn_model,
+                    'efn': get_efn_model,
+                    'transformer': get_transformer_model,
+                    'part': get_part_model,
+                    'depart': get_depart_model,
+                    'bdt': get_bdt_model, }
 
-    model.compile(optimizer=get_optimizer(args_optimizer),
-                  loss=get_loss(num_labels, args_optimizer.label_smoothing),
-                  weighted_metrics=get_metrics(num_labels))
+    if model_name not in lookup_model:
+        raise ValueError(f'Unknown model {model_name}')
 
-    return model
+    return lookup_model[model_name]
+
+

@@ -33,7 +33,7 @@ class ValidationFigure:
         "Method that creates matplotlib figure."
 
     def save_fig(self, path: str, format: str = 'png'):
-        self._fig.savefig(os.path.join(path, self._name + f".{format}"), dpi=300)
+        self._fig.savefig(os.path.join(path, self._name + f".{format}"), dpi=300, bbox_inches='tight')
 
     def save_data(self, path: str):
         if self._data is None:
@@ -108,8 +108,10 @@ class ValidationScoreHistogram(ValidationFigure):
     def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
-        self._data = self._df[['score', 'named_label']]
-        sns.kdeplot(data=self._df, x='score', hue='named_label', fill=True, palette='Set1', alpha=0.1, linewidth=2.5)
+        self._data = self._df[['score', 'Truth Label']]
+        sns.histplot(data=self._df, x='score', hue='Truth Label',
+                     palette='Set1', stat='count', element="step", fill=True)
+        plt.legend(loc='upper center')
         plt.xlabel('Score')
         return fig
 
@@ -118,7 +120,7 @@ class ValidationLabelHistogram(ValidationFigure):
     def _get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
-        self._data = self._df[['named_label', 'named_prediction']]
-        sns.histplot(self._df, x='named_prediction', hue='named_label', stat='count', multiple='stack')
+        self._data = self._df[['Truth Label', 'named_prediction']]
+        sns.histplot(self._df, x='named_prediction', hue='Truth Label', stat='count', multiple='stack')
         plt.xlabel('Predicted Tag')
         return fig
