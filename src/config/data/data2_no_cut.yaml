@@ -3,7 +3,7 @@ labels: # list of labels to use.
   - gluon
   - quark
 num_labels: 2 # Number of labels to use.
-cut: "(jets_pt>20_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+cut: "(jets_pt>20_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
 gluon: 0
 quark: 1
 raw_gluon: 21
@@ -15,14 +15,9 @@ JZ_slices:
   - JZ03_r10724
   - JZ04_r10724
   - JZ05_r10724
-JZ_cut:
-  - "jets_pt>20_000"
-  - "jets_pt>60_000"
-  - "jets_pt>160_000"
-  - "jets_pt>400_000"
-  - "jets_pt>800_000"
+JZ_cut: null
 JZ_weights: [0.2, 0.2, 0.2, 0.2, 0.2] #[0.34, 0.12, 0.29, 0.16, 0.09] # #[0.4, 0.12, 0.29, 0.16, 0.09] # [83, 26, 71, 39, 22]/241
-path: ./data/dataset2 # Path to data folder containing folder of *.root files.
+path: ./data/dataset2_3 # Path to data folder containing folder of *.root files.
 cached:
 input_size: 8 #28 # Number of input features.
 target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
@@ -55,7 +50,7 @@ variables:
     - jets_m
     - jets_phi
     - jets_pt
-    # - jets_PFO_n
+    - jets_PFO_n
     - jets_ChargedPFOWidthPt1000[0]
     - jets_TrackWidthPt1000[0]
     - jets_NumChargedPFOPt1000[0]

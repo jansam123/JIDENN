@@ -33,7 +33,7 @@ class SelfAttention(tf.keras.layers.Layer):
     def __init__(self, dim, heads, dropout, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim//heads, num_heads=heads)
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
         self.ln = tf.keras.layers.LayerNormalization()
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
@@ -85,7 +85,7 @@ class Transformer(tf.keras.layers.Layer):
         mask = mask[:, tf.newaxis, :] & mask[:, :, tf.newaxis]
         hidden = inputs
         for attn, ffn in self.layers:
-            hidden += attn(hidden, mask) 
+            hidden += attn(hidden, mask)
             hidden += ffn(hidden)
         return hidden
 
@@ -96,13 +96,14 @@ class ParticleEmbedding(tf.keras.layers.Layer):
 
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.cls_token = tf.Variable(initial_value=tf.random.truncated_normal((1, 1, self.embedding_dim), stddev=0.02), trainable=True)
+        self.cls_token = tf.Variable(initial_value=tf.random.truncated_normal(
+            (1, 1, self.embedding_dim), stddev=0.02), trainable=True)
         self.mlp = tf.keras.Sequential([tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
                                         for _ in range(self.num_embeding_layers)])
 
     def get_config(self):
         config = super(ParticleEmbedding, self).get_config()
-        config.update({name: getattr(self, name) for name in ["embedding_dim",  "num_embeding_layers", "activation"]})
+        config.update({name: getattr(self, name) for name in ["embedding_dim", "num_embeding_layers", "activation"]})
         return config
 
     def call(self, inputs):

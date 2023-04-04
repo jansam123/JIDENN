@@ -109,9 +109,10 @@ class ValidationScoreHistogram(ValidationFigure):
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         self._data = self._df[['score', 'Truth Label']]
-        sns.histplot(data=self._df, x='score', hue='Truth Label',
-                     palette='Set1', stat='count', element="step", fill=True)
-        plt.legend(loc='upper center')
+        ax = sns.histplot(data=self._df, x='score', hue='Truth Label',
+                     palette='Set1', stat='count', element="step", fill=True,
+                     hue_order=['quark', 'gluon'],)
+        sns.move_legend(ax, 'upper center')
         plt.xlabel('Score')
         return fig
 
@@ -121,6 +122,8 @@ class ValidationLabelHistogram(ValidationFigure):
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         self._data = self._df[['Truth Label', 'named_prediction']]
-        sns.histplot(self._df, x='named_prediction', hue='Truth Label', stat='count', multiple='stack')
+        sns.histplot(self._df, x='named_prediction', hue='Truth Label',
+                     stat='count', multiple='stack', hue_order=['quark', 'gluon'],
+                     palette='Set1')
         plt.xlabel('Predicted Tag')
         return fig

@@ -20,11 +20,22 @@ parser.add_argument("--save_dir", default=".", type=str, help="Directory to save
 parser.add_argument("--take", default=0, type=int, help="Directory to save the plots to.")
 parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 
+MATRIC_NAMING_SCHEMA = {
+    'binary_accuracy': 'Accuracy',
+    'auc': 'AUC',
+    'gluon_efficiency': r'$\varepsilon_g$',
+    'quark_efficiency': r'$\varepsilon_q$',
+    'gluon_rejection': r'$\varphi_g$',
+    'quark_rejection': r'$\varphi_q$',
+    'gluon_rej_at_quark_eff_0.9': r'$\varphi_g @_{0.9} \varepsilon_q$',
+    'quark_rej_at_gluon_eff_0.9': r'$\varphi_q @_{0.9} \varepsilon_g$',
+    'loss': 'Loss'}
+
 
 def main(args: argparse.Namespace):
     logdir = 'good_logs/comparison_12e/'
     model_names = ['interacting_depart', 'interacting_part', 'highway',
-                   'basic_fc', 'transformer', 'part', 'depart', 'depart_rel', 'pfn', 'efn']
+                   'basic_fc', 'transformer', 'part', 'depart', 'pfn', 'efn', 'depart_rel']
     # model_names += ['bdt']
     # used_models = ['interacting_part', 'basic_fc', 'bdt']
     base = 'Transformer'
@@ -32,13 +43,13 @@ def main(args: argparse.Namespace):
 
     save_dir = logdir + 'figs/'
 
-    if args.type == 'pT':
-        eval_dir = 'eval_pT'
+    if args.type == 'pT' or args.type == 'pT_no_cut':
+        eval_dir = f'eval_{args.type}'
         ylabel = '$p_{\mathrm{T}}$ [GeV]'
         ylabel_averaged = '$p_{\mathrm{T}}$ Averaged Accuracy Difference'
         cut = ['20-30', '30-40', '40-60', '60-100', '100-150', '150-200', '200-300',
                '300-400', '400-500', '500-600', '600-800', '800-1000', '1000-1200', '1200+']
-        save_dir += f'pT_{args.take}/'
+        save_dir += f'{args.type}_{args.take}/'
     elif args.type == 'eta':
         eval_dir = 'eval_eta'
         cut = ["0.0-0.1", "0.1-0.3", "0.3-0.5", "0.5-0.7", "0.7-0.9", "0.9-1.1",
@@ -49,9 +60,15 @@ def main(args: argparse.Namespace):
     elif args.type == 'pileup':
         eval_dir = 'eval_pileup'
         cut = ["0-20", "20-25", "25-30", "30-35", "35-40", "40-50", "50-55", "55-60", "60+"]
-        ylabel = 'corrected_averageInteractionsPerCrossing[0]'
-        ylabel_averaged = 'corrected_averageInteractionsPerCrossing[0] Averaged Accuracy Difference'
+        ylabel = r'$\mu$'
+        ylabel_averaged = r'$\mu$ Averaged Accuracy Difference'
         save_dir += f'pileup_{args.take}/'
+    elif args.type == 'JZ' or args.type == 'JZ_full_cut' or args.type == 'JZ_mid_cut':
+        eval_dir = f'eval_{args.type}'
+        cut = ["1", "2", "3", "4", "5", ]
+        ylabel = 'JZ'
+        ylabel_averaged = 'JZ Averaged Accuracy Difference'
+        save_dir += f'{args.type}_{args.take}/'
     else:
         raise ValueError('Unknown type')
 
@@ -78,6 +95,7 @@ def main(args: argparse.Namespace):
     roc_dataframes = []
     for filename, model_name, roc_filename in zip(result_csvs, usable_models, roc_csvs):
         df = pd.read_csv(filename)
+        df = df.drop_duplicates(subset=['cut'])
         try:
             roc_df = pd.read_csv(roc_filename)
             roc_df['model'] = model_name
@@ -103,6 +121,7 @@ def main(args: argparse.Namespace):
     new_df = df[['cut', 'binary_accuracy', 'model']]
     new_df = new_df.pivot(columns=['model'])
     new_df = new_df.loc[:, 'binary_accuracy']
+    print(new_df)
     err_name = ylabel_averaged
     rel_err = {'model': [], err_name: []}
     for col in new_df.columns:
@@ -125,37 +144,50 @@ def main(args: argparse.Namespace):
                            palette=palette, hue_order=rel_err['model'])
 
         plt.xlabel(ylabel)
-        plt.ylabel(metric)
+        plt.ylabel(MATRIC_NAMING_SCHEMA[metric] if metric in MATRIC_NAMING_SCHEMA else metric)
         plt.savefig(save_dir + f'{metric}.jpg', dpi=300, bbox_inches='tight')
         plt.close()
 
-    fig = plt.figure(figsize=(14, 9))
-    max_delta = abs(rel_err[err_name]).max()
-    p = sns.barplot(data=rel_err, x=err_name, y='model', palette=palette, dodge=False)
-    p.axes.set_xlim(-max_delta, max_delta)
-    plt.savefig(save_dir + f'relative_error.jpg', dpi=300, bbox_inches='tight')
-    plt.close()
+    fig_big = plt.figure(figsize=(16, 12))
+    gs = fig_big.add_gridspec(2, hspace=0, height_ratios=[2.5, 1])
+    ax1, ax2 = gs.subplots(sharex=True, sharey=False)
+    sns.pointplot(x='cut', y='binary_accuracy', data=df, hue='model', ci=95,
+                  palette=palette, hue_order=rel_err['model'], ax=ax1)
+    ax1.set(ylabel='Accuracy', xlabel=None)
+    if args.take == 0:
+        ax1.set_ylim(0.6, 0.83)
 
+    fig, ax = plt.subplots(figsize=(14, 9))
+    max_delta = abs(rel_err[err_name]).max()
+    sns.barplot(data=rel_err, x=err_name, y='model', palette=palette, dodge=False, ax=ax)
+    ax.set_xlim(-max_delta, max_delta)
+    fig.savefig(save_dir + f'relative_error.jpg', dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    print(new_df)
     new_df = new_df.set_index(pd.Index(cut))
     new_df = new_df.reindex(rel_err['model'], axis=1)
 
-    fig = plt.figure(figsize=(14, 14))
-    sns.heatmap(new_df, annot=True, fmt='.3f', cmap=cmap + '_r', cbar=False)
-    plt.xlabel('Model')
-    plt.ylabel(ylabel)
-    plt.savefig(save_dir + f'heatmap.jpg', dpi=300, bbox_inches='tight')
-    plt.close()
+    fig, ax = plt.subplots(figsize=(14, 14))
+    sns.heatmap(new_df, annot=True, fmt='.3f', cmap=cmap + '_r', cbar=False, ax=ax)
+    ax.set_xlabel('Model')
+    ax.set_ylabel(ylabel)
+    fig.savefig(save_dir + f'heatmap.jpg', dpi=300, bbox_inches='tight')
+    plt.close(fig)
 
     new_df['metric'] = 'Relative Accuracy'
     new_df = new_df.reset_index()
     new_df = new_df.melt(id_vars=['index', 'metric'], var_name='model', value_name='value')
 
-    fig = plt.figure(figsize=(15, 7))
-    sns.pointplot(data=new_df, x='index', y='value', hue='model', ci=95, palette=palette)
-    plt.xlabel(ylabel)
-    plt.ylabel('Relative Accuracy')
-    plt.savefig(save_dir + f'relative_accuracy.jpg', dpi=300, bbox_inches='tight')
-    plt.close()
+    sns.pointplot(data=new_df, x='index', y='value', hue='model', ci=95, palette=palette, ax=ax2, legend=False)
+    for ax in fig.get_axes():
+        ax.label_outer()
+    ax2.set(xlabel=ylabel, ylabel=f'Difference from {base}')
+    ax2.get_legend().set_visible(False)
+    if args.take == 0:
+        ax2.set_ylim(-0.030, 0.014)
+    fig_big.savefig(save_dir + f'relative_accuracy.jpg', dpi=200, bbox_inches='tight')
+    plt.close(fig_big)
 
     roc_df['FPR'] = roc_df['FPR'] * 100
     roc_df['TPR'] = roc_df['TPR'] * 100

@@ -1,0 +1,14 @@
+type: perEvent
+test_sample_cuts:
+  - "origin_file==1"
+  - "origin_file==2"
+  - "origin_file==3"
+  - "origin_file==4"
+  - "origin_file==5"
+
+test_names:
+  - "JZ1"
+  - "JZ2"
+  - "JZ3"
+  - "JZ4"
+  - "JZ5"

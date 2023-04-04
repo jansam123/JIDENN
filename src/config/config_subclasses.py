@@ -27,7 +27,7 @@ class Data:
     raw_quarks: List[int]
     raw_unknown: List[int]
     path: str   # Path to data folder containing folder of *.root files.
-    JZ_slices: Union[List[int], None]   # Slices of JZ to use.
+    JZ_slices: Union[List[str], None]   # Slices of JZ to use.
     JZ_cut: Union[List[str], None]   # Cut to apply to JZ slices.
     JZ_weights: Union[List[float], None]  # Weights to apply to JZ slices.
     cached: Union[str, None]   # Path to cached data.

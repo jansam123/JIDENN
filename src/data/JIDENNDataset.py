@@ -113,8 +113,8 @@ class JIDENNDataset:
             raise ValueError('Dataset not loaded yet.')
 
         @tf.function
-        def remap_label(x, y, w):
-            return x, label_mapping(y), w
+        def remap_label(x, y, w=None):
+            return x, label_mapping(y)
         dataset = self.dataset.map(remap_label)
         return self._set_dataset(dataset)
 

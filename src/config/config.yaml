@@ -90,18 +90,34 @@ models:
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
     train_input: constituents
 
+  # depart:
+  #   embed_dim: 384 #232
+  #   num_embed_layers: 3 # Number of embedding layers.
+  #   expansion: 4 # 4,  number of hidden units in FFN is expansion * embed_dim
+  #   heads: 8 # 12, must divide embed_dim
+  #   layers: 11 # 6,12
+  #   class_layers: 2
+  #   dropout: 0.1 # Dropout after FFN layer.
+  #   class_dropout: 0.1 # Dropout after FFN layer.
+  #   layer_scale_init_value: 1.0e-05
+  #   stochastic_depth_drop_rate: 0.1
+  #   class_stochastic_depth_drop_rate: 0.1
+  #   interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
+  #   interaction_embedding_layer_size: 64 # Size of the embedding layer.
+  #   activation: gelu # Activation function to use (relu/elu/gelu/silu).
+  #   train_input: constituents
   depart:
-    embed_dim: 512 #232
+    embed_dim: 128 #232
     num_embed_layers: 3 # Number of embedding layers.
     expansion: 4 # 4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 # 12, must divide embed_dim
     layers: 11 # 6,12
     class_layers: 2
-    dropout: 0.1 # Dropout after FFN layer.
+    dropout: 0. # Dropout after FFN layer.
     class_dropout: 0. # Dropout after FFN layer.
     layer_scale_init_value: 1.0e-05
-    stochastic_depth_drop_rate: 0.5
-    class_stochastic_depth_drop_rate: 0.1
+    stochastic_depth_drop_rate: 0.1
+    class_stochastic_depth_drop_rate: 0.
     interaction_embedding_num_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).

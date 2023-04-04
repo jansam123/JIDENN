@@ -157,19 +157,79 @@ class InteractionConstituentVariables(TrainInput):
         E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
         delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
                              tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
         k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
         z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
         m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
             tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
             tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+        m2 = tf.math.log(m2)
+
+        interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+
+        m_jet = sample['perJet']['jets_m']
+        pt_jet = sample['perJet']['jets_pt']
+        eta_jet = sample['perJet']['jets_eta']
+        phi_jet = sample['perJet']['jets_phi']
+
+        PFO_E = tf.math.sqrt(pt**2 + m**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt)
+
+        logPT_PTjet = tf.math.log(pt / tf.math.reduce_sum(pt_jet))
+        logE = tf.math.log(PFO_E)
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+
+        const_vars = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+                      'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+
+        return const_vars, interaction_vars
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
+        return (None, 8), (None, None, 4)
+
+
+class AntiKtInteractionConstituentVariables(TrainInput):
+
+    def __call__(self, sample: JIDENNVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m = sample['perJetTuple']['jets_PFO_m']
+        pt = sample['perJetTuple']['jets_PFO_pt']
+        eta = sample['perJetTuple']['jets_PFO_eta']
+        phi = sample['perJetTuple']['jets_PFO_phi']
+
+        E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
         delta = tf.math.log(delta)
         delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
-        k_t = tf.math.log(k_t)
-        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+        anti_k_t = tf.math.minimum(1 / pt[:, tf.newaxis], 1 / pt[tf.newaxis, :]) * delta**2
+        anti_k_t = tf.math.log(anti_k_t)
+        anti_k_t = tf.linalg.set_diag(anti_k_t, tf.zeros_like(m))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
         z = tf.linalg.set_diag(z, tf.zeros_like(m))
-        m2 = tf.math.log(m2)
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
         m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
-        interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+        m2 = tf.math.log(m2)
+
+        interaction_vars = {'delta': delta, 'anti-k_t': anti_k_t, 'z': z, 'm2': m2}
 
         m_jet = sample['perJet']['jets_m']
         pt_jet = sample['perJet']['jets_pt']
@@ -227,6 +287,7 @@ def input_classes_lookup(class_name: str) -> Type[TrainInput]:
                    'constituents': ConstituentVariables,
                    'relative_constituents': RelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
+                   'antikt_interaction_constituents': AntiKtInteractionConstituentVariables,
                    'deepset_constituents': DeepSetConstituentVariables}
 
     if class_name not in lookup_dict.keys():

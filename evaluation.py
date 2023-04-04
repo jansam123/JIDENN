@@ -48,7 +48,11 @@ def main(args: eval_config.EvalConfig) -> None:
 
     file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
         f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
-    test_ds = get_preprocessed_dataset(file, args.data)
+
+    file_labels = [int(jz.split('_')[0].lstrip('JZ'))
+                   for jz in args.data.JZ_slices] if args.data.JZ_slices is not None else None
+
+    test_ds = get_preprocessed_dataset(file, args.data, file_labels)
     args.binning.test_sample_cuts = [] if args.binning is None else args.binning.test_sample_cuts
 
     names = args.binning.test_names if args.binning is not None else []
@@ -57,7 +61,7 @@ def main(args: eval_config.EvalConfig) -> None:
     cuts = ['base'] + cuts if args.include_base else cuts
 
     for cut, cut_alias in zip(cuts, names):
-        ds = test_ds.filter(lambda x, y, w: Cut(cut)(x[args.binning.type])) if cut != 'base' else test_ds
+        ds = test_ds.filter(lambda *x: Cut(cut)(x[0][args.binning.type])) if cut != 'base' else test_ds
         label = ds.get_dataset(batch_size=args.take, take=args.take, map_func=lambda *d: d[1])
         ds = ds.map_data(model_input)
         tf_ds = ds.get_dataset(batch_size=args.batch_size,

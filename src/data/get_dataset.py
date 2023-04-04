@@ -1,5 +1,5 @@
 import tensorflow as tf
-from typing import List
+from typing import List, Optional, Tuple, Callable
 
 from src.config import config_subclasses as cfg
 from .utils.Cut import Cut
@@ -7,12 +7,15 @@ from .JIDENNDataset import JIDENNDataset, JIDENNVariables
 
 
 def get_preprocessed_dataset(files: List[str],
-                             args_data: cfg.Data) -> JIDENNDataset:
+                             args_data: cfg.Data,
+                             files_labels: Optional[List[int]] = None,
+                             resample_labels: bool = True) -> JIDENNDataset:
     """Loads and preprocesses a dataset from a list of files.
 
     Args:
         files: A list of strings containing the file paths of the datasets to be loaded. Each file path points to a dataset saved with tf.data.experimental.save.
         args_data: Data configuration containing the required preprocessing settings.
+        files_labels: A list of strings containing the stamps of the datasets to be loaded. Each stamp is used to identify the datafile it belongs to.
 
     Returns:
         A JIDENNDataset object containing the preprocessed dataset.
@@ -38,34 +41,40 @@ def get_preprocessed_dataset(files: List[str],
         else:
             return -999
 
-    # p_t_ranges = [100_000, 200_000, 300_000, 400_000, 500_000, 600_000,
-    #               700_000, 800_000, 900_000, 1_000_000, 1_200_000]
-    # total_bins = (len(p_t_ranges) + 1) * 2
-
-    # @tf.function
-    # def p_T_resample(x: JIDENNVariables, l: int, w: float) -> int:
-    #     p_t = x['perJet']['jets_pt']
-    #     p_t_bin = tf.reduce_sum(tf.cast(tf.less_equal(p_t, p_t_ranges), tf.int32))
-    #     if tf.equal(l, args_data.raw_gluon):
-    #         return p_t_bin
-    #     elif tf.reduce_any(tf.equal(l, raw_quarks)):
-    #         return p_t_bin + len(p_t_ranges) + 1
-    #     else:
-    #         return -999
+    def stamp_origin_file(stamp: int) -> Callable[[JIDENNVariables], JIDENNVariables]:
+        @tf.function
+        def stamp_origin_file_wrap(data: JIDENNVariables) -> JIDENNVariables:
+            new_data = data.copy()
+            per_event = new_data['perEvent'].copy()
+            per_event['origin_file'] = stamp
+            new_data['perEvent'] = per_event
+            return new_data
+        return stamp_origin_file_wrap
 
     JZ_cuts = args_data.JZ_cut if args_data.JZ_cut is not None else [None] * len(files)
 
     datasets = []
-    for jz_cut, jz_file in zip(JZ_cuts, files):
+    for i, (jz_cut, jz_file) in enumerate(zip(JZ_cuts, files)):
 
         jidenn_dataset = JIDENNDataset(variables=args_data.variables,
                                        target=args_data.target,
                                        weight=args_data.weight)
         jidenn_dataset = jidenn_dataset.load_dataset(jz_file)
-        jidenn_dataset = jidenn_dataset.process(cut=Cut(jz_cut) & Cut(
-            args_data.cut) if args_data.cut is not None else Cut(jz_cut))
-        jidenn_dataset = jidenn_dataset.resample_dataset(resample_g_q, [0.5, 0.5])
-        # jidenn_dataset = jidenn_dataset.resample_dataset(p_T_resample, [1 / total_bins] * total_bins)
+
+        if jz_cut is not None:
+            cut = Cut(jz_cut) & Cut(args_data.cut) if args_data.cut is not None else Cut(jz_cut)
+        elif args_data.cut is not None:
+            cut = Cut(args_data.cut)
+        else:
+            cut = None
+
+        jidenn_dataset = jidenn_dataset.process(cut=cut) if cut is not None else jidenn_dataset
+
+        jidenn_dataset = jidenn_dataset.resample_dataset(
+            resample_g_q, [0.5, 0.5]) if resample_labels else jidenn_dataset
+        jidenn_dataset = jidenn_dataset.map_data(stamp_origin_file(
+            files_labels[i])) if files_labels is not None else jidenn_dataset
+
         jidenn_dataset = jidenn_dataset.remap_labels(label_mapping)
         datasets.append(jidenn_dataset)
 

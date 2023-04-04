@@ -82,7 +82,7 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         https://keras.io/examples/vision/deit
     """
 
-    def __init__(self, dim: int, heads: int, **kwargs):
+    def __init__(self, dim: int, heads: int, dropout: float, **kwargs):
         super().__init__(**kwargs)
 
         self.num_heads = heads
@@ -91,14 +91,14 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         self.scale = head_dim**-0.5
 
         self.qkv = tf.keras.layers.Dense(dim * 3)
-        # self.attn_drop = tf.keras.layers.Dropout(dropout)
+        self.attn_drop = tf.keras.layers.Dropout(dropout)
 
         self.proj = tf.keras.layers.Dense(dim)
 
         self.proj_l = tf.keras.layers.Dense(self.num_heads)
         self.proj_w = tf.keras.layers.Dense(self.num_heads)
 
-        # self.proj_drop = tf.keras.layers.Dropout(dropout)
+        self.proj_drop = tf.keras.layers.Dropout(dropout)
 
     def call(self, x, mask, interaction=None, training=False):
         B, N, C = tf.shape(x)[0], tf.shape(x)[1], tf.shape(x)[2]
@@ -136,7 +136,7 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         # Linear projection on the softmaxed scores.
         attn = self.proj_w(tf.transpose(attn, perm=[0, 2, 3, 1]))
         attn = tf.transpose(attn, perm=[0, 3, 1, 2])
-        # attn = self.attn_drop(attn, training)
+        attn = self.attn_drop(attn, training)
 
         # Final set of projections as done in the vanilla attention mechanism.
         x = tf.matmul(attn, v)
@@ -144,7 +144,7 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         x = tf.reshape(x, (B, N, C))
 
         x = self.proj(x)
-        # x = self.proj_drop(x, training)
+        x = self.proj_drop(x, training)
 
         return x
 
@@ -208,8 +208,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
         self.norm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.attn = TalkingHeadAttention(dim, heads)
-        # self.attn = tf.keras.layers.MultiHeadAttention(key_dim=dim, num_heads=heads)
+        self.attn = TalkingHeadAttention(dim, heads, dropout)
         self.stoch_depth1 = StochasticDepth(drop_prob=stoch_drop_prob)
         self.layer_scale1 = LayerScale(layer_scale_init_value, dim)
         self.stoch_depth2 = StochasticDepth(drop_prob=stoch_drop_prob)
@@ -227,7 +226,6 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         # Execute the Self-Attention Transformer layer.
         output1 = self.norm1(inputs)
         output1 = self.attn(output1, mask, interaction)
-        # output1 = self.attn(output1, output1, output1, mask)
         output1 = self.layer_scale1(output1)
         output1 = self.stoch_depth1(output1)
         output1 = output1 + inputs
@@ -378,7 +376,6 @@ class DeParTModel(tf.keras.Model):
                                    Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer], None] = None,
                  interaction_embedding_num_layers: Optional[int] = None,
                  interaction_embedding_layer_size: Optional[int] = None):
-        
 
         if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
             input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),

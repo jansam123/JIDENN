@@ -75,7 +75,8 @@ def generate_data_distributions(df: pd.DataFrame,
             small_df = small_df.loc[small_df[var_name] != 0]
 
         ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                          stat='density', element="step", fill=False, palette='Set1', common_norm=False)
+                          stat='density', element="step", fill=True,
+                          palette='Set1', common_norm=False, hue_order=['quark', 'gluon'])
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
         plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
