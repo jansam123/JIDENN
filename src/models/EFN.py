@@ -29,7 +29,7 @@ class EFNModel(tf.keras.Model):
                  Phi_sizes: List[int],
                  F_sizes: List[int],
                  output_layer: tf.keras.layers.Layer,
-                 backbone: Literal["cnn", "fc"] = "cnn",
+                 Phi_backbone: Literal["cnn", "fc"] = "cnn",
                  batch_norm: bool = False,
                  Phi_dropout: Optional[float] = None,
                  F_dropout: Optional[float] = None,
@@ -42,35 +42,36 @@ class EFNModel(tf.keras.Model):
         self.activation = activation
 
         input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+
         angular = input[:, :, 6:]
         energy = input[:, :, :6].to_tensor()
 
         row_lengths = angular.row_lengths()
         mask = tf.sequence_mask(row_lengths)
-        hidden = angular.to_tensor()
+        angular = angular.to_tensor()
 
         if preprocess is not None:
-            hidden = preprocess(hidden)
+            angular = preprocess(angular)
 
         if batch_norm:
-            hidden = tf.keras.layers.BatchNormalization()(hidden)
+            angular = tf.keras.layers.BatchNormalization()(angular)
 
-        if backbone == "cnn":
-            hidden = self.cnn_Phi(hidden)
-        elif backbone == "fc":
-            hidden = self.fc_Phi(hidden)
+        if Phi_backbone == "cnn":
+            angular = self.cnn_Phi(angular)
+        elif Phi_backbone == "fc":
+            angular = self.fc_Phi(angular)
         else:
-            raise ValueError(f"backbone must be either 'cnn' or 'fc', not {backbone}")
+            raise ValueError(f"backbone must be either 'cnn' or 'fc', not {Phi_backbone}")
 
-        hidden = hidden * tf.expand_dims(tf.cast(mask, tf.float32), -1)
-        hidden = EinsumLayer('BPC,BPD->BCD')((hidden, energy))
-        hidden = tf.reshape(hidden, (-1, hidden.shape[-1] * hidden.shape[-2]))
+        angular = angular * tf.expand_dims(tf.cast(mask, tf.float32), -1)
+        hidden = EinsumLayer('BPC,BPD->BCD')((angular, energy))
+        hidden = tf.keras.layers.Flatten()(hidden)
         hidden = self.fc_F(hidden)
         output = output_layer(hidden)
 
         super().__init__(inputs=input, outputs=output)
 
-    def cnn_Phi(self, inputs):
+    def cnn_Phi(self, inputs: tf.Tensor) -> tf.Tensor:
         hidden = inputs
         for size in self.Phi_sizes:
             hidden = tf.keras.layers.Conv1D(size, 1)(hidden)
@@ -80,7 +81,7 @@ class EFNModel(tf.keras.Model):
                 hidden = tf.keras.layers.Dropout(self.Phi_dropout)(hidden)
         return hidden
 
-    def fc_Phi(self, inputs):
+    def fc_Phi(self, inputs: tf.Tensor) -> tf.Tensor:
         hidden = inputs
         for size in self.Phi_sizes:
             hidden = tf.keras.layers.Dense(size)(hidden)
@@ -89,7 +90,7 @@ class EFNModel(tf.keras.Model):
                 hidden = tf.keras.layers.Dropout(self.Phi_dropout)(hidden)
         return hidden
 
-    def fc_F(self, inputs):
+    def fc_F(self, inputs: tf.Tensor) -> tf.Tensor:
         hidden = inputs
         for size in self.F_sizes:
             hidden = tf.keras.layers.Dense(size)(hidden)

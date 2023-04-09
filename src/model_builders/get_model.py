@@ -4,7 +4,7 @@ from typing import Union, Tuple, Optional, Callable, List
 
 from src.config import model_config as model_cfg
 
-from ..models.BasicFC import BasicFCModel
+from ..models.FC import FCModel
 from ..models.Highway import HighwayModel
 from ..models.Transformer import TransformerModel
 from ..models.ParT import ParTModel
@@ -52,8 +52,8 @@ def get_FC_model(input_size,
                  args_model: model_cfg.BasicFC,
                  preprocess: Optional[tf.keras.layers.Layer] = None):
 
-    return BasicFCModel(
-        hidden_layer_size=args_model.layer_size,
+    return FCModel(
+        layer_size=args_model.layer_size,
         num_layers=args_model.num_layers,
         dropout=args_model.dropout,
         input_size=input_size,
@@ -86,7 +86,7 @@ def get_pfn_model(input_size,
         input_shape=input_size,
         Phi_sizes=args_model.Phi_sizes,
         F_sizes=args_model.F_sizes,
-        backbone=args_model.Phi_backbone,
+        Phi_backbone=args_model.Phi_backbone,
         batch_norm=args_model.batch_norm,
         preprocess=preprocess,
         output_layer=output_layer)
@@ -101,7 +101,7 @@ def get_efn_model(input_size,
         input_shape=input_size,
         Phi_sizes=args_model.Phi_sizes,
         F_sizes=args_model.F_sizes,
-        backbone=args_model.Phi_backbone,
+        Phi_backbone=args_model.Phi_backbone,
         batch_norm=args_model.batch_norm,
         preprocess=preprocess,
         output_layer=output_layer)
@@ -136,11 +136,11 @@ def get_part_model(input_size,
         #
         embedding_dim=args_model.embed_dim,
         num_embeding_layers=args_model.num_embed_layers,
-        particle_block_layers=args_model.particle_block_layers,
+        selfattn_block_layers=args_model.particle_block_layers,
         class_block_layers=args_model.class_block_layers,
         expansion=args_model.expansion,
         heads=args_model.heads,
-        particle_block_dropout=args_model.particle_block_dropout,
+        dropout=args_model.particle_block_dropout,
         interaction_embedding_num_layers=args_model.interaction_embedding_num_layers,
         interaction_embedding_layer_size=args_model.interaction_embedding_layer_size,
         #
@@ -198,5 +198,3 @@ def model_getter_lookup(model_name: str) -> Callable:
         raise ValueError(f'Unknown model {model_name}')
 
     return lookup_model[model_name]
-
-
