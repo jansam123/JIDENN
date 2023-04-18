@@ -1,5 +1,5 @@
 data
-!src/**
+!jidenn/**
 venv*
 __pycache__
 tf_dataset
