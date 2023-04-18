@@ -233,7 +233,7 @@ class FCEmbedding(tf.keras.layers.Layer):
                     for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
-        config = super(Embedding, self).get_config()
+        config = super(FCEmbedding, self).get_config()
         config.update({name: getattr(self, name) for name in ["embedding_dim", "num_embeding_layers", "activation"]})
         return config
 
