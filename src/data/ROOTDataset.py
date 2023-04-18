@@ -80,8 +80,17 @@ class ROOTDataset:
             df: pd.DataFrame = ak.to_pandas(df)
             if df.empty:
                 continue
-            sample[var] = pandas_to_tensor(df['values'])
-            logging.info(f'{var}: {sample[var].shape}')
+            tensor = pandas_to_tensor(df['values'])
+
+            if tensor.dtype == tf.float64:
+                tensor = tf.cast(tensor, tf.float32)
+            elif tensor.dtype == tf.int64:
+                tensor = tf.cast(tensor, tf.int32)
+            elif tensor.dtype == tf.uint64:
+                tensor = tf.cast(tensor, tf.uint32)
+
+            sample[var] = tensor
+            logging.info(f'{var}: {sample[var].shape} {sample[var].dtype}')
         return sample
 
     @classmethod
@@ -93,7 +102,7 @@ class ROOTDataset:
             if ak.size(ak.flatten(df, axis=None)) == 0:
                 continue
             sample[var] = awkward_to_tensor(df)
-            logging.info(f'{var}: {sample[var].shape}')
+            logging.info(f'{var}: {sample[var].shape} {sample[var].dtype}')
         return sample
 
     @classmethod

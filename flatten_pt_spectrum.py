@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 ROOTVariables = dict[str, tf.RaggedTensor]
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--save_path", type=str, default='data/dataset2_flat', help="Path to save the dataset")
+parser.add_argument("--save_path", type=str, default='data/dataset2_flat_b100/train', help="Path to save the dataset")
 parser.add_argument("--file_path", type=str, default='data/dataset2_3', help="Path to the root file")
 parser.add_argument("--num_shards", type=int, default=256, help="Path to the root file")
 parser.add_argument("--dataset_type", type=str, default='train', help="train/dev/test")
@@ -34,8 +34,8 @@ def write_JZ_wrapper(jz_slice: int) -> Callable[[ROOTVariables], ROOTVariables]:
 
 @tf.function
 def rebin_pt(data: ROOTVariables) -> tf.Tensor:
-    nbins = 128
-    value_range = [20_000., 1_200_000.]
+    nbins = 100
+    value_range = [20_000., 1_100_000.]
     new_values = data['jets_pt']
     new_values = tf.reshape(new_values, ())
     index = tf.histogram_fixed_width_bins(new_values, value_range, nbins=nbins)
@@ -50,9 +50,6 @@ def rebin_pt(data: ROOTVariables) -> tf.Tensor:
 
 def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
-
-    # tf.config.run_functions_eagerly(True)
-    # tf.data.experimental.enable_debug_mode()
 
     JZ_slices = ['JZ01_r10724',
                  'JZ02_r10724',
@@ -71,7 +68,7 @@ def main(args: argparse.Namespace) -> None:
 
     dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets, stop_on_empty_dataset=True)
     dataset = dataset.rejection_resample(
-        rebin_pt, target_dist=[1 / (128 * 2)] * 128 * 2, seed=42).map(lambda _, data: data)
+        rebin_pt, target_dist=[1 / (100 * 2)] * 100 * 2, seed=42).map(lambda _, data: data)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
     with open(os.path.join(args.save_path, 'element_spec'), 'wb') as f:
@@ -94,7 +91,8 @@ def main(args: argparse.Namespace) -> None:
                               shard_func=random_shards)  # , checkpoint_args=checkpoint_args)
 
     dataset = tf.data.experimental.load(args.save_path, compression='GZIP')
-    dataset = dataset.take(20_000)
+    print(dataset.cardinality())
+    dataset = dataset.take(100_000)
 
     @tf.function
     def get_labeled_pt(data):
