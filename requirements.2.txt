@@ -1,0 +1,14 @@
+tensorflow
+tensorflow-addons
+tensorboard_plugin_profile
+tensorflow_decision_forests
+tensorflow_datasets
+scikit_learn
+uproot
+vector
+awkward
+pandas
+matplotlib
+seaborn
+typed-argument-parser
+hydra-core

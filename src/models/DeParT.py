@@ -166,7 +166,8 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         output = tf.linalg.matmul(attention, v)  # (B, H, N, C // H)
         output = tf.transpose(output, [0, 2, 1, 3])  # (B, N, H, C // H)
         output = tf.reshape(output, [B, N, C])  # (B, N, C)
-        output = self.linear_out(output, training)  # (B, N, C)
+        output = self.linear_out(output)  # (B, N, C)
+        output = self.dropout(output, training)
         return output
 
 
@@ -215,7 +216,8 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
         output = tf.linalg.matmul(attention, v)  # (B, H, 1, C // H)
         output = tf.transpose(output, [0, 2, 1, 3])  # (B, 1, H, C // H)
         output = tf.reshape(output, [B, 1, C])  # (B, 1, C)
-        output = self.linear_out(output, training)  # (B, 1, C)
+        output = self.linear_out(output)  # (B, 1, C)
+        output = self.dropout(output, training)
         return output
 
 
@@ -377,23 +379,23 @@ class DeParT(tf.keras.layers.Layer):
         return cls_token
 
 
-class ParticleEmbedding(tf.keras.layers.Layer):
+class FCEmbedding(tf.keras.layers.Layer):
 
     def __init__(self, embedding_dim, num_embeding_layers, activation, **kwargs):
 
         super().__init__(**kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.mlp = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
                     for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
-        config = super(ParticleEmbedding, self).get_config()
+        config = super(FCEmbedding, self).get_config()
         config.update({name: getattr(self, name) for name in ["embedding_dim", "num_embeding_layers", "activation"]})
         return config
 
     def call(self, inputs):
         hidden = inputs
-        for layer in self.mlp:
+        for layer in self.layers:
             hidden = layer(hidden)
         return hidden
 
@@ -486,7 +488,7 @@ class DeParTModel(tf.keras.Model):
         if preprocess is not None:
             hidden = preprocess(hidden)
 
-        hidden = ParticleEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
+        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
 
         transformed = DeParT(num_selfattn_layers=layers,
                              num_class_layers=class_layers,

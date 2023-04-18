@@ -196,7 +196,7 @@ class ParT(tf.keras.layers.Layer):
         assert dim % 2 == 0
 
         super().__init__(*args, **kwargs)
-        self.dim, self.expansion, self.heads, self.dropout, self.activation, self.num_particle_layers, self.num_class_layers = dim, expansion, heads, dropout, activation, num_selfattn_layers, num_class_layers
+        self.dim, self.expansion, self.heads, self.dropout, self.activation, self.num_selfattn_layers, self.num_class_layers = dim, expansion, heads, dropout, activation, num_selfattn_layers, num_class_layers
 
         self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
         self.sa_layers = [SelfAttentionBlock(dim, heads, dropout, expansion, activation)
@@ -223,13 +223,13 @@ class ParT(tf.keras.layers.Layer):
         return class_token
 
 
-class Embedding(tf.keras.layers.Layer):
+class FCEmbedding(tf.keras.layers.Layer):
 
     def __init__(self, embedding_dim: int, num_embeding_layers: int, activation: Callable, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.mlp = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
                     for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
@@ -239,7 +239,7 @@ class Embedding(tf.keras.layers.Layer):
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
         hidden = inputs
-        for layer in self.mlp:
+        for layer in self.layers:
             hidden = layer(hidden)
         return hidden
 

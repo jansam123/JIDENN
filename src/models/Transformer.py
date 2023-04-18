@@ -76,7 +76,7 @@ class Transformer(tf.keras.layers.Layer):
         super().__init__(*args, **kwargs)
         self.layers, self.dim, self.expansion, self.heads, self.dropout, self.activation = layers, dim, expansion, heads, dropout, activation
         self.cls_token = tf.Variable(initial_value=tf.random.truncated_normal(
-            (1, 1, self.embedding_dim), stddev=0.02), trainable=True)
+            (1, 1, dim), stddev=0.02), trainable=True)
         self.sa_layers = [SelfAttentionBlock(dim, heads, expansion, activation, dropout) for _ in range(layers)]
 
     def get_config(self):
@@ -90,26 +90,26 @@ class Transformer(tf.keras.layers.Layer):
         cls_tokens = tf.tile(self.cls_token, [tf.shape(inputs)[0], 1, 1])
         hidden = tf.concat([cls_tokens, inputs], axis=1)
         for sa_block in self.sa_layers:
-            hidden = sa_block(hidden)
+            hidden = sa_block(hidden, mask)
         return hidden
 
 
-class Embedding(tf.keras.layers.Layer):
+class FCEmbedding(tf.keras.layers.Layer):
 
     def __init__(self, embedding_dim: int, num_embeding_layers: int, activation: Callable, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.mlp = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
                     for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
-        config = super(Embedding, self).get_config()
+        config = super(FCEmbedding, self).get_config()
         config.update({name: getattr(self, name) for name in ["embedding_dim", "num_embeding_layers", "activation"]})
         return config
 
     def call(self, inputs):
         hidden = inputs
-        for layer in self.mlp:
+        for layer in self.layers:
             hidden = layer(hidden)
         return hidden
 
@@ -136,11 +136,11 @@ class TransformerModel(tf.keras.Model):
         if preprocess is not None:
             hidden = preprocess(hidden)
 
-        hidden = Embedding(embedding_dim, num_embeding_layers, activation)(hidden)
+        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
         row_lengths += 1
 
         transformed = Transformer(layers, embedding_dim, expansion,
-                                  heads, dropout, activation)(hidden, mask=tf.sequence_mask(row_lengths))
+                                  heads, activation, dropout)(hidden, mask=tf.sequence_mask(row_lengths))
 
         transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
         output = output_layer(transformed)

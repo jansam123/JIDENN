@@ -7,7 +7,7 @@ import os
 import numpy as np
 import os
 # import atlas_mpl_style as ampl
-from const import MODEL_NAMING_SCHEMA
+from const import MODEL_NAMING_SCHEMA, MATRIC_NAMING_SCHEMA
 # ampl.use_atlas_style()
 sns.set_theme(style="ticks")
 # sns.set_context(rc={"grid.linecolor": "black"})
@@ -20,21 +20,10 @@ parser.add_argument("--save_dir", default=".", type=str, help="Directory to save
 parser.add_argument("--take", default=0, type=int, help="Directory to save the plots to.")
 parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 
-MATRIC_NAMING_SCHEMA = {
-    'binary_accuracy': 'Accuracy',
-    'auc': 'AUC',
-    'gluon_efficiency': r'$\varepsilon_g$',
-    'quark_efficiency': r'$\varepsilon_q$',
-    'gluon_rejection': r'$\varphi_g$',
-    'quark_rejection': r'$\varphi_q$',
-    'gluon_rej_at_quark_eff_0.9': r'$\varphi_g @_{0.9} \varepsilon_q$',
-    'quark_rej_at_gluon_eff_0.9': r'$\varphi_q @_{0.9} \varepsilon_g$',
-    'loss': 'Loss'}
-
 
 def main(args: argparse.Namespace):
     logdir = 'good_logs/comparison_12e/'
-    model_names = ['interacting_depart', 'interacting_part', 'highway',
+    model_names = ['interacting_depart', 'interacting_depart_no_norm', 'interacting_part', 'highway',
                    'basic_fc', 'transformer', 'part', 'depart', 'pfn', 'efn', 'depart_rel']
     # model_names += ['bdt']
     # used_models = ['interacting_part', 'basic_fc', 'bdt']
