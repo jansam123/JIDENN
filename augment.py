@@ -8,18 +8,18 @@ import time
 import matplotlib.ticker as mticker
 import plotly.graph_objects as go
 #
-import src.data.data_info as data_info
-from src.config import eval_config
-from src.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
-from src.data.utils.Cut import Cut
-from src.data.get_dataset import get_preprocessed_dataset
-from src.model_builders.LearningRateSchedulers import LinearWarmup
-from src.data.TrainInput import input_classes_lookup
-from src.evaluation.evaluation_metrics import calculate_metrics
-from src.evaluation.variable_latex_names import LATEX_NAMING_CONVENTION
+import jidenn.data.data_info as data_info
+from jidenn.config import eval_config
+from jidenn.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
+from jidenn.data.utils.Cut import Cut
+from jidenn.data.get_dataset import get_preprocessed_dataset
+from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
+from jidenn.data.TrainInput import input_classes_lookup
+from jidenn.evaluation.evaluation_metrics import calculate_metrics
+from jidenn.evaluation.variable_latex_names import LATEX_NAMING_CONVENTION
 
-from src.data.data_info import *
-from src.model_builders.data_augment import InfraredAugmentation
+from jidenn.data.data_info import *
+from jidenn.model_builders.data_augment import InfraredAugmentation
 
 
 from dataclasses import dataclass

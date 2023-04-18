@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from typing import Union, Tuple, Optional, Callable, List
 
-from src.config import model_config as model_cfg
+from jidenn.config import model_config as model_cfg
 
 from ..models.FC import FCModel
 from ..models.Highway import HighwayModel

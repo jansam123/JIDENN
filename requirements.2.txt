@@ -12,3 +12,4 @@ matplotlib
 seaborn
 typed-argument-parser
 hydra-core
+pdoc3

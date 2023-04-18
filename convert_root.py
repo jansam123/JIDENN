@@ -5,7 +5,7 @@ logging.basicConfig(format='[%(asctime)s][%(levelname)s] - %(message)s',
                     level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 #
 
-from src.data.ROOTDataset import ROOTDataset
+from jidenn.data.ROOTDataset import ROOTDataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, help="Path to save the dataset")

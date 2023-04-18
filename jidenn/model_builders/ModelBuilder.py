@@ -1,7 +1,7 @@
 import tensorflow as tf
 from typing import Union, Tuple, Optional, Callable, List
 
-from src.config import config_subclasses as cfg
+from jidenn.config import config_subclasses as cfg
 from .get_optimizer import get_optimizer
 
 from .get_model import model_getter_lookup
