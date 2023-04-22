@@ -8,7 +8,7 @@ from typing import Union, Literal, Callable, Dict, Tuple, List, Optional
 import os
 import pickle
 #
-import src.config.config_subclasses as cfg
+import jidenn.config.config_subclasses as cfg
 from .utils.Cut import Cut
 from .utils.Expression import Expression
 

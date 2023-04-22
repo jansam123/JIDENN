@@ -1,7 +1,7 @@
 import tensorflow as tf
 from typing import List, Optional, Tuple, Callable
 
-from src.config import config_subclasses as cfg
+from jidenn.config import config_subclasses as cfg
 from .utils.Cut import Cut
 from .JIDENNDataset import JIDENNDataset, JIDENNVariables
 

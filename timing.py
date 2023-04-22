@@ -9,10 +9,10 @@ import pandas as pd
 import time
 from hydra.core.config_store import ConfigStore
 #
-from src.config import eval_config
-from src.data.get_dataset import get_preprocessed_dataset
-from src.model_builders.LearningRateSchedulers import LinearWarmup
-from src.data.TrainInput import input_classes_lookup
+from jidenn.config import eval_config
+from jidenn.data.get_dataset import get_preprocessed_dataset
+from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
+from jidenn.data.TrainInput import input_classes_lookup
 
 
 cs = ConfigStore.instance()

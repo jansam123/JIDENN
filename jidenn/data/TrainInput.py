@@ -1,7 +1,7 @@
 import tensorflow as tf
 from abc import ABC, abstractmethod, abstractproperty
 from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Type
-import src.config.config_subclasses as cfg
+import jidenn.config.config_subclasses as cfg
 #
 from .utils.transformations import to_e_px_py_pz
 

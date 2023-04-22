@@ -7,15 +7,15 @@ import hydra
 from functools import partial
 from hydra.core.config_store import ConfigStore
 #
-from src.data.get_dataset import get_preprocessed_dataset
-import src.data.data_info as data_info
-from src.callbacks.get_callbacks import get_callbacks
-from src.config import config
-from src.evaluation.train_history import plot_train_history
-from src.model_builders.ModelBuilder import ModelBuilder
-from src.model_builders.get_normalization import get_normalization
-from src.data.TrainInput import input_classes_lookup
-from src.model_builders.multi_gpu_strategies import choose_strategy
+from jidenn.data.get_dataset import get_preprocessed_dataset
+import jidenn.data.data_info as data_info
+from jidenn.callbacks.get_callbacks import get_callbacks
+from jidenn.config import config
+from jidenn.evaluation.train_history import plot_train_history
+from jidenn.model_builders.ModelBuilder import ModelBuilder
+from jidenn.model_builders.get_normalization import get_normalization
+from jidenn.data.TrainInput import input_classes_lookup
+from jidenn.model_builders.multi_gpu_strategies import choose_strategy
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)

@@ -7,8 +7,8 @@ import hydra
 from hydra.core.config_store import ConfigStore
 import pickle
 #
-from src.data.get_dataset import get_preprocessed_dataset
-from src.config import config
+from jidenn.data.get_dataset import get_preprocessed_dataset
+from jidenn.config import config
 # os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

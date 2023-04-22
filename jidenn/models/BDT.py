@@ -1,8 +1,17 @@
-from src.config.model_config import BDT as cfg_BDT
 import tensorflow_decision_forests as tfdf
+
+from jidenn.config.model_config import BDT as cfg_BDT
 
 
 def bdt_model(args_model: cfg_BDT) -> tfdf.keras.RandomForestModel:
+    """Builds a BDT model
+
+    Args:
+        args_model (cfg_BDT): BDT model config
+
+    Returns:
+        tfdf.keras.RandomForestModel: BDT model
+    """
 
     model = tfdf.keras.GradientBoostedTreesModel(
         num_trees=args_model.num_trees,

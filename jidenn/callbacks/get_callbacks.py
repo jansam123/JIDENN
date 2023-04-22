@@ -4,7 +4,7 @@ from datetime import datetime
 from logging import Logger
 from typing import List, Optional
 
-from src.config import config_subclasses as cfg
+from jidenn.config import config_subclasses as cfg
 from .BestNModelCheckpoint import BestNModelCheckpoint
 
 

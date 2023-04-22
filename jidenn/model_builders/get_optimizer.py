@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from src.config import config_subclasses as cfg
+from jidenn.config import config_subclasses as cfg
 from .LearningRateSchedulers import LinearWarmup
 
 
