@@ -9,7 +9,6 @@ class FFN(tf.keras.layers.Layer):
 
         self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
         self.dense = tf.keras.layers.Dense(dim, activation=None)
-        self.ln = tf.keras.layers.LayerNormalization()
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
     def get_config(self):
@@ -19,11 +18,9 @@ class FFN(tf.keras.layers.Layer):
         return config
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
-        output = self.ln(inputs)
-        output = self.wide_dense(output)
+        output = self.wide_dense(inputs)
         output = self.dense(output)
-        if self.dropout > 0 and self.dropout is not None:
-            output = self.layer_dropout(output)
+        output = self.layer_dropout(output)
         return output
 
 
@@ -100,7 +97,7 @@ class FCEmbedding(tf.keras.layers.Layer):
         super().__init__(*args, **kwargs)
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
         self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
-                    for _ in range(self.num_embeding_layers)]
+                       for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
         config = super(FCEmbedding, self).get_config()

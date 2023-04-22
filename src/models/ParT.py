@@ -327,7 +327,7 @@ class ParTModel(tf.keras.Model):
         if preprocess is not None:
             hidden = preprocess(hidden)
 
-        hidden = Embedding(embedding_dim, num_embeding_layers, activation)(hidden)
+        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
 
         transformed = ParT(dim=embedding_dim,
                            num_selfattn_layers=selfattn_block_layers,
