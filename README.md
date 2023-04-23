@@ -1,5 +1,6 @@
 # Jet Identification Deep Neural Network (JIDENN) 
 Guark/gluon jet tagging with Transformers
+
 [Documentation](http://jansam.wieno.sk/JIDENN)
 
 <p align="center">
@@ -52,7 +53,7 @@ Hydra also allows for changing the configuration from the command line. For exam
 python train.py dataset.epochs=10
 ```
 
-For more information about usage see the [documentation.](http://jansam.wieno.sk/JIDENN)
+For more usage information see the [documentation.](http://jansam.wieno.sk/JIDENN)
 
 
 ## Data Format
@@ -60,15 +61,17 @@ The data is mainly stored in the ROOT files. In the `jidenn/data` folder is a su
 
 The data preprocessing consists of two steps:
 - **Offline preprocessing**: The data is converted to `tf.data.Dataset` objects and saved to disk. This is done with the `jidenn/data/ROOTDataset` submodule scripts `convert_root.py` and `event_flattening.py`. The first script purely converts the ROOT files to `tf.data.Dataset` objects. The second script performs cuts and flattens the events to individual jets, as seen in figure below.
+
 ![data_off](images/data_prep_off.jpg)
 
 - **Online preprocessing**: As the data comes from different JZ slices, there are specific cuts on each of them separately, as seen in the diagram below. Afterward, the datasets are individually resampled, such that the amount of quarks and gluons is the same in each slice. The datasets are interleaved with equal probabilty and train input variables are created (`jidenn/data/TrainInput`). In the end, the variables are normalized.
+
 ![data_on](images/data_prep_on.jpg)
 
 ## Architecture
 In the following sections, we briefly introduce the implemented architecture.
 ### Dynamically Enhanced Particle Transformer (DeParT)
-Dynamically Enhanced Particle Transformer is an extension of ParT (explained below). It uses several minor improvements based on the DeiT III paper (https://arxiv.org/abs/2204.07118), from which the Talking Multi-heads Attention is the most improtant. The architecture is shown in the figure below.
+Dynamically Enhanced Particle Transformer is an extension of ParT (explained below). It uses several minor improvements based on the DeiT III paper (https://arxiv.org/abs/2204.07118), from which the Talking Multi-heads Attention is the most important. The architecture is shown in the figures below.
 
 <p align="center">
 <img src="images/depart.jpg" width="600">
@@ -102,7 +105,7 @@ Energy Flow Network (https://arxiv.org/abs/1810.05165) is a subset of PFN becaus
 </p>
 
 ### Transformer
-Transformer network (https://arxiv.org/abs/1706.03762) is a constituent-based architecture. It uses the self-attention mechanism to allow the particles to exchange information. The architecture is shown in the figure below.
+Transformer network (https://arxiv.org/abs/1706.03762) is a constituent-based architecture. It uses the self-attention mechanism to allow the particles to exchange information. The architecture is shown in the figures below.
 
 <p align="center">
 <img src="images/transformer.jpg" width="600">
@@ -112,7 +115,7 @@ Transformer network (https://arxiv.org/abs/1706.03762) is a constituent-based ar
 </p>
 
 ### Particle Transformer (ParT)
-Particle Transformer (https://arxiv.org/abs/2202.03772) is an extension of Transformer, which is based on the CaiT model used in image recognition (https://arxiv.org/abs/2103.17239). On top of that, it introduces **interaction variables** that are computed for each pair of particles. They are added as a bias to the attention weights. The architecture is shown in the figure below. 
+Particle Transformer (https://arxiv.org/abs/2202.03772) is an extension of Transformer, which is based on the CaiT model used in image recognition (https://arxiv.org/abs/2103.17239). On top of that, it introduces **interaction variables** that are computed for each pair of particles. They are added as a bias to the attention weights. The architecture is shown in the figures below. 
 
 <p align="center">
 <img src="images/part.jpg" width="600">
