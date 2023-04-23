@@ -1,0 +1,1177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>jidenn.config.config API documentation</title>
+<meta name="description" content="General configurations for JIDENN. It includes training and data preparation configurations.
+The model configurations are defined separately in …" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>jidenn.config.config</code></h1>
+</header>
+<section id="section-intro">
+<p>General configurations for JIDENN. It includes training and data preparation configurations.
+The model configurations are defined separately in <code><a title="jidenn.config.model_config" href="model_config.html">jidenn.config.model_config</a></code>, but are
+in the same <code>.yaml</code> file as the general configurations.</p>
+<p>The data is exspected to have the following structure:</p>
+<ul>
+<li>the main folder contains the folders <code>train</code>, <code>dev</code> and <code>test</code> which contain the saved <code>tf.data.Dataset</code>s.</li>
+<li>optionally, the main folder can contain subfolders which then each contain the folders <code>train</code>, <code>dev</code> and <code>test</code>.</li>
+</ul>
+<pre><code class="language-bash">main_folder/
+    train/
+    dev/
+    test/
+# or
+main_folder/
+    subfolder1/
+        train/
+        dev/
+        test/
+    subfolder2/
+        train/
+        dev/
+        test/
+    ...
+</code></pre>
+<p>The saving of the <code>tf.data.Dataset</code>s is done as:</p>
+<pre><code class="language-python">tf.data.Dataset.save('main_folder/train')
+...
+# or
+tf.data.Dataset.save('main_folder/subfolder1/train')
+...
+</code></pre>
+<p>The saved datasets are expected to be flattened to the jet level.</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;
+General configurations for JIDENN. It includes training and data preparation configurations.
+The model configurations are defined separately in `jidenn.config.model_config`, but are
+in the same `.yaml` file as the general configurations.
+
+The data is exspected to have the following structure:
+
+- the main folder contains the folders `train`, `dev` and `test` which contain the saved `tf.data.Dataset`s.
+- optionally, the main folder can contain subfolders which then each contain the folders `train`, `dev` and `test`.
+```bash
+main_folder/
+    train/
+    dev/
+    test/
+# or
+main_folder/
+    subfolder1/
+        train/
+        dev/
+        test/
+    subfolder2/
+        train/
+        dev/
+        test/
+    ...
+```
+The saving of the `tf.data.Dataset`s is done as:
+```python
+tf.data.Dataset.save(&#39;main_folder/train&#39;)
+...
+# or
+tf.data.Dataset.save(&#39;main_folder/subfolder1/train&#39;)
+...
+```
+
+The saved datasets are expected to be flattened to the jet level.
+&#34;&#34;&#34;
+from dataclasses import dataclass
+from typing import List, Optional, Literal
+
+from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN
+
+
+@dataclass
+class Variables:
+    &#34;&#34;&#34;Variable names loaded from the saved `tf.data.Dataset`s. The `element_spec` of the loaded dataset
+    is expected to be `Dict[str, Union[tf.Tensor, tf.RaggedTensor]]` where the keys are the variable names.
+    From these variables, only variables defined in `per_jet` and `per_jet_tuple` and `per_event` are used.
+    They are then clustered into a dictionary of the following structure 
+    `Dict[Literal[&#39;perEvent&#39;,&#39;perJet&#39;,&#39;perJetTuple&#39;], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]`.
+    Example:
+    ```python
+    # element_spec of the loaded dataset, ROOTDataset
+    element_spec_before = {
+        &#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
+        &#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)
+        &#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None),
+    }
+    # element_spec after processing with JIDENNDataset
+    element_spec_after = {
+        &#39;perEvent&#39;: {&#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None)},
+        &#39;perJet&#39;: {&#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)}
+        &#39;perJetTuple&#39;: {&#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
+    }
+    ```
+    Optionally, the string may be expression which combine multiple variables, or slice them.
+    See the `jidenn.data.string_conversions.Expression` documentation for more information. 
+
+    These variables are then used to construct the model inputs with the `jidenn.data.TrainInput` class.
+
+    Args:
+        per_jet (List[str]): Variables to be loaded from the dataset and clustered into `perJet`.
+            Each variable is expected to have single input per jet, e.g. `jets_pt` 
+            which is a single value for the jet transverse momentum.
+        per_jet_tuple (List[str]): Variables to be loaded from the dataset and clustered into `perJetTuple`.
+            Each variable is expecetd to have multiple inputs per jet, e.g. `jets_PFO_m` which is a list of
+            masses of the constituents of the jet.
+        per_event (List[str]): Variables to be loaded from the dataset and clustered into `perEvent`.
+            Each variable is expected to have only one input per event, which is the same for all jets in the event.
+            It is tiled to the number of jets in the event.
+    &#34;&#34;&#34;
+    per_jet: List[str]
+    per_jet_tuple: List[str]
+    per_event: List[str]
+
+
+@dataclass
+class Data:
+    &#34;&#34;&#34; Data configuration for loading the data, constructing a `tf.data.Dataset` and
+    labeling the data.
+
+    Args:
+        path (str): Path to data folder containing folders of saved `tf.data.Dataset`s. The path **must** contain
+            the folders `train`, `dev` and `test` which contain the saved `tf.data.Dataset`s.
+
+        target (str): Name of the target variable inside the saved `tf.data.Dataset`s.
+
+        target_labels (List[List[int]]): Original labels which are going to be changed by clustering into lists. 
+            The following example will cluster all jets with `target in [21]` into one label,
+            and all jets with `target in [1, 2, 3, 4, 5, 6]` into the second label:
+
+                target_labels:
+                    - [21]
+                    - [1, 2, 3, 4, 5, 6]
+
+        labels (List[str]): List of names of the labels defined by the order in `target_labels`.
+
+                labels:
+                    - gluon
+                    - quark
+
+        variable_unknown_labels (List[int]): List of unknown labels corresponding to undefined `target` (e.q. `[-1, -999]`). 
+            These will be omiited from the dataset.
+
+        variables (Variables): Variables to loaded from the dataset separated into `per_jet` and `per_event` and `per_jet_tuple` 
+            using the `Variables` dataclass. The actual variables used as a training input are defined 
+            from these in `jidenn.data.TrainInput`.
+
+        weight (Optional[str]): Name of the weight variable inside the saved `tf.data.Dataset`s. If `None`, 
+            no weights are used otherwise the weights are passed as a third input to the model.
+
+        cut (Optional[str]): Cut to apply to the dataset. If `None`, no cut is applied. String are parsed using the `jidenn.data.Cut` class.
+            See the `jidenn.data.Cut` documentation for more information of the cut syntax.
+
+        subfolders (Optional[List[str]]): Folders inside the `path` to use. If `None`, the `path` is used directly. Each subfolder
+            must contain the folders `train`, `dev` and `test` which contain the saved `tf.data.Dataset`s.
+            These subfolders are used to combine multiple JZ slices into one dataset.
+
+        subfolder_cut (Optional[List[str]]): Cuts to apply to the individual subfolders separately. If `None`, no cut is applied. 
+            Must be the same length as `subfolders`. String are parsed using the `jidenn.data.Cut` class.
+            See the `jidenn.data.Cut` documentation for more information of the cut syntax.
+
+        subfolder_weights (Optional[List[float]]): Weights to apply to the individual subfolders separately when combining. 
+            `None` is viable only if `subfolders` is `None`. 
+
+        cached (Optional[str]): **Untested.** Path to cached data. If `None`, no cached data is used. If `cached` is not `None`, the `path` is ignored.
+    &#34;&#34;&#34;
+    path: str   # Path to data folder containing folder of *.root files.
+    target: str
+    target_labels: List[List[int]]   # Original labels.
+    labels: List[str]    # list of labels to use.
+    variable_unknown_labels: List[int]
+    variables: Variables
+    weight: Optional[str]
+    cut: Optional[str]
+    subfolders: Optional[List[str]]   # Slices of JZ to use.
+    subfolder_cut: Optional[List[str]]   # Cut to apply to JZ slices.
+    subfolder_weights: Optional[List[float]]  # Weights to apply to JZ slices.
+    cached: Optional[str]   # Path to cached data.
+
+
+@dataclass
+class Dataset:
+    &#34;&#34;&#34; Dataset configuration for preparing the `tf.data.Dataset` for training.
+    Args:
+        epochs (int): Number of epochs.
+        batch_size (int): Batch size.
+        take (Optional[int]): Length of data to use. i.e. number of jets. 
+            If `None`, the whole `train` dataset is used.
+        dev_size (float): Size of dev dataset as a fraction of the `take` length.
+            If `take` is `None`, the size is omitted and whole `dev` dataset is used.
+        test_size (float): Size of test dataset as a fraction of the `take` length.
+            If `take` is `None`, the size is omitted and whole `test` dataset is used.
+        shuffle_buffer (Optional[int]): Size of shuffler buffer, if `None`, no shuffling is used.
+            `shullfe_buffer` samples are shuffled before each epoch.
+    &#34;&#34;&#34;
+    epochs: int  # Number of epochs.
+    batch_size: int   # Batch size.
+    take: Optional[int]   # Length of data to use.
+    dev_size: float   # Size of dev dataset.
+    test_size: float  # Size of test dataset.
+    shuffle_buffer: Optional[int]   # Size of shuffler buffer.
+
+
+@dataclass
+class General:
+    &#34;&#34;&#34;Basic configuration for the training.
+
+    Args:
+        model (str): Model to use, options: `fc`, `highway`, `pfn`, `efn`, `transformer`, `part`, `depart`, `bdt`.
+        seed (int): Random seed. Used for reproducibility.
+        threads (int, optional): Maximum number of threads to use. `None` or 0 uses all threads.
+        debug (bool): Debug mode. If `True`, tensorflow uses the `Eager` mode.
+        base_logdir (str): Path to log directory where subfolders are created for each training session.
+        logdir (str): Path to log directory of a given training session. Could be set manually,
+            but using `${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
+            as it creates a unique folder for each training session inside the `base_logdir`.
+        checkpoint (str, optional): Path to a checkpoint inside `logdir` checkpoint. If `None`, no checkpoint is made.
+        backup (str, optional): Path to a backup of the model inside `logdir` checkpoint. If `None`, no backup is made.
+        load_checkpoint_path (str, optional): Path to a checkpoint to load. If `None`, no checkpoint is loaded.
+    &#34;&#34;&#34;
+    model: Literal[&#39;fc&#39;, &#39;highway&#39;, &#39;pfn&#39;,
+                   &#39;efn&#39;, &#39;transformer&#39;, &#39;part&#39;, &#39;depart&#39;, &#39;bdt&#39;]   # Model to use.
+    base_logdir: str   # Path to log directory.
+    seed: int   # Random seed.
+    threads: Optional[int]   # Maximum number of threads to use.
+    debug: bool   # Debug mode.
+    logdir: str   # Path to log directory.
+    checkpoint: Optional[str]   # Make checkpoint.
+    backup: Optional[str]   # Backup model.
+    load_checkpoint_path: Optional[str]   # Path to checkpoint to load.
+
+
+@dataclass
+class Preprocess:
+    &#34;&#34;&#34;Preprocessing configuration for the `tf.data.Dataset`.
+
+    Args:
+        draw_distribution (int, optional): Number of samples to draw distribution for.
+            This is useful for interpreting the model based on physical quantities.
+            If `None`, no distribution is drawn.    
+        normalization_size (int, optional): Number of batches to calculate the mean and standard deviation 
+            for each variable used for normalization. If `None`, no normalization is done.
+
+    &#34;&#34;&#34;
+    draw_distribution: Optional[int]   # Number of events to draw distribution for.
+    normalization_size: Optional[int]  # Size of normalization dataset.
+
+
+@dataclass
+class Optimizer:
+    &#34;&#34;&#34;Settings for the optimizer.
+
+    Args:
+        name (str): Name of the optimizer to use, options: `LAMB`, `Adam`.
+        learning_rate (float): Learning rate.
+        label_smoothing (float, optional): Label smoothing.
+        decay_steps (int, optional): Number of steps to decay the learning rate with cosine decay. 
+            If `None`, decay is calculated automatically as `decay_steps = epochs * take / batch_size - warmup_steps`.
+        warmup_steps (int, optional): Number of steps to warmup the learning rate with linear warmup.
+        beta_1 (float, optional): Beta 1 for Adam and LAMB, default is 0.9.
+        beta_2 (float, optional): Beta 2 for Adam and LAMB, default is 0.999.
+        epsilon (float, optional): Epsilon for Adam and LAMB, default is 1e-6.
+        clipnorm (float, optional): Clipnorm for Adam and LAMB. If `None`, no clipping is done. Default is `None`.
+        weight_decay (float, optional): Weight decay for LAMB and Adam, default is 0.0.
+    &#34;&#34;&#34;
+    name: Literal[&#39;LAMB&#39;, &#39;Adam&#39;]
+    learning_rate: float
+    label_smoothing: Optional[float]
+    decay_steps: Optional[int]
+    warmup_steps: Optional[int]
+    beta_1: Optional[float]
+    beta_2: Optional[float]
+    epsilon: Optional[float]
+    clipnorm: Optional[float]
+    weight_decay: Optional[float]
+
+
+@dataclass
+class Models:
+    &#34;&#34;&#34;Configuration for the models. See the documentation for each model for more information.&#34;&#34;&#34;
+    fc: FC
+    transformer: Transformer
+    bdt: BDT
+    highway: Highway
+    part: ParT
+    depart: DeParT
+    pfn: PFN
+
+
+@dataclass
+class JIDENNConfig:
+    &#34;&#34;&#34;A dataclass containing all of the configuration information for a JIDENN training session.&#34;&#34;&#34;
+    general: General
+    data: Data
+    dataset: Dataset
+    preprocess: Preprocess
+    optimizer: Optimizer
+    models: Models</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="jidenn.config.config.Data"><code class="flex name class">
+<span>class <span class="ident">Data</span></span>
+<span>(</span><span>path: str, target: str, target_labels: List[List[int]], labels: List[str], variable_unknown_labels: List[int], variables: <a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a>, weight: Optional[str], cut: Optional[str], subfolders: Optional[List[str]], subfolder_cut: Optional[List[str]], subfolder_weights: Optional[List[float]], cached: Optional[str])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Data configuration for loading the data, constructing a <code>tf.data.Dataset</code> and
+labeling the data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to data folder containing folders of saved <code>tf.data.Dataset</code>s. The path <strong>must</strong> contain
+the folders <code>train</code>, <code>dev</code> and <code>test</code> which contain the saved <code>tf.data.Dataset</code>s.</dd>
+<dt><strong><code>target</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the target variable inside the saved <code>tf.data.Dataset</code>s.</dd>
+<dt><strong><code>target_labels</code></strong> :&ensp;<code>List[List[int]]</code></dt>
+<dd>Original labels which are going to be changed by clustering into lists.
+The following example will cluster all jets with <code>target in [21]</code> into one label,
+and all jets with <code>target in [1, 2, 3, 4, 5, 6]</code> into the second label:<pre><code>target_labels:
+    - [21]
+    - [1, 2, 3, 4, 5, 6]
+</code></pre>
+</dd>
+<dt><strong><code>labels</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>List of names of the labels defined by the order in <code>target_labels</code>.<pre><code>labels:
+    - gluon
+    - quark
+</code></pre>
+</dd>
+<dt><strong><code>variable_unknown_labels</code></strong> :&ensp;<code>List[int]</code></dt>
+<dd>List of unknown labels corresponding to undefined <code>target</code> (e.q. <code>[-1, -999]</code>).
+These will be omiited from the dataset.</dd>
+<dt><strong><code>variables</code></strong> :&ensp;<code><a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code></dt>
+<dd>Variables to loaded from the dataset separated into <code>per_jet</code> and <code>per_event</code> and <code>per_jet_tuple</code>
+using the <code><a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code> dataclass. The actual variables used as a training input are defined
+from these in <code><a title="jidenn.data.TrainInput" href="../data/TrainInput.html">jidenn.data.TrainInput</a></code>.</dd>
+<dt><strong><code>weight</code></strong> :&ensp;<code>Optional[str]</code></dt>
+<dd>Name of the weight variable inside the saved <code>tf.data.Dataset</code>s. If <code>None</code>,
+no weights are used otherwise the weights are passed as a third input to the model.</dd>
+<dt><strong><code>cut</code></strong> :&ensp;<code>Optional[str]</code></dt>
+<dd>Cut to apply to the dataset. If <code>None</code>, no cut is applied. String are parsed using the <code>jidenn.data.Cut</code> class.
+See the <code>jidenn.data.Cut</code> documentation for more information of the cut syntax.</dd>
+<dt><strong><code>subfolders</code></strong> :&ensp;<code>Optional[List[str]]</code></dt>
+<dd>Folders inside the <code>path</code> to use. If <code>None</code>, the <code>path</code> is used directly. Each subfolder
+must contain the folders <code>train</code>, <code>dev</code> and <code>test</code> which contain the saved <code>tf.data.Dataset</code>s.
+These subfolders are used to combine multiple JZ slices into one dataset.</dd>
+<dt><strong><code>subfolder_cut</code></strong> :&ensp;<code>Optional[List[str]]</code></dt>
+<dd>Cuts to apply to the individual subfolders separately. If <code>None</code>, no cut is applied.
+Must be the same length as <code>subfolders</code>. String are parsed using the <code>jidenn.data.Cut</code> class.
+See the <code>jidenn.data.Cut</code> documentation for more information of the cut syntax.</dd>
+<dt><strong><code>subfolder_weights</code></strong> :&ensp;<code>Optional[List[float]]</code></dt>
+<dd>Weights to apply to the individual subfolders separately when combining.
+<code>None</code> is viable only if <code>subfolders</code> is <code>None</code>. </dd>
+<dt><strong><code>cached</code></strong> :&ensp;<code>Optional[str]</code></dt>
+<dd><strong>Untested.</strong> Path to cached data. If <code>None</code>, no cached data is used. If <code>cached</code> is not <code>None</code>, the <code>path</code> is ignored.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class Data:
+    &#34;&#34;&#34; Data configuration for loading the data, constructing a `tf.data.Dataset` and
+    labeling the data.
+
+    Args:
+        path (str): Path to data folder containing folders of saved `tf.data.Dataset`s. The path **must** contain
+            the folders `train`, `dev` and `test` which contain the saved `tf.data.Dataset`s.
+
+        target (str): Name of the target variable inside the saved `tf.data.Dataset`s.
+
+        target_labels (List[List[int]]): Original labels which are going to be changed by clustering into lists. 
+            The following example will cluster all jets with `target in [21]` into one label,
+            and all jets with `target in [1, 2, 3, 4, 5, 6]` into the second label:
+
+                target_labels:
+                    - [21]
+                    - [1, 2, 3, 4, 5, 6]
+
+        labels (List[str]): List of names of the labels defined by the order in `target_labels`.
+
+                labels:
+                    - gluon
+                    - quark
+
+        variable_unknown_labels (List[int]): List of unknown labels corresponding to undefined `target` (e.q. `[-1, -999]`). 
+            These will be omiited from the dataset.
+
+        variables (Variables): Variables to loaded from the dataset separated into `per_jet` and `per_event` and `per_jet_tuple` 
+            using the `Variables` dataclass. The actual variables used as a training input are defined 
+            from these in `jidenn.data.TrainInput`.
+
+        weight (Optional[str]): Name of the weight variable inside the saved `tf.data.Dataset`s. If `None`, 
+            no weights are used otherwise the weights are passed as a third input to the model.
+
+        cut (Optional[str]): Cut to apply to the dataset. If `None`, no cut is applied. String are parsed using the `jidenn.data.Cut` class.
+            See the `jidenn.data.Cut` documentation for more information of the cut syntax.
+
+        subfolders (Optional[List[str]]): Folders inside the `path` to use. If `None`, the `path` is used directly. Each subfolder
+            must contain the folders `train`, `dev` and `test` which contain the saved `tf.data.Dataset`s.
+            These subfolders are used to combine multiple JZ slices into one dataset.
+
+        subfolder_cut (Optional[List[str]]): Cuts to apply to the individual subfolders separately. If `None`, no cut is applied. 
+            Must be the same length as `subfolders`. String are parsed using the `jidenn.data.Cut` class.
+            See the `jidenn.data.Cut` documentation for more information of the cut syntax.
+
+        subfolder_weights (Optional[List[float]]): Weights to apply to the individual subfolders separately when combining. 
+            `None` is viable only if `subfolders` is `None`. 
+
+        cached (Optional[str]): **Untested.** Path to cached data. If `None`, no cached data is used. If `cached` is not `None`, the `path` is ignored.
+    &#34;&#34;&#34;
+    path: str   # Path to data folder containing folder of *.root files.
+    target: str
+    target_labels: List[List[int]]   # Original labels.
+    labels: List[str]    # list of labels to use.
+    variable_unknown_labels: List[int]
+    variables: Variables
+    weight: Optional[str]
+    cut: Optional[str]
+    subfolders: Optional[List[str]]   # Slices of JZ to use.
+    subfolder_cut: Optional[List[str]]   # Cut to apply to JZ slices.
+    subfolder_weights: Optional[List[float]]  # Weights to apply to JZ slices.
+    cached: Optional[str]   # Path to cached data.</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.Data.cached"><code class="name">var <span class="ident">cached</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.cut"><code class="name">var <span class="ident">cut</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.labels"><code class="name">var <span class="ident">labels</span> : List[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.path"><code class="name">var <span class="ident">path</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.subfolder_cut"><code class="name">var <span class="ident">subfolder_cut</span> : Optional[List[str]]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.subfolder_weights"><code class="name">var <span class="ident">subfolder_weights</span> : Optional[List[float]]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.subfolders"><code class="name">var <span class="ident">subfolders</span> : Optional[List[str]]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.target"><code class="name">var <span class="ident">target</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.target_labels"><code class="name">var <span class="ident">target_labels</span> : List[List[int]]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.variable_unknown_labels"><code class="name">var <span class="ident">variable_unknown_labels</span> : List[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.variables"><code class="name">var <span class="ident">variables</span> : <a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.weight"><code class="name">var <span class="ident">weight</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.Dataset"><code class="flex name class">
+<span>class <span class="ident">Dataset</span></span>
+<span>(</span><span>epochs: int, batch_size: int, take: Optional[int], dev_size: float, test_size: float, shuffle_buffer: Optional[int])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Dataset configuration for preparing the <code>tf.data.Dataset</code> for training.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>epochs</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of epochs.</dd>
+<dt><strong><code>batch_size</code></strong> :&ensp;<code>int</code></dt>
+<dd>Batch size.</dd>
+<dt><strong><code>take</code></strong> :&ensp;<code>Optional[int]</code></dt>
+<dd>Length of data to use. i.e. number of jets.
+If <code>None</code>, the whole <code>train</code> dataset is used.</dd>
+<dt><strong><code>dev_size</code></strong> :&ensp;<code>float</code></dt>
+<dd>Size of dev dataset as a fraction of the <code>take</code> length.
+If <code>take</code> is <code>None</code>, the size is omitted and whole <code>dev</code> dataset is used.</dd>
+<dt><strong><code>test_size</code></strong> :&ensp;<code>float</code></dt>
+<dd>Size of test dataset as a fraction of the <code>take</code> length.
+If <code>take</code> is <code>None</code>, the size is omitted and whole <code>test</code> dataset is used.</dd>
+<dt><strong><code>shuffle_buffer</code></strong> :&ensp;<code>Optional[int]</code></dt>
+<dd>Size of shuffler buffer, if <code>None</code>, no shuffling is used.
+<code>shullfe_buffer</code> samples are shuffled before each epoch.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class Dataset:
+    &#34;&#34;&#34; Dataset configuration for preparing the `tf.data.Dataset` for training.
+    Args:
+        epochs (int): Number of epochs.
+        batch_size (int): Batch size.
+        take (Optional[int]): Length of data to use. i.e. number of jets. 
+            If `None`, the whole `train` dataset is used.
+        dev_size (float): Size of dev dataset as a fraction of the `take` length.
+            If `take` is `None`, the size is omitted and whole `dev` dataset is used.
+        test_size (float): Size of test dataset as a fraction of the `take` length.
+            If `take` is `None`, the size is omitted and whole `test` dataset is used.
+        shuffle_buffer (Optional[int]): Size of shuffler buffer, if `None`, no shuffling is used.
+            `shullfe_buffer` samples are shuffled before each epoch.
+    &#34;&#34;&#34;
+    epochs: int  # Number of epochs.
+    batch_size: int   # Batch size.
+    take: Optional[int]   # Length of data to use.
+    dev_size: float   # Size of dev dataset.
+    test_size: float  # Size of test dataset.
+    shuffle_buffer: Optional[int]   # Size of shuffler buffer.</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.Dataset.batch_size"><code class="name">var <span class="ident">batch_size</span> : int</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Dataset.dev_size"><code class="name">var <span class="ident">dev_size</span> : float</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Dataset.epochs"><code class="name">var <span class="ident">epochs</span> : int</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Dataset.shuffle_buffer"><code class="name">var <span class="ident">shuffle_buffer</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Dataset.take"><code class="name">var <span class="ident">take</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Dataset.test_size"><code class="name">var <span class="ident">test_size</span> : float</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.General"><code class="flex name class">
+<span>class <span class="ident">General</span></span>
+<span>(</span><span>model: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'], base_logdir: str, seed: int, threads: Optional[int], debug: bool, logdir: str, checkpoint: Optional[str], backup: Optional[str], load_checkpoint_path: Optional[str])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Basic configuration for the training.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>model</code></strong> :&ensp;<code>str</code></dt>
+<dd>Model to use, options: <code>fc</code>, <code>highway</code>, <code>pfn</code>, <code>efn</code>, <code>transformer</code>, <code>part</code>, <code>depart</code>, <code>bdt</code>.</dd>
+<dt><strong><code>seed</code></strong> :&ensp;<code>int</code></dt>
+<dd>Random seed. Used for reproducibility.</dd>
+<dt><strong><code>threads</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Maximum number of threads to use. <code>None</code> or 0 uses all threads.</dd>
+<dt><strong><code>debug</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Debug mode. If <code>True</code>, tensorflow uses the <code>Eager</code> mode.</dd>
+<dt><strong><code>base_logdir</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to log directory where subfolders are created for each training session.</dd>
+<dt><strong><code>logdir</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to log directory of a given training session. Could be set manually,
+but using <code>${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}</code> is recommended,
+as it creates a unique folder for each training session inside the <code>base_logdir</code>.</dd>
+<dt><strong><code>checkpoint</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Path to a checkpoint inside <code>logdir</code> checkpoint. If <code>None</code>, no checkpoint is made.</dd>
+<dt><strong><code>backup</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Path to a backup of the model inside <code>logdir</code> checkpoint. If <code>None</code>, no backup is made.</dd>
+<dt><strong><code>load_checkpoint_path</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Path to a checkpoint to load. If <code>None</code>, no checkpoint is loaded.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class General:
+    &#34;&#34;&#34;Basic configuration for the training.
+
+    Args:
+        model (str): Model to use, options: `fc`, `highway`, `pfn`, `efn`, `transformer`, `part`, `depart`, `bdt`.
+        seed (int): Random seed. Used for reproducibility.
+        threads (int, optional): Maximum number of threads to use. `None` or 0 uses all threads.
+        debug (bool): Debug mode. If `True`, tensorflow uses the `Eager` mode.
+        base_logdir (str): Path to log directory where subfolders are created for each training session.
+        logdir (str): Path to log directory of a given training session. Could be set manually,
+            but using `${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
+            as it creates a unique folder for each training session inside the `base_logdir`.
+        checkpoint (str, optional): Path to a checkpoint inside `logdir` checkpoint. If `None`, no checkpoint is made.
+        backup (str, optional): Path to a backup of the model inside `logdir` checkpoint. If `None`, no backup is made.
+        load_checkpoint_path (str, optional): Path to a checkpoint to load. If `None`, no checkpoint is loaded.
+    &#34;&#34;&#34;
+    model: Literal[&#39;fc&#39;, &#39;highway&#39;, &#39;pfn&#39;,
+                   &#39;efn&#39;, &#39;transformer&#39;, &#39;part&#39;, &#39;depart&#39;, &#39;bdt&#39;]   # Model to use.
+    base_logdir: str   # Path to log directory.
+    seed: int   # Random seed.
+    threads: Optional[int]   # Maximum number of threads to use.
+    debug: bool   # Debug mode.
+    logdir: str   # Path to log directory.
+    checkpoint: Optional[str]   # Make checkpoint.
+    backup: Optional[str]   # Backup model.
+    load_checkpoint_path: Optional[str]   # Path to checkpoint to load.</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.General.backup"><code class="name">var <span class="ident">backup</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.base_logdir"><code class="name">var <span class="ident">base_logdir</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.checkpoint"><code class="name">var <span class="ident">checkpoint</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.debug"><code class="name">var <span class="ident">debug</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.load_checkpoint_path"><code class="name">var <span class="ident">load_checkpoint_path</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.logdir"><code class="name">var <span class="ident">logdir</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.model"><code class="name">var <span class="ident">model</span> : Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.seed"><code class="name">var <span class="ident">seed</span> : int</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.threads"><code class="name">var <span class="ident">threads</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.JIDENNConfig"><code class="flex name class">
+<span>class <span class="ident">JIDENNConfig</span></span>
+<span>(</span><span>general: <a title="jidenn.config.config.General" href="#jidenn.config.config.General">General</a>, data: <a title="jidenn.config.config.Data" href="#jidenn.config.config.Data">Data</a>, dataset: <a title="jidenn.config.config.Dataset" href="#jidenn.config.config.Dataset">Dataset</a>, preprocess: <a title="jidenn.config.config.Preprocess" href="#jidenn.config.config.Preprocess">Preprocess</a>, optimizer: <a title="jidenn.config.config.Optimizer" href="#jidenn.config.config.Optimizer">Optimizer</a>, models: <a title="jidenn.config.config.Models" href="#jidenn.config.config.Models">Models</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A dataclass containing all of the configuration information for a JIDENN training session.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class JIDENNConfig:
+    &#34;&#34;&#34;A dataclass containing all of the configuration information for a JIDENN training session.&#34;&#34;&#34;
+    general: General
+    data: Data
+    dataset: Dataset
+    preprocess: Preprocess
+    optimizer: Optimizer
+    models: Models</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.JIDENNConfig.data"><code class="name">var <span class="ident">data</span> : <a title="jidenn.config.config.Data" href="#jidenn.config.config.Data">Data</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.JIDENNConfig.dataset"><code class="name">var <span class="ident">dataset</span> : <a title="jidenn.config.config.Dataset" href="#jidenn.config.config.Dataset">Dataset</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.JIDENNConfig.general"><code class="name">var <span class="ident">general</span> : <a title="jidenn.config.config.General" href="#jidenn.config.config.General">General</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.JIDENNConfig.models"><code class="name">var <span class="ident">models</span> : <a title="jidenn.config.config.Models" href="#jidenn.config.config.Models">Models</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.JIDENNConfig.optimizer"><code class="name">var <span class="ident">optimizer</span> : <a title="jidenn.config.config.Optimizer" href="#jidenn.config.config.Optimizer">Optimizer</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.JIDENNConfig.preprocess"><code class="name">var <span class="ident">preprocess</span> : <a title="jidenn.config.config.Preprocess" href="#jidenn.config.config.Preprocess">Preprocess</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.Models"><code class="flex name class">
+<span>class <span class="ident">Models</span></span>
+<span>(</span><span>fc: <a title="jidenn.config.model_config.FC" href="model_config.html#jidenn.config.model_config.FC">FC</a>, transformer: <a title="jidenn.config.model_config.Transformer" href="model_config.html#jidenn.config.model_config.Transformer">Transformer</a>, bdt: <a title="jidenn.config.model_config.BDT" href="model_config.html#jidenn.config.model_config.BDT">BDT</a>, highway: <a title="jidenn.config.model_config.Highway" href="model_config.html#jidenn.config.model_config.Highway">Highway</a>, part: <a title="jidenn.config.model_config.ParT" href="model_config.html#jidenn.config.model_config.ParT">ParT</a>, depart: <a title="jidenn.config.model_config.DeParT" href="model_config.html#jidenn.config.model_config.DeParT">DeParT</a>, pfn: <a title="jidenn.config.model_config.PFN" href="model_config.html#jidenn.config.model_config.PFN">PFN</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Configuration for the models. See the documentation for each model for more information.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class Models:
+    &#34;&#34;&#34;Configuration for the models. See the documentation for each model for more information.&#34;&#34;&#34;
+    fc: FC
+    transformer: Transformer
+    bdt: BDT
+    highway: Highway
+    part: ParT
+    depart: DeParT
+    pfn: PFN</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.Models.bdt"><code class="name">var <span class="ident">bdt</span> : <a title="jidenn.config.model_config.BDT" href="model_config.html#jidenn.config.model_config.BDT">BDT</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Models.depart"><code class="name">var <span class="ident">depart</span> : <a title="jidenn.config.model_config.DeParT" href="model_config.html#jidenn.config.model_config.DeParT">DeParT</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Models.fc"><code class="name">var <span class="ident">fc</span> : <a title="jidenn.config.model_config.FC" href="model_config.html#jidenn.config.model_config.FC">FC</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Models.highway"><code class="name">var <span class="ident">highway</span> : <a title="jidenn.config.model_config.Highway" href="model_config.html#jidenn.config.model_config.Highway">Highway</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Models.part"><code class="name">var <span class="ident">part</span> : <a title="jidenn.config.model_config.ParT" href="model_config.html#jidenn.config.model_config.ParT">ParT</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Models.pfn"><code class="name">var <span class="ident">pfn</span> : <a title="jidenn.config.model_config.PFN" href="model_config.html#jidenn.config.model_config.PFN">PFN</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Models.transformer"><code class="name">var <span class="ident">transformer</span> : <a title="jidenn.config.model_config.Transformer" href="model_config.html#jidenn.config.model_config.Transformer">Transformer</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.Optimizer"><code class="flex name class">
+<span>class <span class="ident">Optimizer</span></span>
+<span>(</span><span>name: Literal['LAMB', 'Adam'], learning_rate: float, label_smoothing: Optional[float], decay_steps: Optional[int], warmup_steps: Optional[int], beta_1: Optional[float], beta_2: Optional[float], epsilon: Optional[float], clipnorm: Optional[float], weight_decay: Optional[float])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Settings for the optimizer.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the optimizer to use, options: <code>LAMB</code>, <code>Adam</code>.</dd>
+<dt><strong><code>learning_rate</code></strong> :&ensp;<code>float</code></dt>
+<dd>Learning rate.</dd>
+<dt><strong><code>label_smoothing</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Label smoothing.</dd>
+<dt><strong><code>decay_steps</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of steps to decay the learning rate with cosine decay.
+If <code>None</code>, decay is calculated automatically as <code>decay_steps = epochs * take / batch_size - warmup_steps</code>.</dd>
+<dt><strong><code>warmup_steps</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of steps to warmup the learning rate with linear warmup.</dd>
+<dt><strong><code>beta_1</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Beta 1 for Adam and LAMB, default is 0.9.</dd>
+<dt><strong><code>beta_2</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Beta 2 for Adam and LAMB, default is 0.999.</dd>
+<dt><strong><code>epsilon</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Epsilon for Adam and LAMB, default is 1e-6.</dd>
+<dt><strong><code>clipnorm</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Clipnorm for Adam and LAMB. If <code>None</code>, no clipping is done. Default is <code>None</code>.</dd>
+<dt><strong><code>weight_decay</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Weight decay for LAMB and Adam, default is 0.0.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class Optimizer:
+    &#34;&#34;&#34;Settings for the optimizer.
+
+    Args:
+        name (str): Name of the optimizer to use, options: `LAMB`, `Adam`.
+        learning_rate (float): Learning rate.
+        label_smoothing (float, optional): Label smoothing.
+        decay_steps (int, optional): Number of steps to decay the learning rate with cosine decay. 
+            If `None`, decay is calculated automatically as `decay_steps = epochs * take / batch_size - warmup_steps`.
+        warmup_steps (int, optional): Number of steps to warmup the learning rate with linear warmup.
+        beta_1 (float, optional): Beta 1 for Adam and LAMB, default is 0.9.
+        beta_2 (float, optional): Beta 2 for Adam and LAMB, default is 0.999.
+        epsilon (float, optional): Epsilon for Adam and LAMB, default is 1e-6.
+        clipnorm (float, optional): Clipnorm for Adam and LAMB. If `None`, no clipping is done. Default is `None`.
+        weight_decay (float, optional): Weight decay for LAMB and Adam, default is 0.0.
+    &#34;&#34;&#34;
+    name: Literal[&#39;LAMB&#39;, &#39;Adam&#39;]
+    learning_rate: float
+    label_smoothing: Optional[float]
+    decay_steps: Optional[int]
+    warmup_steps: Optional[int]
+    beta_1: Optional[float]
+    beta_2: Optional[float]
+    epsilon: Optional[float]
+    clipnorm: Optional[float]
+    weight_decay: Optional[float]</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.Optimizer.beta_1"><code class="name">var <span class="ident">beta_1</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.beta_2"><code class="name">var <span class="ident">beta_2</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.clipnorm"><code class="name">var <span class="ident">clipnorm</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.decay_steps"><code class="name">var <span class="ident">decay_steps</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.epsilon"><code class="name">var <span class="ident">epsilon</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.label_smoothing"><code class="name">var <span class="ident">label_smoothing</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.learning_rate"><code class="name">var <span class="ident">learning_rate</span> : float</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.name"><code class="name">var <span class="ident">name</span> : Literal['LAMB', 'Adam']</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.warmup_steps"><code class="name">var <span class="ident">warmup_steps</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.weight_decay"><code class="name">var <span class="ident">weight_decay</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.Preprocess"><code class="flex name class">
+<span>class <span class="ident">Preprocess</span></span>
+<span>(</span><span>draw_distribution: Optional[int], normalization_size: Optional[int])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Preprocessing configuration for the <code>tf.data.Dataset</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>draw_distribution</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of samples to draw distribution for.
+This is useful for interpreting the model based on physical quantities.
+If <code>None</code>, no distribution is drawn.
+</dd>
+<dt><strong><code>normalization_size</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of batches to calculate the mean and standard deviation
+for each variable used for normalization. If <code>None</code>, no normalization is done.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class Preprocess:
+    &#34;&#34;&#34;Preprocessing configuration for the `tf.data.Dataset`.
+
+    Args:
+        draw_distribution (int, optional): Number of samples to draw distribution for.
+            This is useful for interpreting the model based on physical quantities.
+            If `None`, no distribution is drawn.    
+        normalization_size (int, optional): Number of batches to calculate the mean and standard deviation 
+            for each variable used for normalization. If `None`, no normalization is done.
+
+    &#34;&#34;&#34;
+    draw_distribution: Optional[int]   # Number of events to draw distribution for.
+    normalization_size: Optional[int]  # Size of normalization dataset.</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.Preprocess.draw_distribution"><code class="name">var <span class="ident">draw_distribution</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Preprocess.normalization_size"><code class="name">var <span class="ident">normalization_size</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.config.config.Variables"><code class="flex name class">
+<span>class <span class="ident">Variables</span></span>
+<span>(</span><span>per_jet: List[str], per_jet_tuple: List[str], per_event: List[str])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Variable names loaded from the saved <code>tf.data.Dataset</code>s. The <code>element_spec</code> of the loaded dataset
+is expected to be <code>Dict[str, Union[tf.Tensor, tf.RaggedTensor]]</code> where the keys are the variable names.
+From these variables, only variables defined in <code>per_jet</code> and <code>per_jet_tuple</code> and <code>per_event</code> are used.
+They are then clustered into a dictionary of the following structure
+<code>Dict[Literal['perEvent','perJet','perJetTuple'], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]</code>.
+Example:</p>
+<pre><code class="language-python"># element_spec of the loaded dataset, ROOTDataset
+element_spec_before = {
+    'jets_PFO_m': RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
+    'jets_pt': TensorSpec(shape=(), dtype=tf.float32, name=None)
+    'HLT_j60': TensorSpec(shape=(), dtype=tf.bool, name=None),
+}
+# element_spec after processing with JIDENNDataset
+element_spec_after = {
+    'perEvent': {'HLT_j60': TensorSpec(shape=(), dtype=tf.bool, name=None)},
+    'perJet': {'jets_pt': TensorSpec(shape=(), dtype=tf.float32, name=None)}
+    'perJetTuple': {'jets_PFO_m': RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
+}
+</code></pre>
+<p>Optionally, the string may be expression which combine multiple variables, or slice them.
+See the <code><a title="jidenn.data.string_conversions.Expression" href="../data/string_conversions.html#jidenn.data.string_conversions.Expression">Expression</a></code> documentation for more information. </p>
+<p>These variables are then used to construct the model inputs with the <code><a title="jidenn.data.TrainInput" href="../data/TrainInput.html">jidenn.data.TrainInput</a></code> class.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>per_jet</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>Variables to be loaded from the dataset and clustered into <code>perJet</code>.
+Each variable is expected to have single input per jet, e.g. <code>jets_pt</code>
+which is a single value for the jet transverse momentum.</dd>
+<dt><strong><code>per_jet_tuple</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>Variables to be loaded from the dataset and clustered into <code>perJetTuple</code>.
+Each variable is expecetd to have multiple inputs per jet, e.g. <code>jets_PFO_m</code> which is a list of
+masses of the constituents of the jet.</dd>
+<dt><strong><code>per_event</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>Variables to be loaded from the dataset and clustered into <code>perEvent</code>.
+Each variable is expected to have only one input per event, which is the same for all jets in the event.
+It is tiled to the number of jets in the event.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@dataclass
+class Variables:
+    &#34;&#34;&#34;Variable names loaded from the saved `tf.data.Dataset`s. The `element_spec` of the loaded dataset
+    is expected to be `Dict[str, Union[tf.Tensor, tf.RaggedTensor]]` where the keys are the variable names.
+    From these variables, only variables defined in `per_jet` and `per_jet_tuple` and `per_event` are used.
+    They are then clustered into a dictionary of the following structure 
+    `Dict[Literal[&#39;perEvent&#39;,&#39;perJet&#39;,&#39;perJetTuple&#39;], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]`.
+    Example:
+    ```python
+    # element_spec of the loaded dataset, ROOTDataset
+    element_spec_before = {
+        &#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
+        &#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)
+        &#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None),
+    }
+    # element_spec after processing with JIDENNDataset
+    element_spec_after = {
+        &#39;perEvent&#39;: {&#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None)},
+        &#39;perJet&#39;: {&#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)}
+        &#39;perJetTuple&#39;: {&#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
+    }
+    ```
+    Optionally, the string may be expression which combine multiple variables, or slice them.
+    See the `jidenn.data.string_conversions.Expression` documentation for more information. 
+
+    These variables are then used to construct the model inputs with the `jidenn.data.TrainInput` class.
+
+    Args:
+        per_jet (List[str]): Variables to be loaded from the dataset and clustered into `perJet`.
+            Each variable is expected to have single input per jet, e.g. `jets_pt` 
+            which is a single value for the jet transverse momentum.
+        per_jet_tuple (List[str]): Variables to be loaded from the dataset and clustered into `perJetTuple`.
+            Each variable is expecetd to have multiple inputs per jet, e.g. `jets_PFO_m` which is a list of
+            masses of the constituents of the jet.
+        per_event (List[str]): Variables to be loaded from the dataset and clustered into `perEvent`.
+            Each variable is expected to have only one input per event, which is the same for all jets in the event.
+            It is tiled to the number of jets in the event.
+    &#34;&#34;&#34;
+    per_jet: List[str]
+    per_jet_tuple: List[str]
+    per_event: List[str]</code></pre>
+</details>
+<h3>Class variables</h3>
+<dl>
+<dt id="jidenn.config.config.Variables.per_event"><code class="name">var <span class="ident">per_event</span> : List[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Variables.per_jet"><code class="name">var <span class="ident">per_jet</span> : List[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Variables.per_jet_tuple"><code class="name">var <span class="ident">per_jet_tuple</span> : List[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="jidenn.config" href="index.html">jidenn.config</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="jidenn.config.config.Data" href="#jidenn.config.config.Data">Data</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.config.config.Data.cached" href="#jidenn.config.config.Data.cached">cached</a></code></li>
+<li><code><a title="jidenn.config.config.Data.cut" href="#jidenn.config.config.Data.cut">cut</a></code></li>
+<li><code><a title="jidenn.config.config.Data.labels" href="#jidenn.config.config.Data.labels">labels</a></code></li>
+<li><code><a title="jidenn.config.config.Data.path" href="#jidenn.config.config.Data.path">path</a></code></li>
+<li><code><a title="jidenn.config.config.Data.subfolder_cut" href="#jidenn.config.config.Data.subfolder_cut">subfolder_cut</a></code></li>
+<li><code><a title="jidenn.config.config.Data.subfolder_weights" href="#jidenn.config.config.Data.subfolder_weights">subfolder_weights</a></code></li>
+<li><code><a title="jidenn.config.config.Data.subfolders" href="#jidenn.config.config.Data.subfolders">subfolders</a></code></li>
+<li><code><a title="jidenn.config.config.Data.target" href="#jidenn.config.config.Data.target">target</a></code></li>
+<li><code><a title="jidenn.config.config.Data.target_labels" href="#jidenn.config.config.Data.target_labels">target_labels</a></code></li>
+<li><code><a title="jidenn.config.config.Data.variable_unknown_labels" href="#jidenn.config.config.Data.variable_unknown_labels">variable_unknown_labels</a></code></li>
+<li><code><a title="jidenn.config.config.Data.variables" href="#jidenn.config.config.Data.variables">variables</a></code></li>
+<li><code><a title="jidenn.config.config.Data.weight" href="#jidenn.config.config.Data.weight">weight</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.Dataset" href="#jidenn.config.config.Dataset">Dataset</a></code></h4>
+<ul class="two-column">
+<li><code><a title="jidenn.config.config.Dataset.batch_size" href="#jidenn.config.config.Dataset.batch_size">batch_size</a></code></li>
+<li><code><a title="jidenn.config.config.Dataset.dev_size" href="#jidenn.config.config.Dataset.dev_size">dev_size</a></code></li>
+<li><code><a title="jidenn.config.config.Dataset.epochs" href="#jidenn.config.config.Dataset.epochs">epochs</a></code></li>
+<li><code><a title="jidenn.config.config.Dataset.shuffle_buffer" href="#jidenn.config.config.Dataset.shuffle_buffer">shuffle_buffer</a></code></li>
+<li><code><a title="jidenn.config.config.Dataset.take" href="#jidenn.config.config.Dataset.take">take</a></code></li>
+<li><code><a title="jidenn.config.config.Dataset.test_size" href="#jidenn.config.config.Dataset.test_size">test_size</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.General" href="#jidenn.config.config.General">General</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.config.config.General.backup" href="#jidenn.config.config.General.backup">backup</a></code></li>
+<li><code><a title="jidenn.config.config.General.base_logdir" href="#jidenn.config.config.General.base_logdir">base_logdir</a></code></li>
+<li><code><a title="jidenn.config.config.General.checkpoint" href="#jidenn.config.config.General.checkpoint">checkpoint</a></code></li>
+<li><code><a title="jidenn.config.config.General.debug" href="#jidenn.config.config.General.debug">debug</a></code></li>
+<li><code><a title="jidenn.config.config.General.load_checkpoint_path" href="#jidenn.config.config.General.load_checkpoint_path">load_checkpoint_path</a></code></li>
+<li><code><a title="jidenn.config.config.General.logdir" href="#jidenn.config.config.General.logdir">logdir</a></code></li>
+<li><code><a title="jidenn.config.config.General.model" href="#jidenn.config.config.General.model">model</a></code></li>
+<li><code><a title="jidenn.config.config.General.seed" href="#jidenn.config.config.General.seed">seed</a></code></li>
+<li><code><a title="jidenn.config.config.General.threads" href="#jidenn.config.config.General.threads">threads</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.JIDENNConfig" href="#jidenn.config.config.JIDENNConfig">JIDENNConfig</a></code></h4>
+<ul class="two-column">
+<li><code><a title="jidenn.config.config.JIDENNConfig.data" href="#jidenn.config.config.JIDENNConfig.data">data</a></code></li>
+<li><code><a title="jidenn.config.config.JIDENNConfig.dataset" href="#jidenn.config.config.JIDENNConfig.dataset">dataset</a></code></li>
+<li><code><a title="jidenn.config.config.JIDENNConfig.general" href="#jidenn.config.config.JIDENNConfig.general">general</a></code></li>
+<li><code><a title="jidenn.config.config.JIDENNConfig.models" href="#jidenn.config.config.JIDENNConfig.models">models</a></code></li>
+<li><code><a title="jidenn.config.config.JIDENNConfig.optimizer" href="#jidenn.config.config.JIDENNConfig.optimizer">optimizer</a></code></li>
+<li><code><a title="jidenn.config.config.JIDENNConfig.preprocess" href="#jidenn.config.config.JIDENNConfig.preprocess">preprocess</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.Models" href="#jidenn.config.config.Models">Models</a></code></h4>
+<ul class="two-column">
+<li><code><a title="jidenn.config.config.Models.bdt" href="#jidenn.config.config.Models.bdt">bdt</a></code></li>
+<li><code><a title="jidenn.config.config.Models.depart" href="#jidenn.config.config.Models.depart">depart</a></code></li>
+<li><code><a title="jidenn.config.config.Models.fc" href="#jidenn.config.config.Models.fc">fc</a></code></li>
+<li><code><a title="jidenn.config.config.Models.highway" href="#jidenn.config.config.Models.highway">highway</a></code></li>
+<li><code><a title="jidenn.config.config.Models.part" href="#jidenn.config.config.Models.part">part</a></code></li>
+<li><code><a title="jidenn.config.config.Models.pfn" href="#jidenn.config.config.Models.pfn">pfn</a></code></li>
+<li><code><a title="jidenn.config.config.Models.transformer" href="#jidenn.config.config.Models.transformer">transformer</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.Optimizer" href="#jidenn.config.config.Optimizer">Optimizer</a></code></h4>
+<ul class="two-column">
+<li><code><a title="jidenn.config.config.Optimizer.beta_1" href="#jidenn.config.config.Optimizer.beta_1">beta_1</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.beta_2" href="#jidenn.config.config.Optimizer.beta_2">beta_2</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.clipnorm" href="#jidenn.config.config.Optimizer.clipnorm">clipnorm</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.decay_steps" href="#jidenn.config.config.Optimizer.decay_steps">decay_steps</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.epsilon" href="#jidenn.config.config.Optimizer.epsilon">epsilon</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.label_smoothing" href="#jidenn.config.config.Optimizer.label_smoothing">label_smoothing</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.learning_rate" href="#jidenn.config.config.Optimizer.learning_rate">learning_rate</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.name" href="#jidenn.config.config.Optimizer.name">name</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.warmup_steps" href="#jidenn.config.config.Optimizer.warmup_steps">warmup_steps</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.weight_decay" href="#jidenn.config.config.Optimizer.weight_decay">weight_decay</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.Preprocess" href="#jidenn.config.config.Preprocess">Preprocess</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.config.config.Preprocess.draw_distribution" href="#jidenn.config.config.Preprocess.draw_distribution">draw_distribution</a></code></li>
+<li><code><a title="jidenn.config.config.Preprocess.normalization_size" href="#jidenn.config.config.Preprocess.normalization_size">normalization_size</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.config.config.Variables.per_event" href="#jidenn.config.config.Variables.per_event">per_event</a></code></li>
+<li><code><a title="jidenn.config.config.Variables.per_jet" href="#jidenn.config.config.Variables.per_jet">per_jet</a></code></li>
+<li><code><a title="jidenn.config.config.Variables.per_jet_tuple" href="#jidenn.config.config.Variables.per_jet_tuple">per_jet_tuple</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,2163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>jidenn.models.ParT API documentation</title>
+<meta name="description" content="Implementation of Particle Transformer model based on the paper https://arxiv.org/abs/2202.03772 …" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>jidenn.models.ParT</code></h1>
+</header>
+<section id="section-intro">
+<p>Implementation of Particle Transformer model based on the paper <a href="https://arxiv.org/abs/2202.03772.">https://arxiv.org/abs/2202.03772.</a></p>
+<p>This model is a transformer model based on the CaiT transformer model (<a href="https://arxiv.org/abs/2103.17239">https://arxiv.org/abs/2103.17239</a>), used in image classification tasks.
+On top of the <code><a title="jidenn.models.Transformer" href="Transformer.html">jidenn.models.Transformer</a></code> model, it adds a ClassAttention layers, which allows a more effective feature extraction.
+It also includes more layer normalization layers.</p>
+<p>The only difference from CaiT, which is a novelty of this model, is the use of <strong>interaction variables</strong>.
+These are variables caomputed for each pair of intput particles, which are then used when calculating the attention weights as
+<span><span class="MathJax_Preview"> \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)</span><script type="math/tex; mode=display"> \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)</script></span>
+where $U$ is the interaction matrix of shape <code>(batch, num_particles, num_particles, heads)</code>, where each <code>head</code> gets its own interaction matrix.</p>
+<p><img alt="ParT" src="../../../diagrams/part.png">
+<img alt="ParT" src="../../../diagrams/part_layers_1.png">
+<img alt="ParT" src="../../../diagrams/part_layers_2.png"></p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">r&#34;&#34;&#34;
+Implementation of Particle Transformer model based on the paper https://arxiv.org/abs/2202.03772.
+
+This model is a transformer model based on the CaiT transformer model (https://arxiv.org/abs/2103.17239), used in image classification tasks.
+On top of the `jidenn.models.Transformer` model, it adds a ClassAttention layers, which allows a more effective feature extraction.
+It also includes more layer normalization layers.
+
+The only difference from CaiT, which is a novelty of this model, is the use of **interaction variables**.
+These are variables caomputed for each pair of intput particles, which are then used when calculating the attention weights as 
+$$ \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)$$
+where $U$ is the interaction matrix of shape `(batch, num_particles, num_particles, heads)`, where each `head` gets its own interaction matrix.
+
+![ParT](../../../diagrams/part.png)
+![ParT](../../../diagrams/part_layers_1.png)
+![ParT](../../../diagrams/part_layers_2.png)
+
+&#34;&#34;&#34;
+import tensorflow as tf
+from typing import Callable, Union, Tuple, Optional
+
+
+class FFN(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Feed-forward network
+    On top of the Transformer FFN layer, it adds a layer normalization in between the two dense layers.
+
+    Args:
+        dim (int): dimension of the input and output
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+        dropout (float, optional): dropout rate. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, expansion: int, activation: Callable[[tf.Tensor], tf.Tensor], dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
+
+        self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
+        self.dense = tf.keras.layers.Dense(dim, activation=None)
+        self.ln = tf.keras.layers.LayerNormalization()
+        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+
+    def get_config(self):
+        config = super(FFN, self).get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;expansion&#34;: self.expansion,
+                      &#34;activation&#34;: self.activation, &#34;dropout&#34;: self.dropout})
+        return config
+
+    def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the feed-forward network
+        Includes a layer normalization layer in between the two dense layers
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        output = self.wide_dense(inputs)
+        output = self.ln(output)
+        output = self.dense(output)
+        output = self.layer_dropout(output)
+        return output
+
+
+class MultiheadSelfAttention(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Multi-head self-attention layer
+    Standalone implementation of the multi-head self-attention layer, which
+    includes the interaction variables.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, ):
+        super().__init__()
+        self.dim, self.heads = dim, heads
+
+        self.linear_qkv = tf.keras.layers.Dense(dim * 3)
+        self.linear_out = tf.keras.layers.Dense(dim)
+
+    def get_config(self):
+        config = super(MultiheadSelfAttention, self).get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads})
+        return config
+
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            mask (tf.Tensor): mask tensor of shape `(batch_size, num_particles, num_particles)`
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+            interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        B, N, C = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2]
+
+        qkv = self.linear_qkv(inputs)  # (B, N, C * 3)
+        qkv = tf.reshape(qkv, [B, N, 3, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
+        qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
+
+        attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
+
+        if interaction is not None:
+            interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
+            attention_weights += interaction
+
+        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
+
+        output = tf.linalg.matmul(attention, v)  # (B, H, N, C // H)
+        output = tf.transpose(output, [0, 2, 1, 3])  # (B, N, H, C // H)
+        output = tf.reshape(output, [B, N, C])  # (B, N, C)
+        output = self.linear_out(output)  # (B, N, C)
+        return output
+
+
+class MultiheadClassAttention(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Multi-head class attention layer
+    This layer is a wrapper around the `tf.keras.layers.MultiHeadAttention` layer, 
+    to fix the key, and value to be the same as the input, and only use the class token
+    as the query.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+        dropout (float, optional): dropout rate, defaults to None
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.heads, self.dropout = dim, heads, dropout
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
+        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+
+    def get_config(self):
+        config = super(MultiheadClassAttention, self).get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+        return config
+
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            class_token (tf.Tensor): class token tensor of shape `(batch_size, 1, dim)`
+            mask (tf.Tensor): mask tensor of shape `(batch_size, 1, num_particles)`
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, 1, dim)`
+        &#34;&#34;&#34;
+        output = self.mha(query=class_token, value=inputs, key=inputs, attention_mask=mask)
+        output = self.layer_dropout(output)
+        return output
+
+
+class SelfAttentionBlock(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Self-attention block.
+    It contains a multi-head self-attention layer and a feed-forward network with residual connections
+    and layer normalizations. The self-attention layer includes the interaction variables.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+        dropout (float, optional): dropout rate. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, expansion: int, activation: Callable[[tf.Tensor], tf.Tensor], dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.heads, self.dropout, self.expansion, self.activation = dim, heads, dropout, expansion, activation
+
+        self.pre_mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.mhsa = MultiheadSelfAttention(dim=dim, heads=heads)
+        self.post_mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.mhsa_dropout = tf.keras.layers.Dropout(dropout)
+
+        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.ffn = FFN(dim=dim, expansion=expansion, activation=activation, dropout=dropout)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout,
+                      &#34;expansion&#34;: self.expansion, &#34;activation&#34;: self.activation})
+        return config
+
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the self-attention block
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            mask (tf.Tensor, optional): mask tensor of shape `(batch_size, num_particles, num_particles)`. Defaults to None.
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+            interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`. Defaults to None.
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        attented = self.pre_mhsa_ln(inputs)
+        attented = self.mhsa(inputs=attented, mask=mask, interaction=interaction)
+        attented = self.post_mhsa_ln(attented)
+        attented = self.mhsa_dropout(attented)
+        attented = attented + inputs
+
+        ffned = self.pre_ffn_ln(attented)
+        ffned = self.ffn(ffned)
+        output = ffned + attented
+
+        return output
+
+
+class ClassAttentionBlock(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Class attention block.
+    It allows the class token to attend to the input particles, and then feed the attended class token
+    to the feed-forward network with residual connections and layer normalizations.
+
+    This extracts the class information from the attented particles more effectively.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+        dropout (float, optional): dropout rate. Defaults to None.
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, expansion: int, dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.heads, self.dropout, self.expansion = dim, heads, dropout, expansion
+
+        self.pre_mhca_ln = tf.keras.layers.LayerNormalization()
+        self.mhca = MultiheadClassAttention(dim=dim, heads=heads, dropout=dropout)
+        self.post_mhca_ln = tf.keras.layers.LayerNormalization()
+        self.mhca_dropout = tf.keras.layers.Dropout(dropout)
+
+        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.ffn = FFN(dim=dim, expansion=expansion, activation=tf.nn.gelu, dropout=dropout)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+        return config
+
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the class attention block
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            class_token (tf.Tensor): class token tensor of shape `(batch_size, 1, dim)`
+                It is concatenated with the input tensor along the particle dimension,
+                at the front of the input tensor.
+            mask (tf.Tensor): mask tensor of shape `(batch_size, 1, num_particles)`
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, 1, dim)`, an updated class token
+        &#34;&#34;&#34;
+        attented = tf.concat([class_token, inputs], axis=1)
+        attented = self.pre_mhca_ln(attented)
+        attented = self.mhca(inputs=attented, class_token=class_token, mask=mask)
+        attented = self.post_mhca_ln(attented)
+        attented = self.mhca_dropout(attented)
+        attented = attented + class_token
+
+        ffned = self.pre_ffn_ln(attented)
+        ffned = self.ffn(ffned)
+        output = ffned + attented
+        return output
+
+
+class ParT(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Pure Particle Transformer (ParT) layers without the embedding and output layers.
+
+    It also creates the class token, which is used to encode the global information of the input,
+    using the ClassAttentionBlock.
+
+    Args:
+        dim (int): dimension of the input and output
+        self_attn_layers (int): number of self-attention layers
+        class_attn_layers (int): number of class-attention layers
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+        heads (int): number of heads
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+        dropout (float, optional): dropout rate. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self,
+                 dim: int,
+                 self_attn_layers: int,
+                 class_attn_layers: int,
+                 expansion: int,
+                 heads: int,
+                 activation: Callable[[tf.Tensor], tf.Tensor],
+                 dropout: Optional[float] = None):
+        # Make sure `dim` is even.
+        assert dim % 2 == 0
+
+        super().__init__()
+        self.dim, self.expansion, self.heads, self.dropout, self.activation, self.num_selfattn_layers, self.num_class_layers = dim, expansion, heads, dropout, activation, self_attn_layers, class_attn_layers
+
+        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.sa_layers = [SelfAttentionBlock(dim, heads, expansion, activation, dropout)
+                          for _ in range(self_attn_layers)]
+        self.ca_layers = [ClassAttentionBlock(dim, heads, expansion, dropout) for _ in range(class_attn_layers)]
+
+    def get_config(self):
+        config = super(ParT, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in [&#34;dim&#34;, &#34;expansion&#34;, &#34;heads&#34;, &#34;dropout&#34;, &#34;activation&#34;, &#34;num_selfattn_layers&#34;, &#34;num_class_layers&#34;]})
+        return config
+
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the ParT layers
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            mask (tf.Tensor): mask tensor of shape `(batch_size, num_particles)`.
+                From the mask, a mask tensor of shape `(batch_size, num_particles, num_particles)`
+                is calculated, which is used to mask out the attention of padding particles, generated when
+                `tf.RaggedTensor` is converted to `tf.Tensor`.
+            interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        sa_mask = mask[:, tf.newaxis, tf.newaxis, :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
+        hidden = inputs
+        for layer in self.sa_layers:
+            hidden = layer(hidden, sa_mask, interaction)
+
+        class_token = tf.tile(self.class_token, [tf.shape(inputs)[0], 1, 1])
+        class_mask = mask[:, tf.newaxis, :]
+        class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
+        for layer in self.ca_layers:
+            class_token = layer(hidden, class_token, class_mask)
+        return class_token
+
+
+class FCEmbedding(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Embedding layer as a series of fully-connected layers.
+
+    Args:
+        embed_dim (int): dimension of the embedding
+        embed_layers (int): number of fully-connected layers
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+    &#34;&#34;&#34;
+
+    def __init__(self, embedding_dim: int, num_embeding_layers: int, activation: Callable[[tf.Tensor], tf.Tensor], ):
+
+        super().__init__()
+        self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
+        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+                       for _ in range(self.num_embeding_layers)]
+
+    def get_config(self):
+        config = super(FCEmbedding, self).get_config()
+        config.update({name: getattr(self, name) for name in [&#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
+        return config
+
+    def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the embedding layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, num_features)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, embed_dim)`
+        &#34;&#34;&#34;
+        hidden = inputs
+        for layer in self.layers:
+            hidden = layer(hidden)
+        return hidden
+
+
+class CNNEmbedding(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Embedding layer of the interaction variables as a series of point-wise convolutional layers.
+    The interaction variiables are compuetd for each pair of particles.
+    This creates a redundancy in the input, as the matrix is symetric and the diagonal is always zero.
+    To save computation, the upper triangular part of the matrix is used as input, which is 
+    flattend and the 1D convolutions are applied to it.
+
+    Args:
+        num_layers (int): number of convolutional layers
+        layer_size (int): number of channels of the hidden layers
+        out_dim (int): number of channels of the last convolutional layer which 
+            is manually appended as an extra layer after `num_layers` layers.
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+    &#34;&#34;&#34;
+
+    def __init__(self, num_layers: int, layer_size: int, out_dim: int, activation: Callable[[tf.Tensor], tf.Tensor]):
+        super().__init__()
+        self.activation, self.num_layers, self.layer_size, self.out_dim = activation, num_layers, layer_size, out_dim
+
+        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
+        self.bn = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
+        self.activation = tf.keras.layers.Activation(activation)
+
+    def get_config(self):
+        config = super(CNNEmbedding, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in [&#34;num_layers&#34;, &#34;layer_size&#34;, &#34;out_dim&#34;, &#34;activation&#34;]})
+        return config
+
+    def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the interaction embedding layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, num_particles, num_features)`
+                This matrix is assumed to be symetric, with zero diagonal, with only the upper-triag part 
+                can be used fopr embedding. 
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, num_particles, out_dim)`
+        &#34;&#34;&#34;
+
+        ones = tf.ones_like(inputs[0, :, :, 0])
+        upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
+        diag_mask = tf.linalg.band_part(ones, 0, 0)
+        upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
+        flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+
+        hidden = flattened_upper_triag
+        for conv, norm in zip(self.conv_layers, self.bn):
+            hidden = conv(hidden)
+            hidden = norm(hidden)
+            hidden = self.activation(hidden)
+
+        true_mask = tf.cast(tf.where(upper_tril_mask), tf.int32)
+        out = tf.transpose(hidden, [1, 0, 2])
+        out = tf.scatter_nd(true_mask, out, shape=[tf.shape(inputs)[1],
+                            tf.shape(inputs)[2], tf.shape(inputs)[0], self.out_dim])
+        out = out + tf.transpose(out, [1, 0, 2, 3])
+        out = tf.transpose(out, [2, 0, 1, 3])
+        return out
+
+
+class ParTModel(tf.keras.Model):
+    &#34;&#34;&#34;ParT model with embwith embedding and output layers.
+
+    The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.
+
+    The input tensor can be either a tensor of shape `(batch_size, num_particles, num_features)` or
+    a tuple of tensors `(particle_tensor, interaction_tensor)` of shapes 
+    `(batch_size, num_particles, num_features)` and `(batch_size, num_particles, num_particles, num_features)`, respectively.
+
+    The model can be used with or without the interaction tensor, depending on the type of the input shape,
+    if it is a tuple, the interaction tensor is assumed to be present.
+
+    The input tensor is first passed through the embedding layer, then the ParT layers, and finally the output layer.
+    If the interaction tensor is present, it is passed through the interaction embedding layer before the ParT layers.
+
+    If the preprocessing layer is not None, the input tensor is first passed through the preprocessing layer before the embedding layer.
+    If the interaction tensor is present, it is passed through the preprocessing layer is an tuple of two layers,
+    each of which is applied to the particle and interaction tensors, respectively.
+
+    The output of ParT is a vector of shape `(batch_size, embed_dim)` with extracted class infromation.
+    This is then passed through the output layer.
+    Layer normalization is applied to the output of the ParT layers before the output layer.
+
+    Args:
+        input_shape (Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): shape of the input tensor.
+            If the interaction tensor is present, it is assumed to be a tuple of two shapes,
+            each creating a separate input layer.
+        embed_dim (int): dimension of the embedding layer
+        embed_layers (int): number of layers of the embedding layer
+        self_attn_layers (int): number of self-attention layers
+        class_attn_layers (int): number of class-attention layers
+        expansion (int): expansion factor of the self-attention layers
+        heads (int): number of heads of the self-attention layers
+        output_layer (tf.keras.layers.Layer): output layer
+        activation (Callable[[tf.Tensor], tf.Tensor]): activation function
+        dropout (Optional[float], optional): dropout rate. Defaults to None.
+        interaction_embed_layers (Optional[int], optional): number of layers of the interaction embedding layer. Defaults to None.
+        interaction_embed_layer_size (Optional[int], optional): size of the layers of the interaction embedding layer. Defaults to None.
+        preprocess (Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]], optional): preprocessing layer. Defaults to None.
+
+    &#34;&#34;&#34;
+
+    def __init__(self,
+                 input_shape: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
+                 embed_dim: int,
+                 embed_layers: int,
+                 self_attn_layers: int,
+                 class_attn_layers: int,
+                 expansion: int,
+                 heads: int,
+                 output_layer: tf.keras.layers.Layer,
+                 activation: Callable[[tf.Tensor], tf.Tensor],
+                 dropout: Optional[float] = None,
+                 interaction_embed_layers: Optional[int] = None,
+                 interaction_embed_layer_size: Optional[int] = None,
+                 preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None):
+
+        if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
+            input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
+                     tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+            row_lengths = input[0].row_lengths()
+            hidden = input[0].to_tensor()
+            interaction_hidden = input[1].to_tensor()
+
+            if preprocess is not None:
+                if not isinstance(preprocess, tuple):
+                    raise ValueError(
+                        &#34;preprocess must be a tuple of two layers when the input is a tuple of two tensors.&#34;)
+
+                preprocess, interaction_preprocess = preprocess
+                if interaction_preprocess is not None:
+                    interaction_hidden = interaction_preprocess(interaction_hidden)
+
+            if interaction_embed_layers is None or interaction_embed_layer_size is None:
+                raise ValueError(
+                    &#34;&#34;&#34;interaction_embed_layers and interaction_embed_layer_size must be specified 
+                    when the input is a tuple of two tensors, i.e. the interaction variables are used.&#34;&#34;&#34;)
+
+            embed_interaction = CNNEmbedding(
+                interaction_embed_layers,
+                interaction_embed_layer_size,
+                heads,
+                activation)(interaction_hidden)
+        else:
+            input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+            embed_interaction = None
+            row_lengths = input.row_lengths()
+            hidden = input.to_tensor()
+
+        if preprocess is not None:
+            if isinstance(preprocess, tuple):
+                raise ValueError(&#34;preprocess must be a single layer when the input is a single tensor.&#34;)
+            hidden = preprocess(hidden)
+
+        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
+
+        transformed = ParT(dim=embed_dim,
+                           self_attn_layers=self_attn_layers,
+                           class_attn_layers=class_attn_layers,
+                           expansion=expansion,
+                           heads=heads,
+                           dropout=dropout,
+                           activation=activation)(hidden, tf.sequence_mask(row_lengths), embed_interaction)
+
+        transformed = tf.keras.layers.LayerNormalization()(transformed)
+        output = output_layer(transformed[:, 0, :])
+
+        super().__init__(inputs=input, outputs=output)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="jidenn.models.ParT.CNNEmbedding"><code class="flex name class">
+<span>class <span class="ident">CNNEmbedding</span></span>
+<span>(</span><span>num_layers: int, layer_size: int, out_dim: int, activation: Callable[[tensorflow.python.framework.ops.Tensor], tensorflow.python.framework.ops.Tensor])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Embedding layer of the interaction variables as a series of point-wise convolutional layers.
+The interaction variiables are compuetd for each pair of particles.
+This creates a redundancy in the input, as the matrix is symetric and the diagonal is always zero.
+To save computation, the upper triangular part of the matrix is used as input, which is
+flattend and the 1D convolutions are applied to it.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>num_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of convolutional layers</dd>
+<dt><strong><code>layer_size</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of channels of the hidden layers</dd>
+<dt><strong><code>out_dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of channels of the last convolutional layer which
+is manually appended as an extra layer after <code>num_layers</code> layers.</dd>
+</dl>
+<p>activation (Callable[[tf.Tensor], tf.Tensor]) activation function</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class CNNEmbedding(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Embedding layer of the interaction variables as a series of point-wise convolutional layers.
+    The interaction variiables are compuetd for each pair of particles.
+    This creates a redundancy in the input, as the matrix is symetric and the diagonal is always zero.
+    To save computation, the upper triangular part of the matrix is used as input, which is 
+    flattend and the 1D convolutions are applied to it.
+
+    Args:
+        num_layers (int): number of convolutional layers
+        layer_size (int): number of channels of the hidden layers
+        out_dim (int): number of channels of the last convolutional layer which 
+            is manually appended as an extra layer after `num_layers` layers.
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+    &#34;&#34;&#34;
+
+    def __init__(self, num_layers: int, layer_size: int, out_dim: int, activation: Callable[[tf.Tensor], tf.Tensor]):
+        super().__init__()
+        self.activation, self.num_layers, self.layer_size, self.out_dim = activation, num_layers, layer_size, out_dim
+
+        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
+        self.bn = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
+        self.activation = tf.keras.layers.Activation(activation)
+
+    def get_config(self):
+        config = super(CNNEmbedding, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in [&#34;num_layers&#34;, &#34;layer_size&#34;, &#34;out_dim&#34;, &#34;activation&#34;]})
+        return config
+
+    def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the interaction embedding layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, num_particles, num_features)`
+                This matrix is assumed to be symetric, with zero diagonal, with only the upper-triag part 
+                can be used fopr embedding. 
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, num_particles, out_dim)`
+        &#34;&#34;&#34;
+
+        ones = tf.ones_like(inputs[0, :, :, 0])
+        upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
+        diag_mask = tf.linalg.band_part(ones, 0, 0)
+        upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
+        flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+
+        hidden = flattened_upper_triag
+        for conv, norm in zip(self.conv_layers, self.bn):
+            hidden = conv(hidden)
+            hidden = norm(hidden)
+            hidden = self.activation(hidden)
+
+        true_mask = tf.cast(tf.where(upper_tril_mask), tf.int32)
+        out = tf.transpose(hidden, [1, 0, 2])
+        out = tf.scatter_nd(true_mask, out, shape=[tf.shape(inputs)[1],
+                            tf.shape(inputs)[2], tf.shape(inputs)[0], self.out_dim])
+        out = out + tf.transpose(out, [1, 0, 2, 3])
+        out = tf.transpose(out, [2, 0, 1, 3])
+        return out</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.CNNEmbedding.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the interaction embedding layer</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, num_particles, num_features)</code>
+This matrix is assumed to be symetric, with zero diagonal, with only the upper-triag part
+can be used fopr embedding. </dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, num_particles, num_particles, out_dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the interaction embedding layer
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, num_particles, num_features)`
+            This matrix is assumed to be symetric, with zero diagonal, with only the upper-triag part 
+            can be used fopr embedding. 
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, num_particles, num_particles, out_dim)`
+    &#34;&#34;&#34;
+
+    ones = tf.ones_like(inputs[0, :, :, 0])
+    upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
+    diag_mask = tf.linalg.band_part(ones, 0, 0)
+    upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
+    flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+
+    hidden = flattened_upper_triag
+    for conv, norm in zip(self.conv_layers, self.bn):
+        hidden = conv(hidden)
+        hidden = norm(hidden)
+        hidden = self.activation(hidden)
+
+    true_mask = tf.cast(tf.where(upper_tril_mask), tf.int32)
+    out = tf.transpose(hidden, [1, 0, 2])
+    out = tf.scatter_nd(true_mask, out, shape=[tf.shape(inputs)[1],
+                        tf.shape(inputs)[2], tf.shape(inputs)[0], self.out_dim])
+    out = out + tf.transpose(out, [1, 0, 2, 3])
+    out = tf.transpose(out, [2, 0, 1, 3])
+    return out</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.CNNEmbedding.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(CNNEmbedding, self).get_config()
+    config.update({name: getattr(self, name)
+                  for name in [&#34;num_layers&#34;, &#34;layer_size&#34;, &#34;out_dim&#34;, &#34;activation&#34;]})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.ClassAttentionBlock"><code class="flex name class">
+<span>class <span class="ident">ClassAttentionBlock</span></span>
+<span>(</span><span>dim: int, heads: int, expansion: int, dropout: Optional[float] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Class attention block.
+It allows the class token to attend to the input particles, and then feed the attended class token
+to the feed-forward network with residual connections and layer normalizations.</p>
+<p>This extracts the class information from the attented particles more effectively.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the input and output</dd>
+<dt><strong><code>heads</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of heads</dd>
+<dt><strong><code>dropout</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>dropout rate. Defaults to None.</dd>
+<dt><strong><code>expansion</code></strong> :&ensp;<code>int</code></dt>
+<dd>expansion factor of the hidden layer, i.e. the hidden layer has size <code>dim * expansion</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ClassAttentionBlock(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Class attention block.
+    It allows the class token to attend to the input particles, and then feed the attended class token
+    to the feed-forward network with residual connections and layer normalizations.
+
+    This extracts the class information from the attented particles more effectively.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+        dropout (float, optional): dropout rate. Defaults to None.
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, expansion: int, dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.heads, self.dropout, self.expansion = dim, heads, dropout, expansion
+
+        self.pre_mhca_ln = tf.keras.layers.LayerNormalization()
+        self.mhca = MultiheadClassAttention(dim=dim, heads=heads, dropout=dropout)
+        self.post_mhca_ln = tf.keras.layers.LayerNormalization()
+        self.mhca_dropout = tf.keras.layers.Dropout(dropout)
+
+        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.ffn = FFN(dim=dim, expansion=expansion, activation=tf.nn.gelu, dropout=dropout)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+        return config
+
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the class attention block
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            class_token (tf.Tensor): class token tensor of shape `(batch_size, 1, dim)`
+                It is concatenated with the input tensor along the particle dimension,
+                at the front of the input tensor.
+            mask (tf.Tensor): mask tensor of shape `(batch_size, 1, num_particles)`
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, 1, dim)`, an updated class token
+        &#34;&#34;&#34;
+        attented = tf.concat([class_token, inputs], axis=1)
+        attented = self.pre_mhca_ln(attented)
+        attented = self.mhca(inputs=attented, class_token=class_token, mask=mask)
+        attented = self.post_mhca_ln(attented)
+        attented = self.mhca_dropout(attented)
+        attented = attented + class_token
+
+        ffned = self.pre_ffn_ln(attented)
+        ffned = self.ffn(ffned)
+        output = ffned + attented
+        return output</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.ClassAttentionBlock.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor, class_token: tensorflow.python.framework.ops.Tensor, mask: tensorflow.python.framework.ops.Tensor) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the class attention block</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+<dt><strong><code>class_token</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>class token tensor of shape <code>(batch_size, 1, dim)</code>
+It is concatenated with the input tensor along the particle dimension,
+at the front of the input tensor.</dd>
+<dt><strong><code>mask</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>mask tensor of shape <code>(batch_size, 1, num_particles)</code>
+This mask is used to mask out the attention of padding particles, generated when
+tf.RaggedTensor is converted to tf.Tensor.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, 1, dim)</code>, an updated class token</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the class attention block
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+        class_token (tf.Tensor): class token tensor of shape `(batch_size, 1, dim)`
+            It is concatenated with the input tensor along the particle dimension,
+            at the front of the input tensor.
+        mask (tf.Tensor): mask tensor of shape `(batch_size, 1, num_particles)`
+            This mask is used to mask out the attention of padding particles, generated when
+            tf.RaggedTensor is converted to tf.Tensor.
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, 1, dim)`, an updated class token
+    &#34;&#34;&#34;
+    attented = tf.concat([class_token, inputs], axis=1)
+    attented = self.pre_mhca_ln(attented)
+    attented = self.mhca(inputs=attented, class_token=class_token, mask=mask)
+    attented = self.post_mhca_ln(attented)
+    attented = self.mhca_dropout(attented)
+    attented = attented + class_token
+
+    ffned = self.pre_ffn_ln(attented)
+    ffned = self.ffn(ffned)
+    output = ffned + attented
+    return output</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.ClassAttentionBlock.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super().get_config()
+    config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.FCEmbedding"><code class="flex name class">
+<span>class <span class="ident">FCEmbedding</span></span>
+<span>(</span><span>embedding_dim: int, num_embeding_layers: int, activation: Callable[[tensorflow.python.framework.ops.Tensor], tensorflow.python.framework.ops.Tensor])</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Embedding layer as a series of fully-connected layers.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>embed_dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the embedding</dd>
+<dt><strong><code>embed_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of fully-connected layers</dd>
+</dl>
+<p>activation (Callable[[tf.Tensor], tf.Tensor]) activation function</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class FCEmbedding(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Embedding layer as a series of fully-connected layers.
+
+    Args:
+        embed_dim (int): dimension of the embedding
+        embed_layers (int): number of fully-connected layers
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+    &#34;&#34;&#34;
+
+    def __init__(self, embedding_dim: int, num_embeding_layers: int, activation: Callable[[tf.Tensor], tf.Tensor], ):
+
+        super().__init__()
+        self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
+        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+                       for _ in range(self.num_embeding_layers)]
+
+    def get_config(self):
+        config = super(FCEmbedding, self).get_config()
+        config.update({name: getattr(self, name) for name in [&#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
+        return config
+
+    def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the embedding layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, num_features)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, embed_dim)`
+        &#34;&#34;&#34;
+        hidden = inputs
+        for layer in self.layers:
+            hidden = layer(hidden)
+        return hidden</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.FCEmbedding.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the embedding layer</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, num_features)</code></dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, num_particles, embed_dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the embedding layer
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, num_features)`
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, num_particles, embed_dim)`
+    &#34;&#34;&#34;
+    hidden = inputs
+    for layer in self.layers:
+        hidden = layer(hidden)
+    return hidden</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.FCEmbedding.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(FCEmbedding, self).get_config()
+    config.update({name: getattr(self, name) for name in [&#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.FFN"><code class="flex name class">
+<span>class <span class="ident">FFN</span></span>
+<span>(</span><span>dim: int, expansion: int, activation: Callable[[tensorflow.python.framework.ops.Tensor], tensorflow.python.framework.ops.Tensor], dropout: Optional[float] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Feed-forward network
+On top of the Transformer FFN layer, it adds a layer normalization in between the two dense layers.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the input and output</dd>
+<dt><strong><code>expansion</code></strong> :&ensp;<code>int</code></dt>
+<dd>expansion factor of the hidden layer, i.e. the hidden layer has size <code>dim * expansion</code></dd>
+<dt>activation (Callable[[tf.Tensor], tf.Tensor]) activation function</dt>
+<dt><strong><code>dropout</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>dropout rate. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class FFN(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Feed-forward network
+    On top of the Transformer FFN layer, it adds a layer normalization in between the two dense layers.
+
+    Args:
+        dim (int): dimension of the input and output
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+        dropout (float, optional): dropout rate. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, expansion: int, activation: Callable[[tf.Tensor], tf.Tensor], dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
+
+        self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
+        self.dense = tf.keras.layers.Dense(dim, activation=None)
+        self.ln = tf.keras.layers.LayerNormalization()
+        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+
+    def get_config(self):
+        config = super(FFN, self).get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;expansion&#34;: self.expansion,
+                      &#34;activation&#34;: self.activation, &#34;dropout&#34;: self.dropout})
+        return config
+
+    def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the feed-forward network
+        Includes a layer normalization layer in between the two dense layers
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        output = self.wide_dense(inputs)
+        output = self.ln(output)
+        output = self.dense(output)
+        output = self.layer_dropout(output)
+        return output</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.FFN.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the feed-forward network
+Includes a layer normalization layer in between the two dense layers</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the feed-forward network
+    Includes a layer normalization layer in between the two dense layers
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+    &#34;&#34;&#34;
+    output = self.wide_dense(inputs)
+    output = self.ln(output)
+    output = self.dense(output)
+    output = self.layer_dropout(output)
+    return output</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.FFN.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(FFN, self).get_config()
+    config.update({&#34;dim&#34;: self.dim, &#34;expansion&#34;: self.expansion,
+                  &#34;activation&#34;: self.activation, &#34;dropout&#34;: self.dropout})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.MultiheadClassAttention"><code class="flex name class">
+<span>class <span class="ident">MultiheadClassAttention</span></span>
+<span>(</span><span>dim: int, heads: int, dropout: Optional[float] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Multi-head class attention layer
+This layer is a wrapper around the <code>tf.keras.layers.MultiHeadAttention</code> layer,
+to fix the key, and value to be the same as the input, and only use the class token
+as the query.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the input and output</dd>
+<dt><strong><code>heads</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of heads</dd>
+<dt><strong><code>dropout</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>dropout rate, defaults to None</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class MultiheadClassAttention(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Multi-head class attention layer
+    This layer is a wrapper around the `tf.keras.layers.MultiHeadAttention` layer, 
+    to fix the key, and value to be the same as the input, and only use the class token
+    as the query.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+        dropout (float, optional): dropout rate, defaults to None
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.heads, self.dropout = dim, heads, dropout
+        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
+        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+
+    def get_config(self):
+        config = super(MultiheadClassAttention, self).get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+        return config
+
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            class_token (tf.Tensor): class token tensor of shape `(batch_size, 1, dim)`
+            mask (tf.Tensor): mask tensor of shape `(batch_size, 1, num_particles)`
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, 1, dim)`
+        &#34;&#34;&#34;
+        output = self.mha(query=class_token, value=inputs, key=inputs, attention_mask=mask)
+        output = self.layer_dropout(output)
+        return output</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.MultiheadClassAttention.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor, class_token: tensorflow.python.framework.ops.Tensor, mask: tensorflow.python.framework.ops.Tensor) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the multi-head self-attention layer</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+<dt><strong><code>class_token</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>class token tensor of shape <code>(batch_size, 1, dim)</code></dd>
+<dt><strong><code>mask</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>mask tensor of shape <code>(batch_size, 1, num_particles)</code>
+This mask is used to mask out the attention of padding particles, generated when
+tf.RaggedTensor is converted to tf.Tensor.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, 1, dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+        class_token (tf.Tensor): class token tensor of shape `(batch_size, 1, dim)`
+        mask (tf.Tensor): mask tensor of shape `(batch_size, 1, num_particles)`
+            This mask is used to mask out the attention of padding particles, generated when
+            tf.RaggedTensor is converted to tf.Tensor.
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, 1, dim)`
+    &#34;&#34;&#34;
+    output = self.mha(query=class_token, value=inputs, key=inputs, attention_mask=mask)
+    output = self.layer_dropout(output)
+    return output</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.MultiheadClassAttention.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(MultiheadClassAttention, self).get_config()
+    config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.MultiheadSelfAttention"><code class="flex name class">
+<span>class <span class="ident">MultiheadSelfAttention</span></span>
+<span>(</span><span>dim: int, heads: int)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Multi-head self-attention layer
+Standalone implementation of the multi-head self-attention layer, which
+includes the interaction variables.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the input and output</dd>
+<dt><strong><code>heads</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of heads</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class MultiheadSelfAttention(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Multi-head self-attention layer
+    Standalone implementation of the multi-head self-attention layer, which
+    includes the interaction variables.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, ):
+        super().__init__()
+        self.dim, self.heads = dim, heads
+
+        self.linear_qkv = tf.keras.layers.Dense(dim * 3)
+        self.linear_out = tf.keras.layers.Dense(dim)
+
+    def get_config(self):
+        config = super(MultiheadSelfAttention, self).get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads})
+        return config
+
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            mask (tf.Tensor): mask tensor of shape `(batch_size, num_particles, num_particles)`
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+            interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        B, N, C = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2]
+
+        qkv = self.linear_qkv(inputs)  # (B, N, C * 3)
+        qkv = tf.reshape(qkv, [B, N, 3, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
+        qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
+        q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
+
+        attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
+
+        if interaction is not None:
+            interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
+            attention_weights += interaction
+
+        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
+
+        output = tf.linalg.matmul(attention, v)  # (B, H, N, C // H)
+        output = tf.transpose(output, [0, 2, 1, 3])  # (B, N, H, C // H)
+        output = tf.reshape(output, [B, N, C])  # (B, N, C)
+        output = self.linear_out(output)  # (B, N, C)
+        return output</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.MultiheadSelfAttention.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor, mask: tensorflow.python.framework.ops.Tensor, interaction: Optional[tensorflow.python.framework.ops.Tensor] = None) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the multi-head self-attention layer</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+<dt><strong><code>mask</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>mask tensor of shape <code>(batch_size, num_particles, num_particles)</code>
+This mask is used to mask out the attention of padding particles, generated when
+tf.RaggedTensor is converted to tf.Tensor.</dd>
+<dt><strong><code>interaction</code></strong> :&ensp;<code>tf.Tensor</code>, optional</dt>
+<dd>interaction tensor of shape <code>(batch_size, num_particles, num_particles, heads)</code></dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+        mask (tf.Tensor): mask tensor of shape `(batch_size, num_particles, num_particles)`
+            This mask is used to mask out the attention of padding particles, generated when
+            tf.RaggedTensor is converted to tf.Tensor.
+        interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+    &#34;&#34;&#34;
+    B, N, C = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2]
+
+    qkv = self.linear_qkv(inputs)  # (B, N, C * 3)
+    qkv = tf.reshape(qkv, [B, N, 3, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
+    qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
+    q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
+
+    attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
+
+    if interaction is not None:
+        interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
+        attention_weights += interaction
+
+    attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
+
+    output = tf.linalg.matmul(attention, v)  # (B, H, N, C // H)
+    output = tf.transpose(output, [0, 2, 1, 3])  # (B, N, H, C // H)
+    output = tf.reshape(output, [B, N, C])  # (B, N, C)
+    output = self.linear_out(output)  # (B, N, C)
+    return output</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.MultiheadSelfAttention.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(MultiheadSelfAttention, self).get_config()
+    config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.ParT"><code class="flex name class">
+<span>class <span class="ident">ParT</span></span>
+<span>(</span><span>dim: int, self_attn_layers: int, class_attn_layers: int, expansion: int, heads: int, activation: Callable[[tensorflow.python.framework.ops.Tensor], tensorflow.python.framework.ops.Tensor], dropout: Optional[float] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Pure Particle Transformer (ParT) layers without the embedding and output layers.</p>
+<p>It also creates the class token, which is used to encode the global information of the input,
+using the ClassAttentionBlock.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the input and output</dd>
+<dt><strong><code>self_attn_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of self-attention layers</dd>
+<dt><strong><code>class_attn_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of class-attention layers</dd>
+<dt><strong><code>expansion</code></strong> :&ensp;<code>int</code></dt>
+<dd>expansion factor of the hidden layer, i.e. the hidden layer has size <code>dim * expansion</code></dd>
+<dt><strong><code>heads</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of heads</dd>
+<dt>activation (Callable[[tf.Tensor], tf.Tensor]) activation function</dt>
+<dt><strong><code>dropout</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>dropout rate. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ParT(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Pure Particle Transformer (ParT) layers without the embedding and output layers.
+
+    It also creates the class token, which is used to encode the global information of the input,
+    using the ClassAttentionBlock.
+
+    Args:
+        dim (int): dimension of the input and output
+        self_attn_layers (int): number of self-attention layers
+        class_attn_layers (int): number of class-attention layers
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+        heads (int): number of heads
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+        dropout (float, optional): dropout rate. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self,
+                 dim: int,
+                 self_attn_layers: int,
+                 class_attn_layers: int,
+                 expansion: int,
+                 heads: int,
+                 activation: Callable[[tf.Tensor], tf.Tensor],
+                 dropout: Optional[float] = None):
+        # Make sure `dim` is even.
+        assert dim % 2 == 0
+
+        super().__init__()
+        self.dim, self.expansion, self.heads, self.dropout, self.activation, self.num_selfattn_layers, self.num_class_layers = dim, expansion, heads, dropout, activation, self_attn_layers, class_attn_layers
+
+        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.sa_layers = [SelfAttentionBlock(dim, heads, expansion, activation, dropout)
+                          for _ in range(self_attn_layers)]
+        self.ca_layers = [ClassAttentionBlock(dim, heads, expansion, dropout) for _ in range(class_attn_layers)]
+
+    def get_config(self):
+        config = super(ParT, self).get_config()
+        config.update({name: getattr(self, name)
+                      for name in [&#34;dim&#34;, &#34;expansion&#34;, &#34;heads&#34;, &#34;dropout&#34;, &#34;activation&#34;, &#34;num_selfattn_layers&#34;, &#34;num_class_layers&#34;]})
+        return config
+
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the ParT layers
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            mask (tf.Tensor): mask tensor of shape `(batch_size, num_particles)`.
+                From the mask, a mask tensor of shape `(batch_size, num_particles, num_particles)`
+                is calculated, which is used to mask out the attention of padding particles, generated when
+                `tf.RaggedTensor` is converted to `tf.Tensor`.
+            interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        sa_mask = mask[:, tf.newaxis, tf.newaxis, :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
+        hidden = inputs
+        for layer in self.sa_layers:
+            hidden = layer(hidden, sa_mask, interaction)
+
+        class_token = tf.tile(self.class_token, [tf.shape(inputs)[0], 1, 1])
+        class_mask = mask[:, tf.newaxis, :]
+        class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
+        for layer in self.ca_layers:
+            class_token = layer(hidden, class_token, class_mask)
+        return class_token</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.ParT.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor, mask: tensorflow.python.framework.ops.Tensor, interaction: Optional[tensorflow.python.framework.ops.Tensor] = None) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the ParT layers</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+<dt><strong><code>mask</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>mask tensor of shape <code>(batch_size, num_particles)</code>.
+From the mask, a mask tensor of shape <code>(batch_size, num_particles, num_particles)</code>
+is calculated, which is used to mask out the attention of padding particles, generated when
+<code>tf.RaggedTensor</code> is converted to <code>tf.Tensor</code>.</dd>
+<dt><strong><code>interaction</code></strong> :&ensp;<code>tf.Tensor</code>, optional</dt>
+<dd>interaction tensor of shape <code>(batch_size, num_particles, num_particles, heads)</code></dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the ParT layers
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+        mask (tf.Tensor): mask tensor of shape `(batch_size, num_particles)`.
+            From the mask, a mask tensor of shape `(batch_size, num_particles, num_particles)`
+            is calculated, which is used to mask out the attention of padding particles, generated when
+            `tf.RaggedTensor` is converted to `tf.Tensor`.
+        interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+    &#34;&#34;&#34;
+    sa_mask = mask[:, tf.newaxis, tf.newaxis, :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
+    hidden = inputs
+    for layer in self.sa_layers:
+        hidden = layer(hidden, sa_mask, interaction)
+
+    class_token = tf.tile(self.class_token, [tf.shape(inputs)[0], 1, 1])
+    class_mask = mask[:, tf.newaxis, :]
+    class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
+    for layer in self.ca_layers:
+        class_token = layer(hidden, class_token, class_mask)
+    return class_token</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.ParT.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(ParT, self).get_config()
+    config.update({name: getattr(self, name)
+                  for name in [&#34;dim&#34;, &#34;expansion&#34;, &#34;heads&#34;, &#34;dropout&#34;, &#34;activation&#34;, &#34;num_selfattn_layers&#34;, &#34;num_class_layers&#34;]})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.models.ParT.ParTModel"><code class="flex name class">
+<span>class <span class="ident">ParTModel</span></span>
+<span>(</span><span>input_shape: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]], embed_dim: int, embed_layers: int, self_attn_layers: int, class_attn_layers: int, expansion: int, heads: int, output_layer: keras.engine.base_layer.Layer, activation: Callable[[tensorflow.python.framework.ops.Tensor], tensorflow.python.framework.ops.Tensor], dropout: Optional[float] = None, interaction_embed_layers: Optional[int] = None, interaction_embed_layer_size: Optional[int] = None, preprocess: Union[keras.engine.base_layer.Layer, ForwardRef(None), Tuple[keras.engine.base_layer.Layer, keras.engine.base_layer.Layer]] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>ParT model with embwith embedding and output layers.</p>
+<p>The model already contains the <code>tf.keras.layers.Input</code> layer, so it can be used as a standalone model.</p>
+<p>The input tensor can be either a tensor of shape <code>(batch_size, num_particles, num_features)</code> or
+a tuple of tensors <code>(particle_tensor, interaction_tensor)</code> of shapes
+<code>(batch_size, num_particles, num_features)</code> and <code>(batch_size, num_particles, num_particles, num_features)</code>, respectively.</p>
+<p>The model can be used with or without the interaction tensor, depending on the type of the input shape,
+if it is a tuple, the interaction tensor is assumed to be present.</p>
+<p>The input tensor is first passed through the embedding layer, then the ParT layers, and finally the output layer.
+If the interaction tensor is present, it is passed through the interaction embedding layer before the ParT layers.</p>
+<p>If the preprocessing layer is not None, the input tensor is first passed through the preprocessing layer before the embedding layer.
+If the interaction tensor is present, it is passed through the preprocessing layer is an tuple of two layers,
+each of which is applied to the particle and interaction tensors, respectively.</p>
+<p>The output of ParT is a vector of shape <code>(batch_size, embed_dim)</code> with extracted class infromation.
+This is then passed through the output layer.
+Layer normalization is applied to the output of the ParT layers before the output layer.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_shape</code></strong> :&ensp;<code>Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]</code></dt>
+<dd>shape of the input tensor.
+If the interaction tensor is present, it is assumed to be a tuple of two shapes,
+each creating a separate input layer.</dd>
+<dt><strong><code>embed_dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the embedding layer</dd>
+<dt><strong><code>embed_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of layers of the embedding layer</dd>
+<dt><strong><code>self_attn_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of self-attention layers</dd>
+<dt><strong><code>class_attn_layers</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of class-attention layers</dd>
+<dt><strong><code>expansion</code></strong> :&ensp;<code>int</code></dt>
+<dd>expansion factor of the self-attention layers</dd>
+<dt><strong><code>heads</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of heads of the self-attention layers</dd>
+<dt><strong><code>output_layer</code></strong> :&ensp;<code>tf.keras.layers.Layer</code></dt>
+<dd>output layer</dd>
+<dt><strong><code>activation</code></strong> :&ensp;<code>Callable[[tf.Tensor], tf.Tensor]</code></dt>
+<dd>activation function</dd>
+<dt><strong><code>dropout</code></strong> :&ensp;<code>Optional[float]</code>, optional</dt>
+<dd>dropout rate. Defaults to None.</dd>
+<dt><strong><code>interaction_embed_layers</code></strong> :&ensp;<code>Optional[int]</code>, optional</dt>
+<dd>number of layers of the interaction embedding layer. Defaults to None.</dd>
+<dt><strong><code>interaction_embed_layer_size</code></strong> :&ensp;<code>Optional[int]</code>, optional</dt>
+<dd>size of the layers of the interaction embedding layer. Defaults to None.</dd>
+<dt><strong><code>preprocess</code></strong> :&ensp;<code>Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]]</code>, optional</dt>
+<dd>preprocessing layer. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ParTModel(tf.keras.Model):
+    &#34;&#34;&#34;ParT model with embwith embedding and output layers.
+
+    The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.
+
+    The input tensor can be either a tensor of shape `(batch_size, num_particles, num_features)` or
+    a tuple of tensors `(particle_tensor, interaction_tensor)` of shapes 
+    `(batch_size, num_particles, num_features)` and `(batch_size, num_particles, num_particles, num_features)`, respectively.
+
+    The model can be used with or without the interaction tensor, depending on the type of the input shape,
+    if it is a tuple, the interaction tensor is assumed to be present.
+
+    The input tensor is first passed through the embedding layer, then the ParT layers, and finally the output layer.
+    If the interaction tensor is present, it is passed through the interaction embedding layer before the ParT layers.
+
+    If the preprocessing layer is not None, the input tensor is first passed through the preprocessing layer before the embedding layer.
+    If the interaction tensor is present, it is passed through the preprocessing layer is an tuple of two layers,
+    each of which is applied to the particle and interaction tensors, respectively.
+
+    The output of ParT is a vector of shape `(batch_size, embed_dim)` with extracted class infromation.
+    This is then passed through the output layer.
+    Layer normalization is applied to the output of the ParT layers before the output layer.
+
+    Args:
+        input_shape (Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): shape of the input tensor.
+            If the interaction tensor is present, it is assumed to be a tuple of two shapes,
+            each creating a separate input layer.
+        embed_dim (int): dimension of the embedding layer
+        embed_layers (int): number of layers of the embedding layer
+        self_attn_layers (int): number of self-attention layers
+        class_attn_layers (int): number of class-attention layers
+        expansion (int): expansion factor of the self-attention layers
+        heads (int): number of heads of the self-attention layers
+        output_layer (tf.keras.layers.Layer): output layer
+        activation (Callable[[tf.Tensor], tf.Tensor]): activation function
+        dropout (Optional[float], optional): dropout rate. Defaults to None.
+        interaction_embed_layers (Optional[int], optional): number of layers of the interaction embedding layer. Defaults to None.
+        interaction_embed_layer_size (Optional[int], optional): size of the layers of the interaction embedding layer. Defaults to None.
+        preprocess (Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]], optional): preprocessing layer. Defaults to None.
+
+    &#34;&#34;&#34;
+
+    def __init__(self,
+                 input_shape: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
+                 embed_dim: int,
+                 embed_layers: int,
+                 self_attn_layers: int,
+                 class_attn_layers: int,
+                 expansion: int,
+                 heads: int,
+                 output_layer: tf.keras.layers.Layer,
+                 activation: Callable[[tf.Tensor], tf.Tensor],
+                 dropout: Optional[float] = None,
+                 interaction_embed_layers: Optional[int] = None,
+                 interaction_embed_layer_size: Optional[int] = None,
+                 preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None):
+
+        if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
+            input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
+                     tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+            row_lengths = input[0].row_lengths()
+            hidden = input[0].to_tensor()
+            interaction_hidden = input[1].to_tensor()
+
+            if preprocess is not None:
+                if not isinstance(preprocess, tuple):
+                    raise ValueError(
+                        &#34;preprocess must be a tuple of two layers when the input is a tuple of two tensors.&#34;)
+
+                preprocess, interaction_preprocess = preprocess
+                if interaction_preprocess is not None:
+                    interaction_hidden = interaction_preprocess(interaction_hidden)
+
+            if interaction_embed_layers is None or interaction_embed_layer_size is None:
+                raise ValueError(
+                    &#34;&#34;&#34;interaction_embed_layers and interaction_embed_layer_size must be specified 
+                    when the input is a tuple of two tensors, i.e. the interaction variables are used.&#34;&#34;&#34;)
+
+            embed_interaction = CNNEmbedding(
+                interaction_embed_layers,
+                interaction_embed_layer_size,
+                heads,
+                activation)(interaction_hidden)
+        else:
+            input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+            embed_interaction = None
+            row_lengths = input.row_lengths()
+            hidden = input.to_tensor()
+
+        if preprocess is not None:
+            if isinstance(preprocess, tuple):
+                raise ValueError(&#34;preprocess must be a single layer when the input is a single tensor.&#34;)
+            hidden = preprocess(hidden)
+
+        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
+
+        transformed = ParT(dim=embed_dim,
+                           self_attn_layers=self_attn_layers,
+                           class_attn_layers=class_attn_layers,
+                           expansion=expansion,
+                           heads=heads,
+                           dropout=dropout,
+                           activation=activation)(hidden, tf.sequence_mask(row_lengths), embed_interaction)
+
+        transformed = tf.keras.layers.LayerNormalization()(transformed)
+        output = output_layer(transformed[:, 0, :])
+
+        super().__init__(inputs=input, outputs=output)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.training.Model</li>
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+<li>keras.utils.version_utils.ModelVersionSelector</li>
+</ul>
+</dd>
+<dt id="jidenn.models.ParT.SelfAttentionBlock"><code class="flex name class">
+<span>class <span class="ident">SelfAttentionBlock</span></span>
+<span>(</span><span>dim: int, heads: int, expansion: int, activation: Callable[[tensorflow.python.framework.ops.Tensor], tensorflow.python.framework.ops.Tensor], dropout: Optional[float] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Self-attention block.
+It contains a multi-head self-attention layer and a feed-forward network with residual connections
+and layer normalizations. The self-attention layer includes the interaction variables.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dim</code></strong> :&ensp;<code>int</code></dt>
+<dd>dimension of the input and output</dd>
+<dt><strong><code>heads</code></strong> :&ensp;<code>int</code></dt>
+<dd>number of heads</dd>
+<dt><strong><code>expansion</code></strong> :&ensp;<code>int</code></dt>
+<dd>expansion factor of the hidden layer, i.e. the hidden layer has size <code>dim * expansion</code></dd>
+<dt>activation (Callable[[tf.Tensor], tf.Tensor]) activation function</dt>
+<dt><strong><code>dropout</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>dropout rate. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SelfAttentionBlock(tf.keras.layers.Layer):
+    &#34;&#34;&#34;Self-attention block.
+    It contains a multi-head self-attention layer and a feed-forward network with residual connections
+    and layer normalizations. The self-attention layer includes the interaction variables.
+
+    Args:
+        dim (int): dimension of the input and output
+        heads (int): number of heads
+        expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
+        activation (Callable[[tf.Tensor], tf.Tensor]) activation function
+        dropout (float, optional): dropout rate. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, dim: int, heads: int, expansion: int, activation: Callable[[tf.Tensor], tf.Tensor], dropout: Optional[float] = None):
+        super().__init__()
+        self.dim, self.heads, self.dropout, self.expansion, self.activation = dim, heads, dropout, expansion, activation
+
+        self.pre_mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.mhsa = MultiheadSelfAttention(dim=dim, heads=heads)
+        self.post_mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.mhsa_dropout = tf.keras.layers.Dropout(dropout)
+
+        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.ffn = FFN(dim=dim, expansion=expansion, activation=activation, dropout=dropout)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout,
+                      &#34;expansion&#34;: self.expansion, &#34;activation&#34;: self.activation})
+        return config
+
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Forward pass of the self-attention block
+
+        Args:
+            inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+            mask (tf.Tensor, optional): mask tensor of shape `(batch_size, num_particles, num_particles)`. Defaults to None.
+                This mask is used to mask out the attention of padding particles, generated when
+                tf.RaggedTensor is converted to tf.Tensor.
+            interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`. Defaults to None.
+
+        Returns:
+            tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+        &#34;&#34;&#34;
+        attented = self.pre_mhsa_ln(inputs)
+        attented = self.mhsa(inputs=attented, mask=mask, interaction=interaction)
+        attented = self.post_mhsa_ln(attented)
+        attented = self.mhsa_dropout(attented)
+        attented = attented + inputs
+
+        ffned = self.pre_ffn_ln(attented)
+        ffned = self.ffn(ffned)
+        output = ffned + attented
+
+        return output</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.models.ParT.SelfAttentionBlock.call"><code class="name flex">
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor, mask: tensorflow.python.framework.ops.Tensor, interaction: Optional[tensorflow.python.framework.ops.Tensor] = None) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Forward pass of the self-attention block</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>inputs</code></strong> :&ensp;<code>tf.Tensor</code></dt>
+<dd>input tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+<dt><strong><code>mask</code></strong> :&ensp;<code>tf.Tensor</code>, optional</dt>
+<dd>mask tensor of shape <code>(batch_size, num_particles, num_particles)</code>. Defaults to None.
+This mask is used to mask out the attention of padding particles, generated when
+tf.RaggedTensor is converted to tf.Tensor.</dd>
+<dt><strong><code>interaction</code></strong> :&ensp;<code>tf.Tensor</code>, optional</dt>
+<dd>interaction tensor of shape <code>(batch_size, num_particles, num_particles, heads)</code>. Defaults to None.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>output tensor of shape <code>(batch_size, num_particles, dim)</code></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Forward pass of the self-attention block
+
+    Args:
+        inputs (tf.Tensor): input tensor of shape `(batch_size, num_particles, dim)`
+        mask (tf.Tensor, optional): mask tensor of shape `(batch_size, num_particles, num_particles)`. Defaults to None.
+            This mask is used to mask out the attention of padding particles, generated when
+            tf.RaggedTensor is converted to tf.Tensor.
+        interaction (tf.Tensor, optional): interaction tensor of shape `(batch_size, num_particles, num_particles, heads)`. Defaults to None.
+
+    Returns:
+        tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
+    &#34;&#34;&#34;
+    attented = self.pre_mhsa_ln(inputs)
+    attented = self.mhsa(inputs=attented, mask=mask, interaction=interaction)
+    attented = self.post_mhsa_ln(attented)
+    attented = self.mhsa_dropout(attented)
+    attented = attented + inputs
+
+    ffned = self.pre_ffn_ln(attented)
+    ffned = self.ffn(ffned)
+    output = ffned + attented
+
+    return output</code></pre>
+</details>
+</dd>
+<dt id="jidenn.models.ParT.SelfAttentionBlock.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the layer.</p>
+<p>A layer config is a Python dictionary (serializable)
+containing the configuration of a layer.
+The same layer can be reinstantiated later
+(without its trained weights) from this configuration.</p>
+<p>The config of a layer does not include connectivity
+information, nor the layer class name. These are handled
+by <code>Network</code> (one layer of abstraction above).</p>
+<p>Note that <code>get_config()</code> does not guarantee to return a fresh copy of
+dict every time it is called. The callers should make a copy of the
+returned dict if they want to modify it.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super().get_config()
+    config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout,
+                  &#34;expansion&#34;: self.expansion, &#34;activation&#34;: self.activation})
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="jidenn.models" href="index.html">jidenn.models</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="jidenn.models.ParT.CNNEmbedding" href="#jidenn.models.ParT.CNNEmbedding">CNNEmbedding</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.CNNEmbedding.call" href="#jidenn.models.ParT.CNNEmbedding.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.CNNEmbedding.get_config" href="#jidenn.models.ParT.CNNEmbedding.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.ClassAttentionBlock" href="#jidenn.models.ParT.ClassAttentionBlock">ClassAttentionBlock</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.ClassAttentionBlock.call" href="#jidenn.models.ParT.ClassAttentionBlock.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.ClassAttentionBlock.get_config" href="#jidenn.models.ParT.ClassAttentionBlock.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.FCEmbedding" href="#jidenn.models.ParT.FCEmbedding">FCEmbedding</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.FCEmbedding.call" href="#jidenn.models.ParT.FCEmbedding.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.FCEmbedding.get_config" href="#jidenn.models.ParT.FCEmbedding.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.FFN" href="#jidenn.models.ParT.FFN">FFN</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.FFN.call" href="#jidenn.models.ParT.FFN.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.FFN.get_config" href="#jidenn.models.ParT.FFN.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.MultiheadClassAttention" href="#jidenn.models.ParT.MultiheadClassAttention">MultiheadClassAttention</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.MultiheadClassAttention.call" href="#jidenn.models.ParT.MultiheadClassAttention.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.MultiheadClassAttention.get_config" href="#jidenn.models.ParT.MultiheadClassAttention.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.MultiheadSelfAttention" href="#jidenn.models.ParT.MultiheadSelfAttention">MultiheadSelfAttention</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.MultiheadSelfAttention.call" href="#jidenn.models.ParT.MultiheadSelfAttention.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.MultiheadSelfAttention.get_config" href="#jidenn.models.ParT.MultiheadSelfAttention.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.ParT" href="#jidenn.models.ParT.ParT">ParT</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.ParT.call" href="#jidenn.models.ParT.ParT.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.ParT.get_config" href="#jidenn.models.ParT.ParT.get_config">get_config</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.ParTModel" href="#jidenn.models.ParT.ParTModel">ParTModel</a></code></h4>
+</li>
+<li>
+<h4><code><a title="jidenn.models.ParT.SelfAttentionBlock" href="#jidenn.models.ParT.SelfAttentionBlock">SelfAttentionBlock</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.models.ParT.SelfAttentionBlock.call" href="#jidenn.models.ParT.SelfAttentionBlock.call">call</a></code></li>
+<li><code><a title="jidenn.models.ParT.SelfAttentionBlock.get_config" href="#jidenn.models.ParT.SelfAttentionBlock.get_config">get_config</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
