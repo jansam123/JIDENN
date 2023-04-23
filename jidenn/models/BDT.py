@@ -1,9 +1,13 @@
+"""
+BDT model based on `tensorflow_decision_forests` implementation of `tfdf.keras.GradientBoostedTreesModel`.
+See https://www.tensorflow.org/decision_forests/api_docs/python/tfdf/keras/GradientBoostedTreesModel for more details.
+"""
 import tensorflow_decision_forests as tfdf
 
-from jidenn.config.model_config import BDT as cfg_BDT
+from jidenn.config import model_config
 
 
-def bdt_model(args_model: cfg_BDT) -> tfdf.keras.RandomForestModel:
+def bdt_model(args_model: model_config.BDT) -> tfdf.keras.GradientBoostedTreesModel:
     """Builds a BDT model
 
     Args:

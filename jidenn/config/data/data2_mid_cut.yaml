@@ -1,4 +1,3 @@
-tttree_name: NOMINAL # Name of the TTree in the root file.
 labels: # list of labels to use.
   - gluon
   - quark

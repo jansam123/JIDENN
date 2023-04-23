@@ -27,5 +27,4 @@ batch_size: 256
 take: 50_000
 input_type: constituents
 threshold: 0.5
-old: False
 include_base: True

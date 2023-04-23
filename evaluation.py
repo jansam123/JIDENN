@@ -12,19 +12,19 @@ from hydra.core.config_store import ConfigStore
 import jidenn.data.data_info as data_info
 from jidenn.config import eval_config
 from jidenn.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
-from jidenn.data.utils.Cut import Cut
+from jidenn.data.string_conversions import Cut
 from jidenn.data.get_dataset import get_preprocessed_dataset
 from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
 from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.evaluation.evaluation_metrics import calculate_metrics
-from jidenn.evaluation.variable_latex_names import LATEX_NAMING_CONVENTION
+from .utils.const import LATEX_NAMING_CONVENTION
 
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=eval_config.EvalConfig)
 
 
-@hydra.main(version_base="1.2", config_path="src/config", config_name="eval_config")
+@hydra.main(version_base="1.2", config_path="jidenn/config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
 
@@ -41,31 +41,31 @@ def main(args: eval_config.EvalConfig) -> None:
     naming_schema = {0: args.data.labels[0], 1: args.data.labels[1]}
 
     train_input_class = input_classes_lookup(args.input_type)
-    train_input_class = train_input_class(per_jet_variables=args.data.variables.perJet,
-                                          per_event_variables=args.data.variables.perEvent,
-                                          per_jet_tuple_variables=args.data.variables.perJetTuple)
+    train_input_class = train_input_class(per_jet_variables=args.data.variables.per_jet,
+                                          per_event_variables=args.data.variables.per_event,
+                                          per_jet_tuple_variables=args.data.variables.per_jet_tuple)
     model_input = tf.function(func=train_input_class)
 
-    file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
+    file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.subfolders] if args.data.subfolders is not None else [
         f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
 
     file_labels = [int(jz.split('_')[0].lstrip('JZ'))
-                   for jz in args.data.JZ_slices] if args.data.JZ_slices is not None else None
+                   for jz in args.data.subfolders] if args.data.subfolders is not None else None
 
     test_ds = get_preprocessed_dataset(file, args.data, file_labels)
-    args.binning.test_sample_cuts = [] if args.binning is None else args.binning.test_sample_cuts
+    args.binning.cuts = [] if args.binning is None else args.binning.cuts
 
-    names = args.binning.test_names if args.binning is not None else []
+    names = args.binning.cut_names if args.binning is not None else []
     names = ['base'] + names if args.include_base else names
-    cuts = args.binning.test_sample_cuts if args.binning is not None else []
+    cuts = args.binning.cuts if args.binning is not None else []
     cuts = ['base'] + cuts if args.include_base else cuts
 
     for cut, cut_alias in zip(cuts, names):
         ds = test_ds.filter(lambda *x: Cut(cut)(x[0][args.binning.type])) if cut != 'base' else test_ds
-        label = ds.get_dataset(batch_size=args.take, take=args.take, map_func=lambda *d: d[1])
-        ds = ds.map_data(model_input)
-        tf_ds = ds.get_dataset(batch_size=args.batch_size,
-                               take=args.take)
+        label = ds.get_prepared_dataset(batch_size=args.take, take=args.take, map_func=lambda *d: d[1])
+        ds = ds.create_train_input(model_input)
+        tf_ds = ds.get_prepared_dataset(batch_size=args.batch_size,
+                                        take=args.take)
 
         # get model predictions
         start = time.time()

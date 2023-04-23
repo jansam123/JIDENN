@@ -1,12 +1,12 @@
 type: perEvent
-test_sample_cuts:
+cuts:
   - "origin_file==1"
   - "origin_file==2"
   - "origin_file==3"
   - "origin_file==4"
   - "origin_file==5"
 
-test_names:
+cut_names:
   - "JZ1"
   - "JZ2"
   - "JZ3"

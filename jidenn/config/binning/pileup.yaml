@@ -1,5 +1,5 @@
 type: perEvent
-test_sample_cuts:
+cuts:
   - "(corrected_averageInteractionsPerCrossing[0]<20)"
   - "(corrected_averageInteractionsPerCrossing[0]>20) && (corrected_averageInteractionsPerCrossing[0]<25)"
   - "(corrected_averageInteractionsPerCrossing[0]>25) && (corrected_averageInteractionsPerCrossing[0]<30)"
@@ -10,7 +10,7 @@ test_sample_cuts:
   - "(corrected_averageInteractionsPerCrossing[0]>55) && (corrected_averageInteractionsPerCrossing[0]<60)"
   - "(corrected_averageInteractionsPerCrossing[0]>60)"
 
-test_names:
+cut_names:
   - "0-20"
   - "20-25"
   - "25-30"

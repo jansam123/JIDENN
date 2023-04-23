@@ -19,7 +19,7 @@ cs = ConfigStore.instance()
 cs.store(name="args", node=eval_config.EvalConfig)
 
 
-@hydra.main(version_base="1.2", config_path="src/config", config_name="eval_config")
+@hydra.main(version_base="1.2", config_path="jidenn/config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def main(args: eval_config.EvalConfig) -> None:
     num_repeats = 10
 
     custom_objects = {'LinearWarmup': LinearWarmup}
-    models1 = ['basic_fc', 'highway']
+    models1 = ['fc', 'highway']
     models2 = ['depart', 'efn', 'part', 'pfn', 'transformer']
     models3 = ['interacting_depart', 'interacting_part']
     models4 = ['bdt']
@@ -45,23 +45,23 @@ def main(args: eval_config.EvalConfig) -> None:
     df = pd.DataFrame(columns=['model', 'num_params', 'batch_time',
                                'one_jet_time', 'total_time', 'mem_before_current [MB]', 'mem_before_max [MB]', 'mem_after_current [MB]', 'mem_after_max [MB]', 'mem_after_predict_current [MB]', 'mem_after_predict_max [MB]'])
 
-    file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.JZ_slices] if args.data.JZ_slices is not None else [
+    file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.subfolders] if args.data.subfolders is not None else [
         f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
 
     file_labels = [int(jz.split('_')[0].lstrip('JZ'))
-                   for jz in args.data.JZ_slices] if args.data.JZ_slices is not None else None
+                   for jz in args.data.subfolders] if args.data.subfolders is not None else None
     test_ds = get_preprocessed_dataset(file, args.data, file_labels)
 
     for models, input_type in zip(all_models, input_types):
         train_input_class = input_classes_lookup(input_type)
 
-        train_input_class = train_input_class(per_jet_variables=args.data.variables.perJet,
-                                              per_event_variables=args.data.variables.perEvent,
-                                              per_jet_tuple_variables=args.data.variables.perJetTuple)
+        train_input_class = train_input_class(per_jet_variables=args.data.variables.per_jet,
+                                              per_event_variables=args.data.variables.per_event,
+                                              per_jet_tuple_variables=args.data.variables.per_jet_tuple)
 
         model_input = tf.function(func=train_input_class)
-        ds = test_ds.map_data(model_input)
-        ds = ds.get_dataset(batch_size=batch_size, take=num_batches * batch_size)
+        ds = test_ds.create_train_input(model_input)
+        ds = ds.get_prepared_dataset(batch_size=batch_size, take=num_batches * batch_size)
         ds = ds.cache()
         a = sum(1 for _ in ds)
         check = 1
