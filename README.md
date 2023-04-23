@@ -83,7 +83,7 @@ Dynamically Enhanced Particle Transformer is an extension of ParT (explained bel
 ### Fully Connected Network (FC)
 Fully connected (FC) or multi-layer perceptron (MLP) is a simple neural network architecture (https://ieeexplore.ieee.org/document/7238334), which uses the high-level features of jets. The architecture is shown in the figure below.
 <p align="center">
-<img src="images/FC.png" width="300">
+<img src="images/fc.png" width="300">
 </p>
 
 ### Highway Network 
