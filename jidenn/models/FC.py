@@ -5,7 +5,7 @@ $$ x^{(l+1)}_i = f(W^{(l)}_{ij} x^{(l)}_j + b^{(l)}_i) $$
 where $x^{(l)}_i$ is the $i$-th neuron in layer $l$, $W^{(l)}_{ij}$ is the weight between $i$-th neuron in layer $l$, 
 f is the activation function, and $b^{(l)}_i$ is the bias of the $i$-th neuron in layer $l$.
 
-![FC](/diagrams/fc.png)
+![FC](images/fc.png)
 """
 import tensorflow as tf
 from typing import Callable, Optional

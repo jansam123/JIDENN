@@ -15,7 +15,7 @@ i.e. not having to learn the identity function or relearning the same function i
 These Highway based models have a tendency to **not diverge** if the depth of the network is increased,
 as may happen with the fully connected networks.
 
-![Highway](/diagrams/highway.png)
+![Highway](images/highway.png)
 """
 
 import tensorflow as tf
