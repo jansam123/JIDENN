@@ -13,7 +13,7 @@ The mapping Phi can be a fully-connected network or a convolutional network. The
 
 The energy part of the input is not used in the model to maintain **Infrared and Collinear safety** of the model.
 
-![EFN_PFN](../../../diagrams/pfn_efn.png)
+![EFN_PFN](/diagrams/pfn_efn.png)
 On the left is the PFN model, on the right the EFN model.
 """
 import tensorflow as tf

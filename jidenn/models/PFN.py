@@ -13,7 +13,7 @@ The mapping Phi can be a fully-connected network or a convolutional network. The
 The PFN is a modification of the EFN, where the energy part is also mapped with the Phi function.
 However the model then **violates Infrared and Collinear safety**.
 
-![EFN_PFN](../../../diagrams/pfn_efn.png)
+![EFN_PFN](/diagrams/pfn_efn.png)
 On the left is the PFN model, on the right the EFN model.
 """
 

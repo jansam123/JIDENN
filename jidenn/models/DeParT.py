@@ -13,8 +13,8 @@ except the Gated FFN, https://arxiv.org/abs/2002.05202.
 
 The model also includes the intaraction variables as the ParT model.
 
-![DeParT](../../../diagrams/depart.png)
-![DeParT](../../../diagrams/depart_layers.png)
+![DeParT](/diagrams/depart.png)
+![DeParT](/diagrams/depart_layers.png)
 
 """
 import tensorflow as tf

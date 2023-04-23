@@ -12,4 +12,7 @@ This moduele contains all the necessary toolkit to:
 
 These functionalities can be configured using the `jidenn.config` module.
 
+![data_off](/diagrams/data_prep_off.png)
+![data_on](/diagrams/data_prep_on.png)
+
 """

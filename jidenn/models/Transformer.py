@@ -4,8 +4,8 @@ Implementation of the Transformer model from the paper "Attention is all you nee
 The model is a stack of self-attention blocks, each of which contains a multi-head self-attention layer and a feed-forward network.
 The input features are embedded into a vector of size `dim`, which is then passed through the self-attention blocks.
 
-![Transformer](../../../diagrams/transformer.png)
-![Transformer](../../../diagrams/transformer_layers.png)
+![Transformer](/diagrams/transformer.png)
+![Transformer](/diagrams/transformer_layers.png)
 
 """
 import tensorflow as tf

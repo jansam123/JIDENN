@@ -31,9 +31,9 @@ It also includes more layer normalization layers.</p>
 These are variables caomputed for each pair of intput particles, which are then used when calculating the attention weights as
 <span><span class="MathJax_Preview"> \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)</span><script type="math/tex; mode=display"> \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)</script></span>
 where $U$ is the interaction matrix of shape <code>(batch, num_particles, num_particles, heads)</code>, where each <code>head</code> gets its own interaction matrix.</p>
-<p><img alt="ParT" src="../../../diagrams/part.png">
-<img alt="ParT" src="../../../diagrams/part_layers_1.png">
-<img alt="ParT" src="../../../diagrams/part_layers_2.png"></p>
+<p><img alt="ParT" src="/diagrams/part.png">
+<img alt="ParT" src="/diagrams/part_layers_1.png">
+<img alt="ParT" src="/diagrams/part_layers_2.png"></p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -50,9 +50,9 @@ These are variables caomputed for each pair of intput particles, which are then 
 $$ \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)$$
 where $U$ is the interaction matrix of shape `(batch, num_particles, num_particles, heads)`, where each `head` gets its own interaction matrix.
 
-![ParT](../../../diagrams/part.png)
-![ParT](../../../diagrams/part_layers_1.png)
-![ParT](../../../diagrams/part_layers_2.png)
+![ParT](/diagrams/part.png)
+![ParT](/diagrams/part_layers_1.png)
+![ParT](/diagrams/part_layers_2.png)
 
 &#34;&#34;&#34;
 import tensorflow as tf

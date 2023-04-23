@@ -10,9 +10,9 @@ These are variables caomputed for each pair of intput particles, which are then 
 $$ \mathrm{Attention}(Q, K) = \mathrm{softmax} \left( \frac{QK^T}{\sqrt{d_k}} + U \right)$$
 where $U$ is the interaction matrix of shape `(batch, num_particles, num_particles, heads)`, where each `head` gets its own interaction matrix.
 
-![ParT](../../../diagrams/part.png)
-![ParT](../../../diagrams/part_layers_1.png)
-![ParT](../../../diagrams/part_layers_2.png)
+![ParT](/diagrams/part.png)
+![ParT](/diagrams/part_layers_1.png)
+![ParT](/diagrams/part_layers_2.png)
 
 """
 import tensorflow as tf
