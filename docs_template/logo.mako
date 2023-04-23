@@ -1,5 +1,5 @@
 <header>
-    <a class="homelink" rel="home" title="pdoc Home" href="https://pdoc3.github.io/pdoc/">
-        <img src="images/q_g_tagging.jpeg" alt=""> pdoc
+    <a class="homelink" rel="home" title="JIDENN" href="https://jansam.wieno.sk/JIDENN/">
+        <img src="images/q_g_tagging.jpeg" alt=""> JIDENN
     </a>
 </header>

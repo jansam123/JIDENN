@@ -60,10 +60,10 @@ The data is mainly stored in the ROOT files. In the `jidenn/data` folder is a su
 
 The data preprocessing consists of two steps:
 - **Offline preprocessing**: The data is converted to `tf.data.Dataset` objects and saved to disk. This is done with the `jidenn/data/ROOTDataset` submodule scripts `convert_root.py` and `event_flattening.py`. The first script purely converts the ROOT files to `tf.data.Dataset` objects. The second script performs cuts and flattens the events to individual jets, as seen in figure below.
-![data_off](images/data_prep_off.png)
+![data_off](images/data_prep_off.jpg)
 
 - **Online preprocessing**: As the data comes from different JZ slices, there are specific cuts on each of them separately, as seen in the diagram below. Afterward, the datasets are individually resampled, such that the amount of quarks and gluons is the same in each slice. The datasets are interleaved with equal probabilty and train input variables are created (`jidenn/data/TrainInput`). In the end, the variables are normalized.
-![data_on](images/data_prep_on.png)
+![data_on](images/data_prep_on.jpg)
 
 ## Architecture
 In the following sections, we briefly introduce the implemented architecture.
@@ -71,25 +71,25 @@ In the following sections, we briefly introduce the implemented architecture.
 Dynamically Enhanced Particle Transformer is an extension of ParT (explained below). It uses several minor improvements based on the DeiT III paper (https://arxiv.org/abs/2204.07118), from which the Talking Multi-heads Attention is the most improtant. The architecture is shown in the figure below.
 
 <p align="center">
-<img src="images/depart.png" width="600">
+<img src="images/depart.jpg" width="600">
 </p>
 <p align="center">
-<img src="images/depart_layers.png" width="500">
+<img src="images/depart_layers.jpg" width="500">
 </p>
 <p align="center">
-<img src="images/part_layers_2.png" width="500">
+<img src="images/part_layers_2.jpg" width="500">
 </p>
 
 ### Fully Connected Network (FC)
 Fully connected (FC) or multi-layer perceptron (MLP) is a simple neural network architecture (https://ieeexplore.ieee.org/document/7238334), which uses the high-level features of jets. The architecture is shown in the figure below.
 <p align="center">
-<img src="images/fc.png" width="300">
+<img src="images/fc.jpg" width="300">
 </p>
 
 ### Highway Network 
 Highway network (https://arxiv.org/abs/1505.00387) is an extension of FC, which uses gated hidden layers to allow a bypass of a layer. It also uses the high-level features of jets. The architecture is shown in the figure below.
 <p align="center">
-<img src="images/highway.png" width="400">
+<img src="images/highway.jpg" width="400">
 </p>
 
 ### Particle Flow Network (PFN) and Energy Flow Network (EFN)
@@ -98,30 +98,30 @@ Particle Flow Network (https://arxiv.org/abs/1810.05165) is a constituent-based 
 Energy Flow Network (https://arxiv.org/abs/1810.05165) is a subset of PFN because it only uses the angular information about the jet constituents to make the per-particle mapping. The energy information is then multiplied with the angular information, again followed by FC layers. This special case of PFN make the architecture **Infrared and Collinear (IRC) safe**. The architecture is shown in the figure below (b).
 
 <p align="center">
-<img src="images/pfn_efn.png" width="400">
+<img src="images/pfn_efn.jpg" width="400">
 </p>
 
 ### Transformer
 Transformer network (https://arxiv.org/abs/1706.03762) is a constituent-based architecture. It uses the self-attention mechanism to allow the particles to exchange information. The architecture is shown in the figure below.
 
 <p align="center">
-<img src="images/transformer.png" width="600">
+<img src="images/transformer.jpg" width="600">
 </p>
 <p align="center">
-<img src="images/transformer_layers.png" width="400">
+<img src="images/transformer_layers.jpg" width="400">
 </p>
 
 ### Particle Transformer (ParT)
 Particle Transformer (https://arxiv.org/abs/2202.03772) is an extension of Transformer, which is based on the CaiT model used in image recognition (https://arxiv.org/abs/2103.17239). On top of that, it introduces **interaction variables** that are computed for each pair of particles. They are added as a bias to the attention weights. The architecture is shown in the figure below. 
 
 <p align="center">
-<img src="images/part.png" width="600">
+<img src="images/part.jpg" width="600">
 </p>
 <p align="center">
-<img src="images/part_layers_1.png" width="500">
+<img src="images/part_layers_1.jpg" width="500">
 </p>
 <p align="center">
-<img src="images/part_layers_2.png" width="500">
+<img src="images/part_layers_2.jpg" width="500">
 </p>
 
 
