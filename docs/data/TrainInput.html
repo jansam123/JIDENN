@@ -1,0 +1,1498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>jidenn.data.TrainInput API documentation</title>
+<meta name="description" content="Module containing classes that create the various types of input variables for all the neural networks.
+Each type of input variables is a subclass of …" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+<link rel="canonical" href="http://jansam.wieno.sk/JIDENN/jidenn/data/TrainInput.html">
+<link rel="icon" href="images/q_g_tagging.jpeg">
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>jidenn.data.TrainInput</code></h1>
+</header>
+<section id="section-intro">
+<p>Module containing classes that create the various types of input variables for all the neural networks.
+Each type of input variables is a subclass of the <code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code> class.
+Defining a new type of input variables is as simple as creating a new subclass of <code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code> ,
+implementing the <code>__call__</code> method and the <code>input_shape</code> property, which is used to define the
+input layer size of the neural network.</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;
+Module containing classes that create the various types of input variables for all the neural networks.
+Each type of input variables is a subclass of the `TrainInput` class.
+Defining a new type of input variables is as simple as creating a new subclass of `TrainInput` ,
+implementing the `__call__` method and the `input_shape` property, which is used to define the 
+input layer size of the neural network.
+&#34;&#34;&#34;
+import tensorflow as tf
+from abc import ABC, abstractmethod, abstractproperty
+from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Type
+#
+from .four_vector_transform import to_e_px_py_pz
+from .JIDENNDataset import JIDENNVariables, ROOTVariables
+
+
+class TrainInput(ABC):
+    &#34;&#34;&#34;Base class for all train input classes. The `TrainInput` class is used to **construct the input variables** for the neural network.
+    The class can be initialized with a list of available variables. 
+
+    The instance is then passed to the `map` method of a `tf.data.Dataset` object to use the `TrainInput.__call__` method to construct the input variables.
+    Optionally, the class can be put into a `tf.function` to speed up the preprocessing.
+
+    Example:
+    ```python
+    train_input = HighLevelJetVariables(per_jet_variables=[&#39;jets_pt&#39;, &#39;jets_eta&#39;, &#39;jets_phi&#39;, &#39;jets_m&#39;])
+    dataset = dataset.map(tf.function(func=train_input))
+    ```
+
+    Args:
+        per_jet_variables (List[str], optional): List of variables that are per jet. Defaults to None.
+        per_event_variables (List[str], optional): List of variables that are per event. Defaults to None.
+        per_jet_tuple_variables (List[str], optional): List of variables that are per jet and are stored as tuples. Defaults to None.
+
+    &#34;&#34;&#34;
+
+    def __init__(self, per_jet_variables: Optional[List[str]] = None,
+                 per_event_variables: Optional[List[str]] = None,
+                 per_jet_tuple_variables: Optional[List[str]] = None):
+
+        self.per_jet_variables = per_jet_variables
+        self.per_event_variables = per_event_variables
+        self.per_jet_tuple_variables = per_jet_tuple_variables
+
+    @abstractproperty
+    def input_shape(self) -&gt; Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]:
+        &#34;&#34;&#34;The shape of the input variables. This is used to **define the input layer size** of the neural network.
+        The `None` values are used for ragged dimensions., eg. `(None, 4)` for a variable number of jet consitutents with 4 variables per consitutent.
+        &#34;&#34;&#34;
+        raise NotImplementedError
+
+    @abstractmethod
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        &#34;&#34;&#34;Constructs the input variables from the `JIDENNVariables` object. 
+        The output is a dictionary of the form `{&#39;var_name&#39;: tf.Tensor}`, i.e. a `ROOTVariables` type.
+
+        Args:
+            sample (JIDENNVariables): The input sample.    
+
+        Returns:
+            ROOTVariables: The output variables of the form `{&#39;var_name&#39;: tf.Tensor}`.
+
+        &#34;&#34;&#34;
+        raise NotImplementedError
+
+
+class HighLevelJetVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the **whole jet**. 
+    The variables are taken from the `perJet` and `perEvent` dictionary of the `JIDENNVariables` object.
+    These variables are used to train `jidenn.models.FC.FCModel` and `jidenn.models.Highway.HighwayModel`.
+
+    Args:
+        per_jet_variables (List[str], optional): List of variables that are per jet. Defaults to None.
+        per_event_variables (List[str], optional): List of variables that are per event. Defaults to None.
+        per_jet_tuple_variables (List[str], optional): List of variables that are per jet and are stored as tuples. Defaults to None.
+
+    &#34;&#34;&#34;
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.per_jet_variables is None:
+            raise ValueError(&#34;per_jet_variables must be specified&#34;)
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        &#34;&#34;&#34;Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
+
+        Args:
+            sample (JIDENNVariables): The input sample.
+
+        Returns:
+            ROOTVariables: The output variables of the form `{&#39;var_name&#39;: tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
+        &#34;&#34;&#34;
+        data = {var: tf.cast(sample[&#39;perJet&#39;][var], tf.float32) for var in self.per_jet_variables}
+        if self.per_event_variables is None:
+            return data
+        data.update({var: tf.cast(sample[&#39;perEvent&#39;][var], tf.float32) for var in self.per_event_variables})
+        return data
+
+    @property
+    def input_shape(self) -&gt; int:
+        &#34;&#34;&#34;The input shape is just an integer `len(per_jet_variables) + len(per_event_variables)`.&#34;&#34;&#34;
+        return len(self.per_jet_variables) + (len(self.per_event_variables) if self.per_event_variables is not None else 0)
+
+
+class HighLevelPFOVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the **whole jet** from the PFO objects.
+    These are special variables constructed for the BDT model, `jidenn.models.BDT.bdt_model`, from PFO object (originaly only from tracks trk)
+
+    ##Variables: 
+    - jet transverse momentum $$p_{\\mathrm{T}}^{\\mathrm{jet}}$$
+    - jet psedo-rapidity $$\\eta^{\\mathrm{jet}}$$
+    - number of PFOs $$ N_{\\mathrm {PFO}}=\\sum_{\\mathrm {PFO } \\in \\mathrm { jet }} $$
+    - jet width $$$W_{\\mathrm {PFO}}=\\frac{\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a} \\sqrt{(\\eta^a - \\eta^{\\mathrm{jet}})^2 + (\\phi^a - \\phi^{\\mathrm{jet}})^2}}{\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a}}$$
+    - C variable $$C_1^{\\beta=0.2}=\\frac{\\sum_{a, b \\in \\mathrm{jet}}^{a \\neq b} p_{\\mathrm{T}}^a p_{\\mathrm{T}}^b \\left(\\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}\\right)^{\\beta=0.2}}{\\left(\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a}\\right)^2}$$
+    &#34;&#34;&#34;
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        N_PFO = sample[&#39;perJet&#39;][&#39;jets_PFO_n&#39;]
+
+        delta_R_PFO_jet = tf.math.sqrt(tf.math.square(eta_jet - eta_const) +
+                                       tf.math.square(phi_jet - phi_const))
+
+        W_PFO_jet = tf.math.reduce_sum(pt_const * delta_R_PFO_jet, axis=-1) / tf.math.reduce_sum(pt_const, axis=-1)
+        delta_R_PFOs = tf.math.sqrt(tf.math.square(
+            eta_const[:, tf.newaxis] - eta_const[tf.newaxis, :]) + tf.math.square(phi_const[:, tf.newaxis] - phi_const[tf.newaxis, :]))
+        C1_PFO_jet = tf.einsum(&#39;i,ij,j&#39;, pt_const, tf.linalg.set_diag(
+            delta_R_PFOs, tf.zeros_like(pt_const))**0.2, pt_const) / tf.math.reduce_sum(pt_const, axis=-1)**2
+
+        output_data = {&#39;pt_jet&#39;: pt_jet, &#39;eta_jet&#39;: eta_jet, &#39;N_PFO&#39;: N_PFO,
+                       &#39;W_PFO_jet&#39;: W_PFO_jet, &#39;C1_PFO_jet&#39;: C1_PFO_jet}
+        return output_data
+
+    @property
+    def input_shape(self) -&gt; int:
+        &#34;&#34;&#34;The input shape is just an integer `5`, number of variables.&#34;&#34;&#34;
+        return 5
+
+
+class ConstituentVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    &#34;&#34;&#34;
+    
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        m_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+        pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(PFO_E)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+        m = m_const
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        return {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+                &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+    @property
+    def input_shape(self) -&gt; Tuple[None, int]:
+        &#34;&#34;&#34;The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent.&#34;&#34;&#34;
+        return (None, 8)
+
+
+class RelativeConstituentVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    It is the same as `ConstituentVariables` but containg only variables relative to the jet.
+    These are used as alternative input to models mentioned in `ConstituentVariables`.
+
+    ##Variables: 
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    &#34;&#34;&#34;
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        m_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+        pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+        logE = tf.math.log(PFO_E)
+        m = m_const
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        return {&#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E|Ejet&#39;: logE_Ejet,
+                &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+    @property
+    def input_shape(self) -&gt; Tuple[None, int]:
+        &#34;&#34;&#34;The input shape is `(None, 6)`, where `None` indicates that the number of constituents is not fixed, 
+        and `6` is the number of variables per constituent.&#34;&#34;&#34;
+        return (None, 6)
+
+
+class InteractionConstituentVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the individual **jet constituents**, but on top of the
+    `ConstituentVariables` it also includes the interaction variables, i.e. the variables characterizing the
+    pair of constituents.
+    These are used in the `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    ###Constituent variables:
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    ###Interaction variables:
+    - log of the angular distance between the constituents $$\\log \\Delta  = \\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}$$
+    - log of the kt variable $$\\log k_\\mathrm{T} = \\log \\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b) \\Delta $$
+    - the fraction of carried transverse momentum of the softer constituent $$z = \\frac{\\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b)}{p_{\\mathrm{T}}^a + p_{\\mathrm{T}}^b}$$
+    - the log of invariant mass $$\\log m^2 = \\log{(p^{\\mu, a} + p^{\\mu, b})^2}$$
+    
+    &#34;&#34;&#34;
+
+    def __call__(self, sample: JIDENNVariables) -&gt; Tuple[ROOTVariables, ROOTVariables]:
+        m = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+        pt = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+        m2 = tf.math.log(m2)
+
+        interaction_vars = {&#39;delta&#39;: delta, &#39;k_t&#39;: k_t, &#39;z&#39;: z, &#39;m2&#39;: m2}
+
+        m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        PFO_E = tf.math.sqrt(pt**2 + m**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt)
+
+        logPT_PTjet = tf.math.log(pt / tf.math.reduce_sum(pt_jet))
+        logE = tf.math.log(PFO_E)
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+
+        const_vars = {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+                      &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+        return const_vars, interaction_vars
+
+    @property
+    def input_shape(self) -&gt; Tuple[Tuple[None, int], Tuple[None, None, int]]:
+        &#34;&#34;&#34;The input shape is a tuple of two tuples `(None, 8)` and `(None, None, 4)`, where the first tuple corresponds to the shape 
+        of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
+        i.e. a matrix for each jet.&#34;&#34;&#34;
+        return (None, 8), (None, None, 4)
+
+
+# class AntiKtInteractionConstituentVariables(TrainInput):
+
+#     def __call__(self, sample: JIDENNVariables) -&gt; Tuple[ROOTVariables, ROOTVariables]:
+#         m = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+#         pt = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+#         eta = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+#         phi = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+#         E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+#         delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+#                              tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+#         delta = tf.math.log(delta)
+#         delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+#         anti_k_t = tf.math.minimum(1 / pt[:, tf.newaxis], 1 / pt[tf.newaxis, :]) * delta**2
+#         anti_k_t = tf.math.log(anti_k_t)
+#         anti_k_t = tf.linalg.set_diag(anti_k_t, tf.zeros_like(m))
+
+#         z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+#         z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+#         m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+#             tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+#             tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+#         m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+#         m2 = tf.math.log(m2)
+
+#         interaction_vars = {&#39;delta&#39;: delta, &#39;anti-k_t&#39;: anti_k_t, &#39;z&#39;: z, &#39;m2&#39;: m2}
+
+#         m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+#         pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+#         eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+#         phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+#         PFO_E = tf.math.sqrt(pt**2 + m**2)
+#         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+#         deltaEta = eta - tf.math.reduce_mean(eta_jet)
+#         deltaPhi = phi - tf.math.reduce_mean(phi_jet)
+#         deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+#         logPT = tf.math.log(pt)
+
+#         logPT_PTjet = tf.math.log(pt / tf.math.reduce_sum(pt_jet))
+#         logE = tf.math.log(PFO_E)
+#         logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+
+#         const_vars = {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+#                       &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+#         return const_vars, interaction_vars
+
+#     @property
+#     def input_shape(self) -&gt; Tuple[Tuple[None, int], Tuple[None, None, int]]:
+#         return (None, 8), (None, None, 4)
+
+
+# class DeepSetConstituentVariables(TrainInput):
+#     def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+#         pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+#         eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+#         phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+#         # pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+#         eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+#         phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+#         logPT_PTjet = - tf.math.log(pt_const / tf.math.reduce_sum(pt_const))
+
+#         eta = eta_const - tf.math.reduce_mean(eta_jet)
+#         phi = phi_const - tf.math.reduce_mean(phi_jet)
+
+#         return {&#39;log_pT&#39;: logPT_PTjet, &#39;deltaEta&#39;: eta, &#39;deltaPhi&#39;: phi}
+
+#     @property
+#     def input_shape(self) -&gt; Tuple[None, int]:
+#         return (None, 3)
+
+
+def input_classes_lookup(class_name: Literal[&#39;highlevel&#39;, 
+                                             &#39;highlevel_constituents&#39;, 
+                                             &#39;constituents&#39;, 
+                                             &#39;relative_constituents&#39;, 
+                                             &#39;interaction_constituents&#39;]) -&gt; Type[TrainInput]:
+    
+    &#34;&#34;&#34;Function to return the input class based on the class name.
+    It is used to pick training class based on the config file.
+
+    Args:
+        class_name (str): Name of the class to return. Options are: &#39;highlevel&#39;, &#39;highlevel_constituents&#39;, &#39;constituents&#39;, &#39;relative_constituents&#39;, &#39;interaction_constituents&#39;
+
+    Raises:
+        ValueError: If the class name is not in the list of options.
+
+    Returns:
+        Type[TrainInput]: The class to use for training. **Not as instance**, but as class itself.
+    &#34;&#34;&#34;
+
+    lookup_dict = {&#39;highlevel&#39;: HighLevelJetVariables,
+                   &#39;highlevel_constituents&#39;: HighLevelPFOVariables,
+                   &#39;constituents&#39;: ConstituentVariables,
+                   &#39;relative_constituents&#39;: RelativeConstituentVariables,
+                   &#39;interaction_constituents&#39;: InteractionConstituentVariables,}
+                   #&#39;antikt_interaction_constituents&#39;: AntiKtInteractionConstituentVariables,
+                   #&#39;deepset_constituents&#39;: DeepSetConstituentVariables}
+
+    if class_name not in lookup_dict.keys():
+        raise ValueError(f&#39;Unknown input class name {class_name}&#39;)
+
+    return lookup_dict[class_name]
+
+
+__pdoc__ = {f&#39;{local_class.__name__}.__call__&#39;: True for local_class in TrainInput.__subclasses__() + [TrainInput]}</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="jidenn.data.TrainInput.input_classes_lookup"><code class="name flex">
+<span>def <span class="ident">input_classes_lookup</span></span>(<span>class_name: Literal['highlevel', 'highlevel_constituents', 'constituents', 'relative_constituents', 'interaction_constituents']) ‑> Type[<a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a>]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Function to return the input class based on the class name.
+It is used to pick training class based on the config file.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>class_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the class to return. Options are: 'highlevel', 'highlevel_constituents', 'constituents', 'relative_constituents', 'interaction_constituents'</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the class name is not in the list of options.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Type[<a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a>]</code></dt>
+<dd>The class to use for training. <strong>Not as instance</strong>, but as class itself.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def input_classes_lookup(class_name: Literal[&#39;highlevel&#39;, 
+                                             &#39;highlevel_constituents&#39;, 
+                                             &#39;constituents&#39;, 
+                                             &#39;relative_constituents&#39;, 
+                                             &#39;interaction_constituents&#39;]) -&gt; Type[TrainInput]:
+    
+    &#34;&#34;&#34;Function to return the input class based on the class name.
+    It is used to pick training class based on the config file.
+
+    Args:
+        class_name (str): Name of the class to return. Options are: &#39;highlevel&#39;, &#39;highlevel_constituents&#39;, &#39;constituents&#39;, &#39;relative_constituents&#39;, &#39;interaction_constituents&#39;
+
+    Raises:
+        ValueError: If the class name is not in the list of options.
+
+    Returns:
+        Type[TrainInput]: The class to use for training. **Not as instance**, but as class itself.
+    &#34;&#34;&#34;
+
+    lookup_dict = {&#39;highlevel&#39;: HighLevelJetVariables,
+                   &#39;highlevel_constituents&#39;: HighLevelPFOVariables,
+                   &#39;constituents&#39;: ConstituentVariables,
+                   &#39;relative_constituents&#39;: RelativeConstituentVariables,
+                   &#39;interaction_constituents&#39;: InteractionConstituentVariables,}
+                   #&#39;antikt_interaction_constituents&#39;: AntiKtInteractionConstituentVariables,
+                   #&#39;deepset_constituents&#39;: DeepSetConstituentVariables}
+
+    if class_name not in lookup_dict.keys():
+        raise ValueError(f&#39;Unknown input class name {class_name}&#39;)
+
+    return lookup_dict[class_name]</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="jidenn.data.TrainInput.ConstituentVariables"><code class="flex name class">
+<span>class <span class="ident">ConstituentVariables</span></span>
+<span>(</span><span>per_jet_variables: Optional[List[str]] = None, per_event_variables: Optional[List[str]] = None, per_jet_tuple_variables: Optional[List[str]] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Constructs the input variables characterizing the individual <strong>jet constituents</strong>, the PFO objects.
+These variables are used to train <code><a title="jidenn.models.PFN.PFNModel" href="../models/PFN.html#jidenn.models.PFN.PFNModel">PFNModel</a></code>, <code><a title="jidenn.models.EFN.EFNModel" href="../models/EFN.html#jidenn.models.EFN.EFNModel">EFNModel</a></code>,
+<code><a title="jidenn.models.Transformer.TransformerModel" href="../models/Transformer.html#jidenn.models.Transformer.TransformerModel">TransformerModel</a></code>, <code><a title="jidenn.models.ParT.ParTModel" href="../models/ParT.html#jidenn.models.ParT.ParTModel">ParTModel</a></code>, <code><a title="jidenn.models.DeParT.DeParTModel" href="../models/DeParT.html#jidenn.models.DeParT.DeParTModel">DeParTModel</a></code>.</p>
+<h2 id="variables">Variables:</h2>
+<ul>
+<li>log of the constituent transverse momentum <span><span class="MathJax_Preview">\log(p_{\mathrm{T}})</span><script type="math/tex; mode=display">\log(p_{\mathrm{T}})</script></span></li>
+<li>log of the constituent energy <span><span class="MathJax_Preview">\log(E)</span><script type="math/tex; mode=display">\log(E)</script></span></li>
+<li>mass of the constituent <span><span class="MathJax_Preview">m</span><script type="math/tex; mode=display">m</script></span></li>
+<li>log of the fraction of the constituent energy to the jet energy <span><span class="MathJax_Preview">\log(E_{\mathrm{const}}/E_{\mathrm{jet}})</span><script type="math/tex; mode=display">\log(E_{\mathrm{const}}/E_{\mathrm{jet}})</script></span></li>
+<li>log of the fraction of the constituent transverse momentum to the jet transverse momentum <span><span class="MathJax_Preview">\log(p_{\mathrm{T}}^{\mathrm{const}}/p_{\mathrm{T}}^{\mathrm{jet}})</span><script type="math/tex; mode=display">\log(p_{\mathrm{T}}^{\mathrm{const}}/p_{\mathrm{T}}^{\mathrm{jet}})</script></span></li>
+<li>difference in the constituent and jet pseudorapidity <span><span class="MathJax_Preview">\Delta \eta = \eta^{\mathrm{const}} - \eta^{\mathrm{jet}}</span><script type="math/tex; mode=display">\Delta \eta = \eta^{\mathrm{const}} - \eta^{\mathrm{jet}}</script></span></li>
+<li>difference in the constituent and jet azimuthal angle <span><span class="MathJax_Preview">\Delta \phi = \phi^{\mathrm{const}} - \phi^{\mathrm{jet}}</span><script type="math/tex; mode=display">\Delta \phi = \phi^{\mathrm{const}} - \phi^{\mathrm{jet}}</script></span></li>
+<li>angular distance between the constituent and jet <span><span class="MathJax_Preview">\Delta R = \sqrt{(\Delta \eta)^2 + (\Delta \phi)^2}</span><script type="math/tex; mode=display">\Delta R = \sqrt{(\Delta \eta)^2 + (\Delta \phi)^2}</script></span></li>
+</ul></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ConstituentVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    &#34;&#34;&#34;
+    
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        m_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+        pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(PFO_E)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+        m = m_const
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        return {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+                &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+    @property
+    def input_shape(self) -&gt; Tuple[None, int]:
+        &#34;&#34;&#34;The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent.&#34;&#34;&#34;
+        return (None, 8)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.ConstituentVariables.input_shape"><code class="name">var <span class="ident">input_shape</span> : Tuple[None, int]</code></dt>
+<dd>
+<div class="desc"><p>The input shape is <code>(None, 8)</code>, where <code>None</code> indicates that the number of constituents is not fixed,
+and <code>8</code> is the number of variables per constituent.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def input_shape(self) -&gt; Tuple[None, int]:
+    &#34;&#34;&#34;The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+    and `8` is the number of variables per constituent.&#34;&#34;&#34;
+    return (None, 8)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.ConstituentVariables.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]) ‑> Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code>.<code><a title="jidenn.data.TrainInput.TrainInput.__call__" href="#jidenn.data.TrainInput.TrainInput.__call__">__call__</a></code>
+</p>
+<div class="desc inherited"><p>Constructs the input variables from the <code>JIDENNVariables</code> object.
+The output is a dictionary of the form <code>{'var_name': tf.Tensor}</code>, i.e. a …</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+    m_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+    pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+    eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+    phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+    m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+    pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+    eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+    phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+    PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+    jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+    deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+    deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+    deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+    logPT = tf.math.log(pt_const)
+
+    logE = tf.math.log(PFO_E)
+    logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+    logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+    m = m_const
+    # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+    return {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+            &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.TrainInput.HighLevelJetVariables"><code class="flex name class">
+<span>class <span class="ident">HighLevelJetVariables</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Constructs the input variables characterizing the <strong>whole jet</strong>.
+The variables are taken from the <code>perJet</code> and <code>perEvent</code> dictionary of the <code>JIDENNVariables</code> object.
+These variables are used to train <code><a title="jidenn.models.FC.FCModel" href="../models/FC.html#jidenn.models.FC.FCModel">FCModel</a></code> and <code><a title="jidenn.models.Highway.HighwayModel" href="../models/Highway.html#jidenn.models.Highway.HighwayModel">HighwayModel</a></code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>per_jet_variables</code></strong> :&ensp;<code>List[str]</code>, optional</dt>
+<dd>List of variables that are per jet. Defaults to None.</dd>
+<dt><strong><code>per_event_variables</code></strong> :&ensp;<code>List[str]</code>, optional</dt>
+<dd>List of variables that are per event. Defaults to None.</dd>
+<dt><strong><code>per_jet_tuple_variables</code></strong> :&ensp;<code>List[str]</code>, optional</dt>
+<dd>List of variables that are per jet and are stored as tuples. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class HighLevelJetVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the **whole jet**. 
+    The variables are taken from the `perJet` and `perEvent` dictionary of the `JIDENNVariables` object.
+    These variables are used to train `jidenn.models.FC.FCModel` and `jidenn.models.Highway.HighwayModel`.
+
+    Args:
+        per_jet_variables (List[str], optional): List of variables that are per jet. Defaults to None.
+        per_event_variables (List[str], optional): List of variables that are per event. Defaults to None.
+        per_jet_tuple_variables (List[str], optional): List of variables that are per jet and are stored as tuples. Defaults to None.
+
+    &#34;&#34;&#34;
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.per_jet_variables is None:
+            raise ValueError(&#34;per_jet_variables must be specified&#34;)
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        &#34;&#34;&#34;Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
+
+        Args:
+            sample (JIDENNVariables): The input sample.
+
+        Returns:
+            ROOTVariables: The output variables of the form `{&#39;var_name&#39;: tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
+        &#34;&#34;&#34;
+        data = {var: tf.cast(sample[&#39;perJet&#39;][var], tf.float32) for var in self.per_jet_variables}
+        if self.per_event_variables is None:
+            return data
+        data.update({var: tf.cast(sample[&#39;perEvent&#39;][var], tf.float32) for var in self.per_event_variables})
+        return data
+
+    @property
+    def input_shape(self) -&gt; int:
+        &#34;&#34;&#34;The input shape is just an integer `len(per_jet_variables) + len(per_event_variables)`.&#34;&#34;&#34;
+        return len(self.per_jet_variables) + (len(self.per_event_variables) if self.per_event_variables is not None else 0)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.HighLevelJetVariables.input_shape"><code class="name">var <span class="ident">input_shape</span> : int</code></dt>
+<dd>
+<div class="desc"><p>The input shape is just an integer <code>len(per_jet_variables) + len(per_event_variables)</code>.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def input_shape(self) -&gt; int:
+    &#34;&#34;&#34;The input shape is just an integer `len(per_jet_variables) + len(per_event_variables)`.&#34;&#34;&#34;
+    return len(self.per_jet_variables) + (len(self.per_event_variables) if self.per_event_variables is not None else 0)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.HighLevelJetVariables.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]) ‑> Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Loops over the <code>per_jet_variables</code> and <code>per_event_variables</code> and constructs the input variables.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>sample</code></strong> :&ensp;<code>JIDENNVariables</code></dt>
+<dd>The input sample.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>ROOTVariables</code></dt>
+<dd>The output variables of the form <code>{'var_name': tf.Tensor}</code> where <code>var_name</code> is from <code>per_jet_variables</code> and <code>per_event_variables</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+    &#34;&#34;&#34;Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
+
+    Args:
+        sample (JIDENNVariables): The input sample.
+
+    Returns:
+        ROOTVariables: The output variables of the form `{&#39;var_name&#39;: tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
+    &#34;&#34;&#34;
+    data = {var: tf.cast(sample[&#39;perJet&#39;][var], tf.float32) for var in self.per_jet_variables}
+    if self.per_event_variables is None:
+        return data
+    data.update({var: tf.cast(sample[&#39;perEvent&#39;][var], tf.float32) for var in self.per_event_variables})
+    return data</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.TrainInput.HighLevelPFOVariables"><code class="flex name class">
+<span>class <span class="ident">HighLevelPFOVariables</span></span>
+<span>(</span><span>per_jet_variables: Optional[List[str]] = None, per_event_variables: Optional[List[str]] = None, per_jet_tuple_variables: Optional[List[str]] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Constructs the input variables characterizing the <strong>whole jet</strong> from the PFO objects.
+These are special variables constructed for the BDT model, <code><a title="jidenn.models.BDT.bdt_model" href="../models/BDT.html#jidenn.models.BDT.bdt_model">bdt_model()</a></code>, from PFO object (originaly only from tracks trk)</p>
+<h2 id="variables">Variables:</h2>
+<ul>
+<li>jet transverse momentum <span><span class="MathJax_Preview">p_{\mathrm{T}}^{\mathrm{jet}}</span><script type="math/tex; mode=display">p_{\mathrm{T}}^{\mathrm{jet}}</script></span></li>
+<li>jet psedo-rapidity <span><span class="MathJax_Preview">\eta^{\mathrm{jet}}</span><script type="math/tex; mode=display">\eta^{\mathrm{jet}}</script></span></li>
+<li>number of PFOs <span><span class="MathJax_Preview"> N_{\mathrm {PFO}}=\sum_{\mathrm {PFO } \in \mathrm { jet }} </span><script type="math/tex; mode=display"> N_{\mathrm {PFO}}=\sum_{\mathrm {PFO } \in \mathrm { jet }} </script></span></li>
+<li>jet width <span><span class="MathJax_Preview">$W_{\mathrm {PFO}}=\frac{\sum_{a \in \mathrm{jet}} p_{\mathrm{T}}^{a} \sqrt{(\eta^a - \eta^{\mathrm{jet}})^2 + (\phi^a - \phi^{\mathrm{jet}})^2}}{\sum_{a \in \mathrm{jet}} p_{\mathrm{T}}^{a}}</span><script type="math/tex; mode=display">$W_{\mathrm {PFO}}=\frac{\sum_{a \in \mathrm{jet}} p_{\mathrm{T}}^{a} \sqrt{(\eta^a - \eta^{\mathrm{jet}})^2 + (\phi^a - \phi^{\mathrm{jet}})^2}}{\sum_{a \in \mathrm{jet}} p_{\mathrm{T}}^{a}}</script></span></li>
+<li>C variable <span><span class="MathJax_Preview">C_1^{\beta=0.2}=\frac{\sum_{a, b \in \mathrm{jet}}^{a \neq b} p_{\mathrm{T}}^a p_{\mathrm{T}}^b \left(\sqrt{(\eta^a - \eta^b)^2 + (\phi^a - \phi^b)^2}\right)^{\beta=0.2}}{\left(\sum_{a \in \mathrm{jet}} p_{\mathrm{T}}^{a}\right)^2}</span><script type="math/tex; mode=display">C_1^{\beta=0.2}=\frac{\sum_{a, b \in \mathrm{jet}}^{a \neq b} p_{\mathrm{T}}^a p_{\mathrm{T}}^b \left(\sqrt{(\eta^a - \eta^b)^2 + (\phi^a - \phi^b)^2}\right)^{\beta=0.2}}{\left(\sum_{a \in \mathrm{jet}} p_{\mathrm{T}}^{a}\right)^2}</script></span></li>
+</ul></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class HighLevelPFOVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the **whole jet** from the PFO objects.
+    These are special variables constructed for the BDT model, `jidenn.models.BDT.bdt_model`, from PFO object (originaly only from tracks trk)
+
+    ##Variables: 
+    - jet transverse momentum $$p_{\\mathrm{T}}^{\\mathrm{jet}}$$
+    - jet psedo-rapidity $$\\eta^{\\mathrm{jet}}$$
+    - number of PFOs $$ N_{\\mathrm {PFO}}=\\sum_{\\mathrm {PFO } \\in \\mathrm { jet }} $$
+    - jet width $$$W_{\\mathrm {PFO}}=\\frac{\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a} \\sqrt{(\\eta^a - \\eta^{\\mathrm{jet}})^2 + (\\phi^a - \\phi^{\\mathrm{jet}})^2}}{\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a}}$$
+    - C variable $$C_1^{\\beta=0.2}=\\frac{\\sum_{a, b \\in \\mathrm{jet}}^{a \\neq b} p_{\\mathrm{T}}^a p_{\\mathrm{T}}^b \\left(\\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}\\right)^{\\beta=0.2}}{\\left(\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a}\\right)^2}$$
+    &#34;&#34;&#34;
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        N_PFO = sample[&#39;perJet&#39;][&#39;jets_PFO_n&#39;]
+
+        delta_R_PFO_jet = tf.math.sqrt(tf.math.square(eta_jet - eta_const) +
+                                       tf.math.square(phi_jet - phi_const))
+
+        W_PFO_jet = tf.math.reduce_sum(pt_const * delta_R_PFO_jet, axis=-1) / tf.math.reduce_sum(pt_const, axis=-1)
+        delta_R_PFOs = tf.math.sqrt(tf.math.square(
+            eta_const[:, tf.newaxis] - eta_const[tf.newaxis, :]) + tf.math.square(phi_const[:, tf.newaxis] - phi_const[tf.newaxis, :]))
+        C1_PFO_jet = tf.einsum(&#39;i,ij,j&#39;, pt_const, tf.linalg.set_diag(
+            delta_R_PFOs, tf.zeros_like(pt_const))**0.2, pt_const) / tf.math.reduce_sum(pt_const, axis=-1)**2
+
+        output_data = {&#39;pt_jet&#39;: pt_jet, &#39;eta_jet&#39;: eta_jet, &#39;N_PFO&#39;: N_PFO,
+                       &#39;W_PFO_jet&#39;: W_PFO_jet, &#39;C1_PFO_jet&#39;: C1_PFO_jet}
+        return output_data
+
+    @property
+    def input_shape(self) -&gt; int:
+        &#34;&#34;&#34;The input shape is just an integer `5`, number of variables.&#34;&#34;&#34;
+        return 5</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.HighLevelPFOVariables.input_shape"><code class="name">var <span class="ident">input_shape</span> : int</code></dt>
+<dd>
+<div class="desc"><p>The input shape is just an integer <code>5</code>, number of variables.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def input_shape(self) -&gt; int:
+    &#34;&#34;&#34;The input shape is just an integer `5`, number of variables.&#34;&#34;&#34;
+    return 5</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.HighLevelPFOVariables.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]) ‑> Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code>.<code><a title="jidenn.data.TrainInput.TrainInput.__call__" href="#jidenn.data.TrainInput.TrainInput.__call__">__call__</a></code>
+</p>
+<div class="desc inherited"><p>Constructs the input variables from the <code>JIDENNVariables</code> object.
+The output is a dictionary of the form <code>{'var_name': tf.Tensor}</code>, i.e. a …</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+    pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+    eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+    phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+    pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+    eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+    phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+    N_PFO = sample[&#39;perJet&#39;][&#39;jets_PFO_n&#39;]
+
+    delta_R_PFO_jet = tf.math.sqrt(tf.math.square(eta_jet - eta_const) +
+                                   tf.math.square(phi_jet - phi_const))
+
+    W_PFO_jet = tf.math.reduce_sum(pt_const * delta_R_PFO_jet, axis=-1) / tf.math.reduce_sum(pt_const, axis=-1)
+    delta_R_PFOs = tf.math.sqrt(tf.math.square(
+        eta_const[:, tf.newaxis] - eta_const[tf.newaxis, :]) + tf.math.square(phi_const[:, tf.newaxis] - phi_const[tf.newaxis, :]))
+    C1_PFO_jet = tf.einsum(&#39;i,ij,j&#39;, pt_const, tf.linalg.set_diag(
+        delta_R_PFOs, tf.zeros_like(pt_const))**0.2, pt_const) / tf.math.reduce_sum(pt_const, axis=-1)**2
+
+    output_data = {&#39;pt_jet&#39;: pt_jet, &#39;eta_jet&#39;: eta_jet, &#39;N_PFO&#39;: N_PFO,
+                   &#39;W_PFO_jet&#39;: W_PFO_jet, &#39;C1_PFO_jet&#39;: C1_PFO_jet}
+    return output_data</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.TrainInput.InteractionConstituentVariables"><code class="flex name class">
+<span>class <span class="ident">InteractionConstituentVariables</span></span>
+<span>(</span><span>per_jet_variables: Optional[List[str]] = None, per_event_variables: Optional[List[str]] = None, per_jet_tuple_variables: Optional[List[str]] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Constructs the input variables characterizing the individual <strong>jet constituents</strong>, but on top of the
+<code><a title="jidenn.data.TrainInput.ConstituentVariables" href="#jidenn.data.TrainInput.ConstituentVariables">ConstituentVariables</a></code> it also includes the interaction variables, i.e. the variables characterizing the
+pair of constituents.
+These are used in the <code><a title="jidenn.models.ParT.ParTModel" href="../models/ParT.html#jidenn.models.ParT.ParTModel">ParTModel</a></code>, <code><a title="jidenn.models.DeParT.DeParTModel" href="../models/DeParT.html#jidenn.models.DeParT.DeParTModel">DeParTModel</a></code>.</p>
+<h2 id="variables">Variables:</h2>
+<h3 id="constituent-variables">Constituent variables:</h3>
+<ul>
+<li>log of the constituent transverse momentum <span><span class="MathJax_Preview">\log(p_{\mathrm{T}})</span><script type="math/tex; mode=display">\log(p_{\mathrm{T}})</script></span></li>
+<li>log of the constituent energy <span><span class="MathJax_Preview">\log(E)</span><script type="math/tex; mode=display">\log(E)</script></span></li>
+<li>mass of the constituent <span><span class="MathJax_Preview">m</span><script type="math/tex; mode=display">m</script></span></li>
+<li>log of the fraction of the constituent energy to the jet energy <span><span class="MathJax_Preview">\log(E_{\mathrm{const}}/E_{\mathrm{jet}})</span><script type="math/tex; mode=display">\log(E_{\mathrm{const}}/E_{\mathrm{jet}})</script></span></li>
+<li>log of the fraction of the constituent transverse momentum to the jet transverse momentum <span><span class="MathJax_Preview">\log(p_{\mathrm{T}}^{\mathrm{const}}/p_{\mathrm{T}}^{\mathrm{jet}})</span><script type="math/tex; mode=display">\log(p_{\mathrm{T}}^{\mathrm{const}}/p_{\mathrm{T}}^{\mathrm{jet}})</script></span></li>
+<li>difference in the constituent and jet pseudorapidity <span><span class="MathJax_Preview">\Delta \eta = \eta^{\mathrm{const}} - \eta^{\mathrm{jet}}</span><script type="math/tex; mode=display">\Delta \eta = \eta^{\mathrm{const}} - \eta^{\mathrm{jet}}</script></span></li>
+<li>difference in the constituent and jet azimuthal angle <span><span class="MathJax_Preview">\Delta \phi = \phi^{\mathrm{const}} - \phi^{\mathrm{jet}}</span><script type="math/tex; mode=display">\Delta \phi = \phi^{\mathrm{const}} - \phi^{\mathrm{jet}}</script></span></li>
+<li>angular distance between the constituent and jet <span><span class="MathJax_Preview">\Delta R = \sqrt{(\Delta \eta)^2 + (\Delta \phi)^2}</span><script type="math/tex; mode=display">\Delta R = \sqrt{(\Delta \eta)^2 + (\Delta \phi)^2}</script></span></li>
+</ul>
+<h3 id="interaction-variables">Interaction variables:</h3>
+<ul>
+<li>log of the angular distance between the constituents <span><span class="MathJax_Preview">\log \Delta
+= \sqrt{(\eta^a - \eta^b)^2 + (\phi^a - \phi^b)^2}</span><script type="math/tex; mode=display">\log \Delta
+= \sqrt{(\eta^a - \eta^b)^2 + (\phi^a - \phi^b)^2}</script></span></li>
+<li>log of the kt variable <span><span class="MathJax_Preview">\log k_\mathrm{T} = \log \mathrm{min}(p_{\mathrm{T}}^a, p_{\mathrm{T}}^b) \Delta </span><script type="math/tex; mode=display">\log k_\mathrm{T} = \log \mathrm{min}(p_{\mathrm{T}}^a, p_{\mathrm{T}}^b) \Delta </script></span></li>
+<li>the fraction of carried transverse momentum of the softer constituent <span><span class="MathJax_Preview">z = \frac{\mathrm{min}(p_{\mathrm{T}}^a, p_{\mathrm{T}}^b)}{p_{\mathrm{T}}^a + p_{\mathrm{T}}^b}</span><script type="math/tex; mode=display">z = \frac{\mathrm{min}(p_{\mathrm{T}}^a, p_{\mathrm{T}}^b)}{p_{\mathrm{T}}^a + p_{\mathrm{T}}^b}</script></span></li>
+<li>the log of invariant mass <span><span class="MathJax_Preview">\log m^2 = \log{(p^{\mu, a} + p^{\mu, b})^2}</span><script type="math/tex; mode=display">\log m^2 = \log{(p^{\mu, a} + p^{\mu, b})^2}</script></span></li>
+</ul></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class InteractionConstituentVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the individual **jet constituents**, but on top of the
+    `ConstituentVariables` it also includes the interaction variables, i.e. the variables characterizing the
+    pair of constituents.
+    These are used in the `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    ###Constituent variables:
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    ###Interaction variables:
+    - log of the angular distance between the constituents $$\\log \\Delta  = \\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}$$
+    - log of the kt variable $$\\log k_\\mathrm{T} = \\log \\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b) \\Delta $$
+    - the fraction of carried transverse momentum of the softer constituent $$z = \\frac{\\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b)}{p_{\\mathrm{T}}^a + p_{\\mathrm{T}}^b}$$
+    - the log of invariant mass $$\\log m^2 = \\log{(p^{\\mu, a} + p^{\\mu, b})^2}$$
+    
+    &#34;&#34;&#34;
+
+    def __call__(self, sample: JIDENNVariables) -&gt; Tuple[ROOTVariables, ROOTVariables]:
+        m = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+        pt = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+        m2 = tf.math.log(m2)
+
+        interaction_vars = {&#39;delta&#39;: delta, &#39;k_t&#39;: k_t, &#39;z&#39;: z, &#39;m2&#39;: m2}
+
+        m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        PFO_E = tf.math.sqrt(pt**2 + m**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt)
+
+        logPT_PTjet = tf.math.log(pt / tf.math.reduce_sum(pt_jet))
+        logE = tf.math.log(PFO_E)
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+
+        const_vars = {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+                      &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+        return const_vars, interaction_vars
+
+    @property
+    def input_shape(self) -&gt; Tuple[Tuple[None, int], Tuple[None, None, int]]:
+        &#34;&#34;&#34;The input shape is a tuple of two tuples `(None, 8)` and `(None, None, 4)`, where the first tuple corresponds to the shape 
+        of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
+        i.e. a matrix for each jet.&#34;&#34;&#34;
+        return (None, 8), (None, None, 4)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.InteractionConstituentVariables.input_shape"><code class="name">var <span class="ident">input_shape</span> : Tuple[Tuple[None, int], Tuple[None, None, int]]</code></dt>
+<dd>
+<div class="desc"><p>The input shape is a tuple of two tuples <code>(None, 8)</code> and <code>(None, None, 4)</code>, where the first tuple corresponds to the shape
+of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
+i.e. a matrix for each jet.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def input_shape(self) -&gt; Tuple[Tuple[None, int], Tuple[None, None, int]]:
+    &#34;&#34;&#34;The input shape is a tuple of two tuples `(None, 8)` and `(None, None, 4)`, where the first tuple corresponds to the shape 
+    of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
+    i.e. a matrix for each jet.&#34;&#34;&#34;
+    return (None, 8), (None, None, 4)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.InteractionConstituentVariables.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]) ‑> Tuple[Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code>.<code><a title="jidenn.data.TrainInput.TrainInput.__call__" href="#jidenn.data.TrainInput.TrainInput.__call__">__call__</a></code>
+</p>
+<div class="desc inherited"><p>Constructs the input variables from the <code>JIDENNVariables</code> object.
+The output is a dictionary of the form <code>{'var_name': tf.Tensor}</code>, i.e. a …</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: JIDENNVariables) -&gt; Tuple[ROOTVariables, ROOTVariables]:
+    m = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+    pt = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+    eta = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+    phi = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+    E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+    delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                         tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+    delta = tf.math.log(delta)
+    delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+    k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+    k_t = tf.math.log(k_t)
+    k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+    z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+    z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+    m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+        tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+        tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+    m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+    m2 = tf.math.log(m2)
+
+    interaction_vars = {&#39;delta&#39;: delta, &#39;k_t&#39;: k_t, &#39;z&#39;: z, &#39;m2&#39;: m2}
+
+    m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+    pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+    eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+    phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+    PFO_E = tf.math.sqrt(pt**2 + m**2)
+    jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+    deltaEta = eta - tf.math.reduce_mean(eta_jet)
+    deltaPhi = phi - tf.math.reduce_mean(phi_jet)
+    deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+    logPT = tf.math.log(pt)
+
+    logPT_PTjet = tf.math.log(pt / tf.math.reduce_sum(pt_jet))
+    logE = tf.math.log(PFO_E)
+    logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+
+    const_vars = {&#39;log_pT&#39;: logPT, &#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E&#39;: logE, &#39;log_E|Ejet&#39;: logE_Ejet,
+                  &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+    return const_vars, interaction_vars</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.TrainInput.RelativeConstituentVariables"><code class="flex name class">
+<span>class <span class="ident">RelativeConstituentVariables</span></span>
+<span>(</span><span>per_jet_variables: Optional[List[str]] = None, per_event_variables: Optional[List[str]] = None, per_jet_tuple_variables: Optional[List[str]] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Constructs the input variables characterizing the individual <strong>jet constituents</strong>, the PFO objects.
+It is the same as <code><a title="jidenn.data.TrainInput.ConstituentVariables" href="#jidenn.data.TrainInput.ConstituentVariables">ConstituentVariables</a></code> but containg only variables relative to the jet.
+These are used as alternative input to models mentioned in <code><a title="jidenn.data.TrainInput.ConstituentVariables" href="#jidenn.data.TrainInput.ConstituentVariables">ConstituentVariables</a></code>.</p>
+<h2 id="variables">Variables:</h2>
+<ul>
+<li>mass of the constituent <span><span class="MathJax_Preview">m</span><script type="math/tex; mode=display">m</script></span></li>
+<li>log of the fraction of the constituent energy to the jet energy <span><span class="MathJax_Preview">\log(E_{\mathrm{const}}/E_{\mathrm{jet}})</span><script type="math/tex; mode=display">\log(E_{\mathrm{const}}/E_{\mathrm{jet}})</script></span></li>
+<li>log of the fraction of the constituent transverse momentum to the jet transverse momentum <span><span class="MathJax_Preview">\log(p_{\mathrm{T}}^{\mathrm{const}}/p_{\mathrm{T}}^{\mathrm{jet}})</span><script type="math/tex; mode=display">\log(p_{\mathrm{T}}^{\mathrm{const}}/p_{\mathrm{T}}^{\mathrm{jet}})</script></span></li>
+<li>difference in the constituent and jet pseudorapidity <span><span class="MathJax_Preview">\Delta \eta = \eta^{\mathrm{const}} - \eta^{\mathrm{jet}}</span><script type="math/tex; mode=display">\Delta \eta = \eta^{\mathrm{const}} - \eta^{\mathrm{jet}}</script></span></li>
+<li>difference in the constituent and jet azimuthal angle <span><span class="MathJax_Preview">\Delta \phi = \phi^{\mathrm{const}} - \phi^{\mathrm{jet}}</span><script type="math/tex; mode=display">\Delta \phi = \phi^{\mathrm{const}} - \phi^{\mathrm{jet}}</script></span></li>
+<li>angular distance between the constituent and jet <span><span class="MathJax_Preview">\Delta R = \sqrt{(\Delta \eta)^2 + (\Delta \phi)^2}</span><script type="math/tex; mode=display">\Delta R = \sqrt{(\Delta \eta)^2 + (\Delta \phi)^2}</script></span></li>
+</ul></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RelativeConstituentVariables(TrainInput):
+    &#34;&#34;&#34;Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    It is the same as `ConstituentVariables` but containg only variables relative to the jet.
+    These are used as alternative input to models mentioned in `ConstituentVariables`.
+
+    ##Variables: 
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    &#34;&#34;&#34;
+
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        m_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+        pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+        eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+        phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+        m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+        pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+        eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+        phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+        logE = tf.math.log(PFO_E)
+        m = m_const
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        return {&#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E|Ejet&#39;: logE_Ejet,
+                &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}
+
+    @property
+    def input_shape(self) -&gt; Tuple[None, int]:
+        &#34;&#34;&#34;The input shape is `(None, 6)`, where `None` indicates that the number of constituents is not fixed, 
+        and `6` is the number of variables per constituent.&#34;&#34;&#34;
+        return (None, 6)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.RelativeConstituentVariables.input_shape"><code class="name">var <span class="ident">input_shape</span> : Tuple[None, int]</code></dt>
+<dd>
+<div class="desc"><p>The input shape is <code>(None, 6)</code>, where <code>None</code> indicates that the number of constituents is not fixed,
+and <code>6</code> is the number of variables per constituent.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def input_shape(self) -&gt; Tuple[None, int]:
+    &#34;&#34;&#34;The input shape is `(None, 6)`, where `None` indicates that the number of constituents is not fixed, 
+    and `6` is the number of variables per constituent.&#34;&#34;&#34;
+    return (None, 6)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.RelativeConstituentVariables.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]) ‑> Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code>.<code><a title="jidenn.data.TrainInput.TrainInput.__call__" href="#jidenn.data.TrainInput.TrainInput.__call__">__call__</a></code>
+</p>
+<div class="desc inherited"><p>Constructs the input variables from the <code>JIDENNVariables</code> object.
+The output is a dictionary of the form <code>{'var_name': tf.Tensor}</code>, i.e. a …</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+    m_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_m&#39;]
+    pt_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_pt&#39;]
+    eta_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_eta&#39;]
+    phi_const = sample[&#39;perJetTuple&#39;][&#39;jets_PFO_phi&#39;]
+
+    m_jet = sample[&#39;perJet&#39;][&#39;jets_m&#39;]
+    pt_jet = sample[&#39;perJet&#39;][&#39;jets_pt&#39;]
+    eta_jet = sample[&#39;perJet&#39;][&#39;jets_eta&#39;]
+    phi_jet = sample[&#39;perJet&#39;][&#39;jets_phi&#39;]
+
+    PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+    jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+    deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+    deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+    deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+    logPT = tf.math.log(pt_const)
+
+    logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+    logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+    logE = tf.math.log(PFO_E)
+    m = m_const
+    # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+    return {&#39;log_PT|PTjet&#39;: logPT_PTjet, &#39;log_E|Ejet&#39;: logE_Ejet,
+            &#39;m&#39;: m, &#39;deltaEta&#39;: deltaEta, &#39;deltaPhi&#39;: deltaPhi, &#39;deltaR&#39;: deltaR}</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.TrainInput.TrainInput"><code class="flex name class">
+<span>class <span class="ident">TrainInput</span></span>
+<span>(</span><span>per_jet_variables: Optional[List[str]] = None, per_event_variables: Optional[List[str]] = None, per_jet_tuple_variables: Optional[List[str]] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Base class for all train input classes. The <code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code> class is used to <strong>construct the input variables</strong> for the neural network.
+The class can be initialized with a list of available variables. </p>
+<p>The instance is then passed to the <code>map</code> method of a <code>tf.data.Dataset</code> object to use the <code><a title="jidenn.data.TrainInput.TrainInput.__call__" href="#jidenn.data.TrainInput.TrainInput.__call__">TrainInput.__call__()</a></code> method to construct the input variables.
+Optionally, the class can be put into a <code>tf.function</code> to speed up the preprocessing.</p>
+<p>Example:</p>
+<pre><code class="language-python">train_input = HighLevelJetVariables(per_jet_variables=['jets_pt', 'jets_eta', 'jets_phi', 'jets_m'])
+dataset = dataset.map(tf.function(func=train_input))
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>per_jet_variables</code></strong> :&ensp;<code>List[str]</code>, optional</dt>
+<dd>List of variables that are per jet. Defaults to None.</dd>
+<dt><strong><code>per_event_variables</code></strong> :&ensp;<code>List[str]</code>, optional</dt>
+<dd>List of variables that are per event. Defaults to None.</dd>
+<dt><strong><code>per_jet_tuple_variables</code></strong> :&ensp;<code>List[str]</code>, optional</dt>
+<dd>List of variables that are per jet and are stored as tuples. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TrainInput(ABC):
+    &#34;&#34;&#34;Base class for all train input classes. The `TrainInput` class is used to **construct the input variables** for the neural network.
+    The class can be initialized with a list of available variables. 
+
+    The instance is then passed to the `map` method of a `tf.data.Dataset` object to use the `TrainInput.__call__` method to construct the input variables.
+    Optionally, the class can be put into a `tf.function` to speed up the preprocessing.
+
+    Example:
+    ```python
+    train_input = HighLevelJetVariables(per_jet_variables=[&#39;jets_pt&#39;, &#39;jets_eta&#39;, &#39;jets_phi&#39;, &#39;jets_m&#39;])
+    dataset = dataset.map(tf.function(func=train_input))
+    ```
+
+    Args:
+        per_jet_variables (List[str], optional): List of variables that are per jet. Defaults to None.
+        per_event_variables (List[str], optional): List of variables that are per event. Defaults to None.
+        per_jet_tuple_variables (List[str], optional): List of variables that are per jet and are stored as tuples. Defaults to None.
+
+    &#34;&#34;&#34;
+
+    def __init__(self, per_jet_variables: Optional[List[str]] = None,
+                 per_event_variables: Optional[List[str]] = None,
+                 per_jet_tuple_variables: Optional[List[str]] = None):
+
+        self.per_jet_variables = per_jet_variables
+        self.per_event_variables = per_event_variables
+        self.per_jet_tuple_variables = per_jet_tuple_variables
+
+    @abstractproperty
+    def input_shape(self) -&gt; Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]:
+        &#34;&#34;&#34;The shape of the input variables. This is used to **define the input layer size** of the neural network.
+        The `None` values are used for ragged dimensions., eg. `(None, 4)` for a variable number of jet consitutents with 4 variables per consitutent.
+        &#34;&#34;&#34;
+        raise NotImplementedError
+
+    @abstractmethod
+    def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+        &#34;&#34;&#34;Constructs the input variables from the `JIDENNVariables` object. 
+        The output is a dictionary of the form `{&#39;var_name&#39;: tf.Tensor}`, i.e. a `ROOTVariables` type.
+
+        Args:
+            sample (JIDENNVariables): The input sample.    
+
+        Returns:
+            ROOTVariables: The output variables of the form `{&#39;var_name&#39;: tf.Tensor}`.
+
+        &#34;&#34;&#34;
+        raise NotImplementedError</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>abc.ABC</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="jidenn.data.TrainInput.ConstituentVariables" href="#jidenn.data.TrainInput.ConstituentVariables">ConstituentVariables</a></li>
+<li><a title="jidenn.data.TrainInput.HighLevelJetVariables" href="#jidenn.data.TrainInput.HighLevelJetVariables">HighLevelJetVariables</a></li>
+<li><a title="jidenn.data.TrainInput.HighLevelPFOVariables" href="#jidenn.data.TrainInput.HighLevelPFOVariables">HighLevelPFOVariables</a></li>
+<li><a title="jidenn.data.TrainInput.InteractionConstituentVariables" href="#jidenn.data.TrainInput.InteractionConstituentVariables">InteractionConstituentVariables</a></li>
+<li><a title="jidenn.data.TrainInput.RelativeConstituentVariables" href="#jidenn.data.TrainInput.RelativeConstituentVariables">RelativeConstituentVariables</a></li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.TrainInput.input_shape"><code class="name">var <span class="ident">input_shape</span> : Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]</code></dt>
+<dd>
+<div class="desc"><p>The shape of the input variables. This is used to <strong>define the input layer size</strong> of the neural network.
+The <code>None</code> values are used for ragged dimensions., eg. <code>(None, 4)</code> for a variable number of jet consitutents with 4 variables per consitutent.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractproperty
+def input_shape(self) -&gt; Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]:
+    &#34;&#34;&#34;The shape of the input variables. This is used to **define the input layer size** of the neural network.
+    The `None` values are used for ragged dimensions., eg. `(None, 4)` for a variable number of jet consitutents with 4 variables per consitutent.
+    &#34;&#34;&#34;
+    raise NotImplementedError</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.TrainInput.TrainInput.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]]) ‑> Dict[str, Union[tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor, tensorflow.python.framework.ops.Tensor]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Constructs the input variables from the <code>JIDENNVariables</code> object.
+The output is a dictionary of the form <code>{'var_name': tf.Tensor}</code>, i.e. a <code>ROOTVariables</code> type.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>sample</code></strong> :&ensp;<code>JIDENNVariables</code></dt>
+<dd>The input sample.
+</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>ROOTVariables</code></dt>
+<dd>The output variables of the form <code>{'var_name': tf.Tensor}</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def __call__(self, sample: JIDENNVariables) -&gt; ROOTVariables:
+    &#34;&#34;&#34;Constructs the input variables from the `JIDENNVariables` object. 
+    The output is a dictionary of the form `{&#39;var_name&#39;: tf.Tensor}`, i.e. a `ROOTVariables` type.
+
+    Args:
+        sample (JIDENNVariables): The input sample.    
+
+    Returns:
+        ROOTVariables: The output variables of the form `{&#39;var_name&#39;: tf.Tensor}`.
+
+    &#34;&#34;&#34;
+    raise NotImplementedError</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<a class="homelink" rel="home" title="JIDENN" href="https://jansam.wieno.sk/JIDENN/">
+<img src="images/q_g_tagging.jpeg" alt=""> JIDENN
+</a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="jidenn.data" href="index.html">jidenn.data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.input_classes_lookup" href="#jidenn.data.TrainInput.input_classes_lookup">input_classes_lookup</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="jidenn.data.TrainInput.ConstituentVariables" href="#jidenn.data.TrainInput.ConstituentVariables">ConstituentVariables</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.ConstituentVariables.__call__" href="#jidenn.data.TrainInput.ConstituentVariables.__call__">__call__</a></code></li>
+<li><code><a title="jidenn.data.TrainInput.ConstituentVariables.input_shape" href="#jidenn.data.TrainInput.ConstituentVariables.input_shape">input_shape</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.TrainInput.HighLevelJetVariables" href="#jidenn.data.TrainInput.HighLevelJetVariables">HighLevelJetVariables</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.HighLevelJetVariables.__call__" href="#jidenn.data.TrainInput.HighLevelJetVariables.__call__">__call__</a></code></li>
+<li><code><a title="jidenn.data.TrainInput.HighLevelJetVariables.input_shape" href="#jidenn.data.TrainInput.HighLevelJetVariables.input_shape">input_shape</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.TrainInput.HighLevelPFOVariables" href="#jidenn.data.TrainInput.HighLevelPFOVariables">HighLevelPFOVariables</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.HighLevelPFOVariables.__call__" href="#jidenn.data.TrainInput.HighLevelPFOVariables.__call__">__call__</a></code></li>
+<li><code><a title="jidenn.data.TrainInput.HighLevelPFOVariables.input_shape" href="#jidenn.data.TrainInput.HighLevelPFOVariables.input_shape">input_shape</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.TrainInput.InteractionConstituentVariables" href="#jidenn.data.TrainInput.InteractionConstituentVariables">InteractionConstituentVariables</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.InteractionConstituentVariables.__call__" href="#jidenn.data.TrainInput.InteractionConstituentVariables.__call__">__call__</a></code></li>
+<li><code><a title="jidenn.data.TrainInput.InteractionConstituentVariables.input_shape" href="#jidenn.data.TrainInput.InteractionConstituentVariables.input_shape">input_shape</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.TrainInput.RelativeConstituentVariables" href="#jidenn.data.TrainInput.RelativeConstituentVariables">RelativeConstituentVariables</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.RelativeConstituentVariables.__call__" href="#jidenn.data.TrainInput.RelativeConstituentVariables.__call__">__call__</a></code></li>
+<li><code><a title="jidenn.data.TrainInput.RelativeConstituentVariables.input_shape" href="#jidenn.data.TrainInput.RelativeConstituentVariables.input_shape">input_shape</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.TrainInput.TrainInput" href="#jidenn.data.TrainInput.TrainInput">TrainInput</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.TrainInput.TrainInput.__call__" href="#jidenn.data.TrainInput.TrainInput.__call__">__call__</a></code></li>
+<li><code><a title="jidenn.data.TrainInput.TrainInput.input_shape" href="#jidenn.data.TrainInput.TrainInput.input_shape">input_shape</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>jidenn.data.string_conversions API documentation</title>
+<meta name="description" content="This module contains functions to convert strings to objects that can be evaluated on a sample, **without** using `eval`.
+The two commonly operations …" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+<link rel="canonical" href="http://jansam.wieno.sk/JIDENN/jidenn/data/string_conversions.html">
+<link rel="icon" href="images/q_g_tagging.jpeg">
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>jidenn.data.string_conversions</code></h1>
+</header>
+<section id="section-intro">
+<p>This module contains functions to convert strings to objects that can be evaluated on a sample, <strong>without</strong> using <code>eval</code>.
+The two commonly operations are cuts and construction of variables from strings given some prior knowledge of the variables.
+Data samples are represented as <code>Dict[str, tf.Tensor]</code> (alternatively <code>tf.Raggedtensor</code>) where the keys are the variable names and the values are the variable values.</p>
+<p>The main advantage of this approach is that it is <strong>safe</strong> and can be <strong>easily configured</strong>.</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#34;&#34;&#34;
+This module contains functions to convert strings to objects that can be evaluated on a sample, **without** using `eval`.
+The two commonly operations are cuts and construction of variables from strings given some prior knowledge of the variables.
+Data samples are represented as `Dict[str, tf.Tensor]` (alternatively `tf.Raggedtensor`) where the keys are the variable names and the values are the variable values.
+
+The main advantage of this approach is that it is **safe** and can be **easily configured**.
+&#34;&#34;&#34;
+from __future__ import annotations
+import tensorflow as tf
+from typing import Dict, Iterable
+
+
+def bracketed_split(string: str, delimiter: str = &#39;,&#39;, strip_brackets: bool = True) -&gt; Iterable[str]:
+    &#34;&#34;&#34; Split a string by the delimiter unless it is inside brackets.
+    original code from https://stackoverflow.com/questions/21662474/splitting-a-string-with-brackets-using-regular-expression-in-python
+
+    Example:
+    ```python
+    for s in bracketed_split(&#39;abc,(def,ghi),jkl&#39;, delimiter=&#39;,&#39;):
+        print(s)
+    #&#39;abc&#39;
+    #&#39;(def,ghi)&#39;
+    #&#39;jkl&#39;
+    ``` 
+
+    Args:
+        string(str): The string to split.
+        delimiter(str): The delimiter to split by.
+        strip_brackets(bool): If `True`, the brackets are stripped from the output strings.
+
+    &#34;&#34;&#34;
+
+    openers = &#39;(&#39;
+    closers = &#39;)&#39;
+    opener_to_closer = dict(zip(openers, closers))
+    opening_bracket = dict()
+    current_string = &#39;&#39;
+    depth = 0
+    for c in string:
+        if c in openers:
+            depth += 1
+            opening_bracket[depth] = c
+            if strip_brackets and depth == 1:
+                continue
+        elif c in closers:
+            assert depth &gt; 0, f&#34;You exited more brackets that we have entered in string {string}&#34;
+            assert c == opener_to_closer[opening_bracket[depth]
+                                         ], f&#34;Closing bracket {c} did not match opening bracket {opening_bracket[depth]} in string {string}&#34;
+            depth -= 1
+            if strip_brackets and depth == 0:
+                continue
+        if depth == 0 and c == delimiter:
+            yield current_string
+            current_string = &#39;&#39;
+        else:
+            current_string += c
+    assert depth == 0, f&#39;You did not close all brackets in string {string}&#39;
+    yield current_string
+
+
+class SimpleCut:
+    &#34;&#34;&#34;A simple cut that can be evaluated on a sample. 
+    It is initialized with a string representation of the cut, eg. &#39;jets_pt &gt; 50_000&#39;.
+    The **allowed operators** are `==`, `!=`, `&gt;`, `&lt;`, `&gt;=`, `&lt;=`.
+    There **must not be any spaces** in the string, next to the operators.
+
+    When the class instance is called on a sample `Dict[str, tf.Tensor]`, it returns a boolean tensor that is `True` 
+    if the given variable cut is passed and `False` otherwise.
+    The boolean is returned as a `tf.Tensor`.
+
+    Example:
+    ```python
+    cut = SimpleCut(&#39;jets_pt &gt; 50_000&#39;)
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000]), &#39;jets_eta&#39;: tf.constant([2.0])}
+    data_sample2 = {&#39;jets_pt&#39;: tf.constant([10_000]), &#39;jets_eta&#39;: tf.constant([0.1])}
+    cut(data_sample) # True
+    cut(data_sample2) # False
+    ```
+
+    Args:
+        cut_repr (str): The string representation of the cut.
+    &#34;&#34;&#34;
+    _ordered_signs = [&#39;&lt;=&#39;, &#39;&gt;=&#39;, &#39;==&#39;, &#39;!=&#39;, &#39;&lt;&#39;, &#39;&gt;&#39;]
+    _sign_mapping = {&#39;==&#39;: tf.equal, &#39;!=&#39;: tf.not_equal, &#39;&gt;&#39;: tf.greater,
+                     &#39;&lt;&#39;: tf.less, &#39;&gt;=&#39;: tf.greater_equal, &#39;&lt;=&#39;: tf.less_equal}
+
+    def __init__(self, cut_repr: str) -&gt; None:
+        if cut_repr[0] == &#39;(&#39; and cut_repr[-1] == &#39;)&#39;:
+            self._cut_repr = cut_repr[1:-1]
+        else:
+            self._cut_repr = cut_repr
+
+    def __str__(self) -&gt; str:
+        return self._cut_repr
+
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the cut on a sample. If the cut is passed, the returned tensor is `True`, otherwise it is `False`.
+        The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the cut on.
+
+        Returns:
+            tf.Tensor: A boolean tensor that is `True` if the cut is passed and `False` otherwise.
+        &#34;&#34;&#34;
+        for sign in self._ordered_signs:
+            if sign in self._cut_repr:
+                left, right = self._cut_repr.split(sign)
+                left = left.strip()
+                right = right.strip()
+                if left in sample:
+                    left = sample[left]
+                else:
+                    left = tf.constant(float(left))
+                if right in sample:
+                    right = sample[right]
+                else:
+                    right = tf.cast(float(right), left.dtype)
+                return tf.reduce_all(self._sign_mapping[sign](left, right))
+
+
+class Cut:
+    &#34;&#34;&#34;Class representing a composite cut that can be evaluated on a sample `Dict[str, tf.Tensor]`.
+    The cut is initialized with a string representation of the cut, eg. &#39;(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 2.0)&#39;.
+    They are a composition of `SimpleCut`s and the **allowed operators** are `&amp;&amp;` and `||` .
+    `SimpleCut` **must be enclosed in brackets** and composition operators must be **separated by spaces** from the `SimpleCut`s.
+    There **must not be any space** next to the `==`, `!=`, `&gt;`, `&lt;`, `&gt;=`, `&lt;=` operators.
+
+    Example:
+    ```python
+    cut = Cut(&#39;(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 1.5)&#39;)
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000]), &#39;jets_eta&#39;: tf.constant([2.0])}
+    data_sample2 = {&#39;jets_pt&#39;: tf.constant([10_000]), &#39;jets_eta&#39;: tf.constant([0.1])}
+    cut(data_sample) # False
+    cut(data_sample2) # False
+    ```
+
+    Two `Cut`s can be combined with the `&amp;` and `|` operators. The `&amp;` operator is equivalent to `&amp;&amp;` and the `|` operator is equivalent to `||`.
+
+    Example:
+    ```python
+    cut = Cut(&#39;(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 1.5)&#39;)
+    cut2 = cut &amp; Cut(&#39;(jets_pt &lt; 100_000)&#39;)
+    cut3 = cut | Cut(&#39;(jets_eta &gt; -1.5)&#39;)
+    ```
+
+    Args:
+        cut_repr (str): The string representation of the cut.
+    &#34;&#34;&#34;
+
+    def __init__(self, cut_repr: str) -&gt; None:
+        self._cut_repr = cut_repr
+
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the cut on a sample. If the cut is passed, the returned tensor is `True`, otherwise it is `False`.
+        The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the cut. 
+
+        Returns:
+            bool: `True` if the cut is passed and `False` otherwise as a `tf.Tensor`.
+        &#34;&#34;&#34;
+        return self._evaluate(self, sample)
+
+    def _evaluate(self, cut: Cut, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        split = list(bracketed_split(cut._cut_repr, delimiter=&#39; &#39;, strip_brackets=True))
+        if &#39;&amp;&amp;&#39; in split and &#39;||&#39; in split:
+            raise ValueError(f&#34;Cut {cut._cut_repr} is not valid, use brackets to separate &amp;&amp; and ||&#34;)
+
+        if len(split) == 1:
+            return SimpleCut(split[0])(sample)
+        if &#39;&amp;&amp;&#39; in split:
+            split[:] = (x for x in split if x != &#39;&amp;&amp;&#39;)
+            return tf.reduce_all([self._evaluate(Cut(subcut), sample) for subcut in split])
+        elif &#39;||&#39; in split:
+            split[:] = (x for x in split if x != &#39;||&#39;)
+            return tf.reduce_any([self._evaluate(Cut(subcut), sample) for subcut in split])
+
+    def __str__(self) -&gt; str:
+        return self._cut_repr
+
+    def __and__(self, other: Cut) -&gt; Cut:
+        return Cut(f&#39;({self._cut_repr}) &amp;&amp; ({other._cut_repr})&#39;)
+
+    def __or__(self, other: Cut) -&gt; Cut:
+        return Cut(f&#39;({self._cut_repr}) || ({other._cut_repr})&#39;)
+
+
+class SimpleExpression:
+    &#34;&#34;&#34;
+    .. caution::
+        Might not work properly!
+    Class representing a simple expression that can be evaluated on a sample `Dict[str, tf.Tensor]`.
+    Simple expression is a slice of a tensor in the sample, eg. `jets_pt[0]`.
+    The class instance can be called on a sample to evaluate the expression.
+
+    Example:
+    ```python
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000, 50_000])}
+    expression = SimpleExpression(&#39;jets_pt[0]&#39;)
+    expression(data_sample) # 100_000
+    ```
+    Args:
+        expression (str): The string representation of the expression.
+    &#34;&#34;&#34;
+
+    def __init__(self, expression: str):
+        expression = expression.strip()
+        self._expression = expression
+        if &#39;[&#39; in expression and &#39;]&#39; in expression:
+            self._var = expression.split(&#39;[&#39;)[0]
+            self._slice = self._parse_slice(expression.split(&#39;[&#39;)[1][:-1])
+        else:
+            self._var = expression
+            self._slice = None
+
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the expression.
+
+        Raises:
+            ValueError: If the expression is not found in the sample and cannot be cast to float.
+
+        Returns:
+            tf.Tensor: The sliced tensor.
+        &#34;&#34;&#34;
+        if self._var not in sample:
+            try:
+                return float(self._var)
+            except ValueError:
+                raise ValueError(f&#39;Expression {self._expression} not found in sample and cannot be cast to float&#39;)
+        if self._slice is None:
+            return sample[self._var]
+        else:
+            tensor = sample[self._var]
+            old_rank = tensor.shape.rank
+            sliced = tensor[self._slice]
+            new_rank = sliced.shape.rank
+            if old_rank == new_rank:
+                return tf.squeeze(sliced, axis=-1)
+            else:
+                return sliced
+
+    def __str__(self):
+        return self._expression
+
+    def _pick_var(self, sample, var):
+        var_split = var.split(&#39;[&#39;)
+        if len(var_split) == 1:
+            return sample[var]
+        var_name = var_split[0]
+        var_slice = self._parse_slice(var_split[1][:-1]) if &#39;[&#39; in var else None
+        if sample[var_name].shape.rank == 1:
+            return sample[var_name][var_slice]
+        return tf.squeeze(sample[var_name][var_slice], axis=-1)
+
+    def _parse_slice(self, slice_str: str):
+        return tuple((slice(*(int(i) if i else None for i in part.strip().split(&#39;:&#39;))) if &#39;:&#39; in part else int(part.strip())) for part in slice_str.split(&#39;,&#39;))
+
+
+def _add(a, b):
+    &#34;&#34;&#34;Add two numbers&#34;&#34;&#34;
+    return a + b
+
+
+def _sub(a, b):
+    &#34;&#34;&#34;Subtract two numbers&#34;&#34;&#34;
+    return a - b
+
+
+def _multiply(a, b):
+    &#34;&#34;&#34;Multiply two numbers&#34;&#34;&#34;
+    return a * b
+
+
+def _divide(a, b):
+    &#34;&#34;&#34;Divide two numbers&#34;&#34;&#34;
+    return a / b
+
+
+class Expression:
+    &#34;&#34;&#34;
+    .. caution::
+        Might not work properly!
+    An expression that can be evaluated on a sample `Dict[str, tf.Tensor]`.
+    It can be used to create new variables in the sample, eg. `jets_pt[0] + jets_pt[1]`.
+    The allowed operations are `+`, `-`, `*`, `/`. The opeartions can involve numbers, eg. `jets_pt[0]/1000`. 
+
+    It is mainly use to use only some entries of a multidimensional tensor, eg. `jets_pt[0]` to use only the leading jet. 
+
+    The name of the new variable is the same as the string represtation of the expression.
+
+    Example:
+    ``` python
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000, 50_000])}
+    expression = Expression(&#39;jets_pt[0] + jets_pt[1]&#39;)
+    expression(data_sample) # 150_000
+    ```
+    Args:
+        expression (str): The string representation of the expression.
+    &#34;&#34;&#34;
+
+    _operation_mapping = {&#39;+&#39;: _add, &#39;-&#39;: _sub, &#39;*&#39;: _multiply, &#39;/&#39;: _divide}
+
+    def __init__(self, expression):
+        self._expression = expression
+
+    @tf.function
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+        The method is decorated with `tf.function` to speed up the evaluation during training.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the expression.
+
+        Returns:
+            tf.Tensor: The sliced tensor.
+        &#34;&#34;&#34;
+        return self._evaluate(self._expression, sample)
+
+    def __str__(self):
+        return self._expression
+
+    def _evaluate(self, expression: str, sample):
+        for operation_rep, operation in self._operation_mapping.items():
+            if operation_rep in expression:
+                left = self._evaluate(expression.split(operation_rep, 1)[0], sample)
+                right = self._evaluate(expression.split(operation_rep, 1)[1], sample)
+                try:
+                    return operation(left, right)
+                except TypeError:
+                    return operation(float(left), float(right))
+
+        return SimpleExpression(expression)(sample)
+
+
+__pdoc__ = {&#39;SimpleCut.__call__&#39;: True, &#39;Cut.__call__&#39;: True,
+            &#39;Expression.__call__&#39;: True, &#39;SimpleExpression.__call__&#39;: True}</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="jidenn.data.string_conversions.bracketed_split"><code class="name flex">
+<span>def <span class="ident">bracketed_split</span></span>(<span>string: str, delimiter: str = ',', strip_brackets: bool = True) ‑> Iterable[str]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Split a string by the delimiter unless it is inside brackets.
+original code from <a href="https://stackoverflow.com/questions/21662474/splitting-a-string-with-brackets-using-regular-expression-in-python">https://stackoverflow.com/questions/21662474/splitting-a-string-with-brackets-using-regular-expression-in-python</a></p>
+<p>Example:</p>
+<pre><code class="language-python">for s in bracketed_split('abc,(def,ghi),jkl', delimiter=','):
+    print(s)
+#'abc'
+#'(def,ghi)'
+#'jkl'
+</code></pre>
+<h2 id="args">Args</h2>
+<p>string(str): The string to split.
+delimiter(str): The delimiter to split by.
+strip_brackets(bool): If <code>True</code>, the brackets are stripped from the output strings.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def bracketed_split(string: str, delimiter: str = &#39;,&#39;, strip_brackets: bool = True) -&gt; Iterable[str]:
+    &#34;&#34;&#34; Split a string by the delimiter unless it is inside brackets.
+    original code from https://stackoverflow.com/questions/21662474/splitting-a-string-with-brackets-using-regular-expression-in-python
+
+    Example:
+    ```python
+    for s in bracketed_split(&#39;abc,(def,ghi),jkl&#39;, delimiter=&#39;,&#39;):
+        print(s)
+    #&#39;abc&#39;
+    #&#39;(def,ghi)&#39;
+    #&#39;jkl&#39;
+    ``` 
+
+    Args:
+        string(str): The string to split.
+        delimiter(str): The delimiter to split by.
+        strip_brackets(bool): If `True`, the brackets are stripped from the output strings.
+
+    &#34;&#34;&#34;
+
+    openers = &#39;(&#39;
+    closers = &#39;)&#39;
+    opener_to_closer = dict(zip(openers, closers))
+    opening_bracket = dict()
+    current_string = &#39;&#39;
+    depth = 0
+    for c in string:
+        if c in openers:
+            depth += 1
+            opening_bracket[depth] = c
+            if strip_brackets and depth == 1:
+                continue
+        elif c in closers:
+            assert depth &gt; 0, f&#34;You exited more brackets that we have entered in string {string}&#34;
+            assert c == opener_to_closer[opening_bracket[depth]
+                                         ], f&#34;Closing bracket {c} did not match opening bracket {opening_bracket[depth]} in string {string}&#34;
+            depth -= 1
+            if strip_brackets and depth == 0:
+                continue
+        if depth == 0 and c == delimiter:
+            yield current_string
+            current_string = &#39;&#39;
+        else:
+            current_string += c
+    assert depth == 0, f&#39;You did not close all brackets in string {string}&#39;
+    yield current_string</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="jidenn.data.string_conversions.Cut"><code class="flex name class">
+<span>class <span class="ident">Cut</span></span>
+<span>(</span><span>cut_repr: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Class representing a composite cut that can be evaluated on a sample <code>Dict[str, tf.Tensor]</code>.
+The cut is initialized with a string representation of the cut, eg. '(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 2.0)'.
+They are a composition of <code><a title="jidenn.data.string_conversions.SimpleCut" href="#jidenn.data.string_conversions.SimpleCut">SimpleCut</a></code>s and the <strong>allowed operators</strong> are <code>&amp;&amp;</code> and <code>||</code> .
+<code><a title="jidenn.data.string_conversions.SimpleCut" href="#jidenn.data.string_conversions.SimpleCut">SimpleCut</a></code> <strong>must be enclosed in brackets</strong> and composition operators must be <strong>separated by spaces</strong> from the <code><a title="jidenn.data.string_conversions.SimpleCut" href="#jidenn.data.string_conversions.SimpleCut">SimpleCut</a></code>s.
+There <strong>must not be any space</strong> next to the <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code> operators.</p>
+<p>Example:</p>
+<pre><code class="language-python">cut = Cut('(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 1.5)')
+data_sample = {'jets_pt': tf.constant([100_000]), 'jets_eta': tf.constant([2.0])}
+data_sample2 = {'jets_pt': tf.constant([10_000]), 'jets_eta': tf.constant([0.1])}
+cut(data_sample) # False
+cut(data_sample2) # False
+</code></pre>
+<p>Two <code><a title="jidenn.data.string_conversions.Cut" href="#jidenn.data.string_conversions.Cut">Cut</a></code>s can be combined with the <code>&amp;</code> and <code>|</code> operators. The <code>&amp;</code> operator is equivalent to <code>&amp;&amp;</code> and the <code>|</code> operator is equivalent to <code>||</code>.</p>
+<p>Example:</p>
+<pre><code class="language-python">cut = Cut('(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 1.5)')
+cut2 = cut &amp; Cut('(jets_pt &lt; 100_000)')
+cut3 = cut | Cut('(jets_eta &gt; -1.5)')
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>cut_repr</code></strong> :&ensp;<code>str</code></dt>
+<dd>The string representation of the cut.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Cut:
+    &#34;&#34;&#34;Class representing a composite cut that can be evaluated on a sample `Dict[str, tf.Tensor]`.
+    The cut is initialized with a string representation of the cut, eg. &#39;(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 2.0)&#39;.
+    They are a composition of `SimpleCut`s and the **allowed operators** are `&amp;&amp;` and `||` .
+    `SimpleCut` **must be enclosed in brackets** and composition operators must be **separated by spaces** from the `SimpleCut`s.
+    There **must not be any space** next to the `==`, `!=`, `&gt;`, `&lt;`, `&gt;=`, `&lt;=` operators.
+
+    Example:
+    ```python
+    cut = Cut(&#39;(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 1.5)&#39;)
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000]), &#39;jets_eta&#39;: tf.constant([2.0])}
+    data_sample2 = {&#39;jets_pt&#39;: tf.constant([10_000]), &#39;jets_eta&#39;: tf.constant([0.1])}
+    cut(data_sample) # False
+    cut(data_sample2) # False
+    ```
+
+    Two `Cut`s can be combined with the `&amp;` and `|` operators. The `&amp;` operator is equivalent to `&amp;&amp;` and the `|` operator is equivalent to `||`.
+
+    Example:
+    ```python
+    cut = Cut(&#39;(jets_pt &gt; 50_000) &amp;&amp; (jets_eta &lt; 1.5)&#39;)
+    cut2 = cut &amp; Cut(&#39;(jets_pt &lt; 100_000)&#39;)
+    cut3 = cut | Cut(&#39;(jets_eta &gt; -1.5)&#39;)
+    ```
+
+    Args:
+        cut_repr (str): The string representation of the cut.
+    &#34;&#34;&#34;
+
+    def __init__(self, cut_repr: str) -&gt; None:
+        self._cut_repr = cut_repr
+
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the cut on a sample. If the cut is passed, the returned tensor is `True`, otherwise it is `False`.
+        The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the cut. 
+
+        Returns:
+            bool: `True` if the cut is passed and `False` otherwise as a `tf.Tensor`.
+        &#34;&#34;&#34;
+        return self._evaluate(self, sample)
+
+    def _evaluate(self, cut: Cut, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        split = list(bracketed_split(cut._cut_repr, delimiter=&#39; &#39;, strip_brackets=True))
+        if &#39;&amp;&amp;&#39; in split and &#39;||&#39; in split:
+            raise ValueError(f&#34;Cut {cut._cut_repr} is not valid, use brackets to separate &amp;&amp; and ||&#34;)
+
+        if len(split) == 1:
+            return SimpleCut(split[0])(sample)
+        if &#39;&amp;&amp;&#39; in split:
+            split[:] = (x for x in split if x != &#39;&amp;&amp;&#39;)
+            return tf.reduce_all([self._evaluate(Cut(subcut), sample) for subcut in split])
+        elif &#39;||&#39; in split:
+            split[:] = (x for x in split if x != &#39;||&#39;)
+            return tf.reduce_any([self._evaluate(Cut(subcut), sample) for subcut in split])
+
+    def __str__(self) -&gt; str:
+        return self._cut_repr
+
+    def __and__(self, other: Cut) -&gt; Cut:
+        return Cut(f&#39;({self._cut_repr}) &amp;&amp; ({other._cut_repr})&#39;)
+
+    def __or__(self, other: Cut) -&gt; Cut:
+        return Cut(f&#39;({self._cut_repr}) || ({other._cut_repr})&#39;)</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.string_conversions.Cut.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[str, tf.Tensor]) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluate the cut on a sample. If the cut is passed, the returned tensor is <code>True</code>, otherwise it is <code>False</code>.
+The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>sample</code></strong> :&ensp;<code>Dict[str, tf.Tensor]</code></dt>
+<dd>The sample to evaluate the cut. </dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd><code>True</code> if the cut is passed and <code>False</code> otherwise as a <code>tf.Tensor</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Evaluate the cut on a sample. If the cut is passed, the returned tensor is `True`, otherwise it is `False`.
+    The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.
+
+    Args:
+        sample (Dict[str, tf.Tensor]): The sample to evaluate the cut. 
+
+    Returns:
+        bool: `True` if the cut is passed and `False` otherwise as a `tf.Tensor`.
+    &#34;&#34;&#34;
+    return self._evaluate(self, sample)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.string_conversions.Expression"><code class="flex name class">
+<span>class <span class="ident">Expression</span></span>
+<span>(</span><span>expression)</span>
+</code></dt>
+<dd>
+<div class="desc"><div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>Might not work properly!</p>
+</div>
+<p>An expression that can be evaluated on a sample <code>Dict[str, tf.Tensor]</code>.
+It can be used to create new variables in the sample, eg. <code>jets_pt[0] + jets_pt[1]</code>.
+The allowed operations are <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>. The opeartions can involve numbers, eg. <code>jets_pt[0]/1000</code>. </p>
+<p>It is mainly use to use only some entries of a multidimensional tensor, eg. <code>jets_pt[0]</code> to use only the leading jet. </p>
+<p>The name of the new variable is the same as the string represtation of the expression.</p>
+<p>Example:</p>
+<pre><code class="language-python">data_sample = {'jets_pt': tf.constant([100_000, 50_000])}
+expression = Expression('jets_pt[0] + jets_pt[1]')
+expression(data_sample) # 150_000
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>str</code></dt>
+<dd>The string representation of the expression.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Expression:
+    &#34;&#34;&#34;
+    .. caution::
+        Might not work properly!
+    An expression that can be evaluated on a sample `Dict[str, tf.Tensor]`.
+    It can be used to create new variables in the sample, eg. `jets_pt[0] + jets_pt[1]`.
+    The allowed operations are `+`, `-`, `*`, `/`. The opeartions can involve numbers, eg. `jets_pt[0]/1000`. 
+
+    It is mainly use to use only some entries of a multidimensional tensor, eg. `jets_pt[0]` to use only the leading jet. 
+
+    The name of the new variable is the same as the string represtation of the expression.
+
+    Example:
+    ``` python
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000, 50_000])}
+    expression = Expression(&#39;jets_pt[0] + jets_pt[1]&#39;)
+    expression(data_sample) # 150_000
+    ```
+    Args:
+        expression (str): The string representation of the expression.
+    &#34;&#34;&#34;
+
+    _operation_mapping = {&#39;+&#39;: _add, &#39;-&#39;: _sub, &#39;*&#39;: _multiply, &#39;/&#39;: _divide}
+
+    def __init__(self, expression):
+        self._expression = expression
+
+    @tf.function
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+        The method is decorated with `tf.function` to speed up the evaluation during training.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the expression.
+
+        Returns:
+            tf.Tensor: The sliced tensor.
+        &#34;&#34;&#34;
+        return self._evaluate(self._expression, sample)
+
+    def __str__(self):
+        return self._expression
+
+    def _evaluate(self, expression: str, sample):
+        for operation_rep, operation in self._operation_mapping.items():
+            if operation_rep in expression:
+                left = self._evaluate(expression.split(operation_rep, 1)[0], sample)
+                right = self._evaluate(expression.split(operation_rep, 1)[1], sample)
+                try:
+                    return operation(left, right)
+                except TypeError:
+                    return operation(float(left), float(right))
+
+        return SimpleExpression(expression)(sample)</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.string_conversions.Expression.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[str, tf.Tensor]) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+The method is decorated with <code>tf.function</code> to speed up the evaluation during training.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>sample</code></strong> :&ensp;<code>Dict[str, tf.Tensor]</code></dt>
+<dd>The sample to evaluate the expression.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>The sliced tensor.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@tf.function
+def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+    The method is decorated with `tf.function` to speed up the evaluation during training.
+
+    Args:
+        sample (Dict[str, tf.Tensor]): The sample to evaluate the expression.
+
+    Returns:
+        tf.Tensor: The sliced tensor.
+    &#34;&#34;&#34;
+    return self._evaluate(self._expression, sample)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.string_conversions.SimpleCut"><code class="flex name class">
+<span>class <span class="ident">SimpleCut</span></span>
+<span>(</span><span>cut_repr: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>A simple cut that can be evaluated on a sample.
+It is initialized with a string representation of the cut, eg. 'jets_pt &gt; 50_000'.
+The <strong>allowed operators</strong> are <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>.
+There <strong>must not be any spaces</strong> in the string, next to the operators.</p>
+<p>When the class instance is called on a sample <code>Dict[str, tf.Tensor]</code>, it returns a boolean tensor that is <code>True</code>
+if the given variable cut is passed and <code>False</code> otherwise.
+The boolean is returned as a <code>tf.Tensor</code>.</p>
+<p>Example:</p>
+<pre><code class="language-python">cut = SimpleCut('jets_pt &gt; 50_000')
+data_sample = {'jets_pt': tf.constant([100_000]), 'jets_eta': tf.constant([2.0])}
+data_sample2 = {'jets_pt': tf.constant([10_000]), 'jets_eta': tf.constant([0.1])}
+cut(data_sample) # True
+cut(data_sample2) # False
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>cut_repr</code></strong> :&ensp;<code>str</code></dt>
+<dd>The string representation of the cut.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SimpleCut:
+    &#34;&#34;&#34;A simple cut that can be evaluated on a sample. 
+    It is initialized with a string representation of the cut, eg. &#39;jets_pt &gt; 50_000&#39;.
+    The **allowed operators** are `==`, `!=`, `&gt;`, `&lt;`, `&gt;=`, `&lt;=`.
+    There **must not be any spaces** in the string, next to the operators.
+
+    When the class instance is called on a sample `Dict[str, tf.Tensor]`, it returns a boolean tensor that is `True` 
+    if the given variable cut is passed and `False` otherwise.
+    The boolean is returned as a `tf.Tensor`.
+
+    Example:
+    ```python
+    cut = SimpleCut(&#39;jets_pt &gt; 50_000&#39;)
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000]), &#39;jets_eta&#39;: tf.constant([2.0])}
+    data_sample2 = {&#39;jets_pt&#39;: tf.constant([10_000]), &#39;jets_eta&#39;: tf.constant([0.1])}
+    cut(data_sample) # True
+    cut(data_sample2) # False
+    ```
+
+    Args:
+        cut_repr (str): The string representation of the cut.
+    &#34;&#34;&#34;
+    _ordered_signs = [&#39;&lt;=&#39;, &#39;&gt;=&#39;, &#39;==&#39;, &#39;!=&#39;, &#39;&lt;&#39;, &#39;&gt;&#39;]
+    _sign_mapping = {&#39;==&#39;: tf.equal, &#39;!=&#39;: tf.not_equal, &#39;&gt;&#39;: tf.greater,
+                     &#39;&lt;&#39;: tf.less, &#39;&gt;=&#39;: tf.greater_equal, &#39;&lt;=&#39;: tf.less_equal}
+
+    def __init__(self, cut_repr: str) -&gt; None:
+        if cut_repr[0] == &#39;(&#39; and cut_repr[-1] == &#39;)&#39;:
+            self._cut_repr = cut_repr[1:-1]
+        else:
+            self._cut_repr = cut_repr
+
+    def __str__(self) -&gt; str:
+        return self._cut_repr
+
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the cut on a sample. If the cut is passed, the returned tensor is `True`, otherwise it is `False`.
+        The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the cut on.
+
+        Returns:
+            tf.Tensor: A boolean tensor that is `True` if the cut is passed and `False` otherwise.
+        &#34;&#34;&#34;
+        for sign in self._ordered_signs:
+            if sign in self._cut_repr:
+                left, right = self._cut_repr.split(sign)
+                left = left.strip()
+                right = right.strip()
+                if left in sample:
+                    left = sample[left]
+                else:
+                    left = tf.constant(float(left))
+                if right in sample:
+                    right = sample[right]
+                else:
+                    right = tf.cast(float(right), left.dtype)
+                return tf.reduce_all(self._sign_mapping[sign](left, right))</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.string_conversions.SimpleCut.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[str, tf.Tensor]) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluate the cut on a sample. If the cut is passed, the returned tensor is <code>True</code>, otherwise it is <code>False</code>.
+The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>sample</code></strong> :&ensp;<code>Dict[str, tf.Tensor]</code></dt>
+<dd>The sample to evaluate the cut on.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>A boolean tensor that is <code>True</code> if the cut is passed and <code>False</code> otherwise.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Evaluate the cut on a sample. If the cut is passed, the returned tensor is `True`, otherwise it is `False`.
+    The behaviour is undefined if the cut is not valid, ie. if the variable name is not in the sample.
+
+    Args:
+        sample (Dict[str, tf.Tensor]): The sample to evaluate the cut on.
+
+    Returns:
+        tf.Tensor: A boolean tensor that is `True` if the cut is passed and `False` otherwise.
+    &#34;&#34;&#34;
+    for sign in self._ordered_signs:
+        if sign in self._cut_repr:
+            left, right = self._cut_repr.split(sign)
+            left = left.strip()
+            right = right.strip()
+            if left in sample:
+                left = sample[left]
+            else:
+                left = tf.constant(float(left))
+            if right in sample:
+                right = sample[right]
+            else:
+                right = tf.cast(float(right), left.dtype)
+            return tf.reduce_all(self._sign_mapping[sign](left, right))</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.data.string_conversions.SimpleExpression"><code class="flex name class">
+<span>class <span class="ident">SimpleExpression</span></span>
+<span>(</span><span>expression: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>Might not work properly!</p>
+</div>
+<p>Class representing a simple expression that can be evaluated on a sample <code>Dict[str, tf.Tensor]</code>.
+Simple expression is a slice of a tensor in the sample, eg. <code>jets_pt[0]</code>.
+The class instance can be called on a sample to evaluate the expression.</p>
+<p>Example:</p>
+<pre><code class="language-python">data_sample = {'jets_pt': tf.constant([100_000, 50_000])}
+expression = SimpleExpression('jets_pt[0]')
+expression(data_sample) # 100_000
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>expression</code></strong> :&ensp;<code>str</code></dt>
+<dd>The string representation of the expression.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SimpleExpression:
+    &#34;&#34;&#34;
+    .. caution::
+        Might not work properly!
+    Class representing a simple expression that can be evaluated on a sample `Dict[str, tf.Tensor]`.
+    Simple expression is a slice of a tensor in the sample, eg. `jets_pt[0]`.
+    The class instance can be called on a sample to evaluate the expression.
+
+    Example:
+    ```python
+    data_sample = {&#39;jets_pt&#39;: tf.constant([100_000, 50_000])}
+    expression = SimpleExpression(&#39;jets_pt[0]&#39;)
+    expression(data_sample) # 100_000
+    ```
+    Args:
+        expression (str): The string representation of the expression.
+    &#34;&#34;&#34;
+
+    def __init__(self, expression: str):
+        expression = expression.strip()
+        self._expression = expression
+        if &#39;[&#39; in expression and &#39;]&#39; in expression:
+            self._var = expression.split(&#39;[&#39;)[0]
+            self._slice = self._parse_slice(expression.split(&#39;[&#39;)[1][:-1])
+        else:
+            self._var = expression
+            self._slice = None
+
+    def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+
+        Args:
+            sample (Dict[str, tf.Tensor]): The sample to evaluate the expression.
+
+        Raises:
+            ValueError: If the expression is not found in the sample and cannot be cast to float.
+
+        Returns:
+            tf.Tensor: The sliced tensor.
+        &#34;&#34;&#34;
+        if self._var not in sample:
+            try:
+                return float(self._var)
+            except ValueError:
+                raise ValueError(f&#39;Expression {self._expression} not found in sample and cannot be cast to float&#39;)
+        if self._slice is None:
+            return sample[self._var]
+        else:
+            tensor = sample[self._var]
+            old_rank = tensor.shape.rank
+            sliced = tensor[self._slice]
+            new_rank = sliced.shape.rank
+            if old_rank == new_rank:
+                return tf.squeeze(sliced, axis=-1)
+            else:
+                return sliced
+
+    def __str__(self):
+        return self._expression
+
+    def _pick_var(self, sample, var):
+        var_split = var.split(&#39;[&#39;)
+        if len(var_split) == 1:
+            return sample[var]
+        var_name = var_split[0]
+        var_slice = self._parse_slice(var_split[1][:-1]) if &#39;[&#39; in var else None
+        if sample[var_name].shape.rank == 1:
+            return sample[var_name][var_slice]
+        return tf.squeeze(sample[var_name][var_slice], axis=-1)
+
+    def _parse_slice(self, slice_str: str):
+        return tuple((slice(*(int(i) if i else None for i in part.strip().split(&#39;:&#39;))) if &#39;:&#39; in part else int(part.strip())) for part in slice_str.split(&#39;,&#39;))</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.data.string_conversions.SimpleExpression.__call__"><code class="name flex">
+<span>def <span class="ident">__call__</span></span>(<span>self, sample: Dict[str, tf.Tensor]) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>sample</code></strong> :&ensp;<code>Dict[str, tf.Tensor]</code></dt>
+<dd>The sample to evaluate the expression.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the expression is not found in the sample and cannot be cast to float.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>The sliced tensor.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __call__(self, sample: Dict[str, tf.Tensor]) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Evaluate the expression on a sample. The behaviour is undefined if the variable name is not in the sample.
+
+    Args:
+        sample (Dict[str, tf.Tensor]): The sample to evaluate the expression.
+
+    Raises:
+        ValueError: If the expression is not found in the sample and cannot be cast to float.
+
+    Returns:
+        tf.Tensor: The sliced tensor.
+    &#34;&#34;&#34;
+    if self._var not in sample:
+        try:
+            return float(self._var)
+        except ValueError:
+            raise ValueError(f&#39;Expression {self._expression} not found in sample and cannot be cast to float&#39;)
+    if self._slice is None:
+        return sample[self._var]
+    else:
+        tensor = sample[self._var]
+        old_rank = tensor.shape.rank
+        sliced = tensor[self._slice]
+        new_rank = sliced.shape.rank
+        if old_rank == new_rank:
+            return tf.squeeze(sliced, axis=-1)
+        else:
+            return sliced</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<a class="homelink" rel="home" title="JIDENN" href="https://jansam.wieno.sk/JIDENN/">
+<img src="images/q_g_tagging.jpeg" alt=""> JIDENN
+</a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="jidenn.data" href="index.html">jidenn.data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="jidenn.data.string_conversions.bracketed_split" href="#jidenn.data.string_conversions.bracketed_split">bracketed_split</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="jidenn.data.string_conversions.Cut" href="#jidenn.data.string_conversions.Cut">Cut</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.string_conversions.Cut.__call__" href="#jidenn.data.string_conversions.Cut.__call__">__call__</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.string_conversions.Expression" href="#jidenn.data.string_conversions.Expression">Expression</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.string_conversions.Expression.__call__" href="#jidenn.data.string_conversions.Expression.__call__">__call__</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.string_conversions.SimpleCut" href="#jidenn.data.string_conversions.SimpleCut">SimpleCut</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.string_conversions.SimpleCut.__call__" href="#jidenn.data.string_conversions.SimpleCut.__call__">__call__</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.data.string_conversions.SimpleExpression" href="#jidenn.data.string_conversions.SimpleExpression">SimpleExpression</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.data.string_conversions.SimpleExpression.__call__" href="#jidenn.data.string_conversions.SimpleExpression.__call__">__call__</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
