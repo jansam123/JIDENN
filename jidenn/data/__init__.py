@@ -1,5 +1,5 @@
 """
-This moduele contains all the necessary toolkit to:
+This module contains all the necessary toolkit to:
 
 - convert a ROOT file into a Tensorflow `tf.data.Dataset` object 
 - flatten the dataset from events to individal jets
