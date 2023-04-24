@@ -98,7 +98,7 @@ def main(args: argparse.Namespace) -> None:
         pickle.dump(dataset.element_spec, f)
 
     @tf.function
-    def random_shards(_: ROOTVariables) -> tf.Tensor:
+    def random_shards(x: ROOTVariables) -> tf.Tensor:
         return tf.random.uniform(shape=[], minval=0, maxval=args.num_shards, dtype=tf.int64)
 
     tf.data.experimental.save(dataset, path=args.save_path, compression='GZIP', shard_func=random_shards)

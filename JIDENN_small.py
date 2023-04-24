@@ -147,7 +147,7 @@ def main(args: argparse.Namespace) -> None:
     normalizer = tf.keras.layers.Normalization()
 
     @ tf.function
-    def pick_only_data(data: tf.Tensor, _: tf.Tensor) -> tf.Tensor:
+    def pick_only_data(data: tf.Tensor, x: tf.Tensor) -> tf.Tensor:
         # this function is just a helper to choose only data and not label
         # we could use a lambda syntax, but sometimes tf has a problem converting it to a Graph Mode
         return data

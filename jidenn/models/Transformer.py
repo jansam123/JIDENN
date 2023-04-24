@@ -157,7 +157,7 @@ class Transformer(tf.keras.layers.Layer):
 
         super().__init__()
         self.layers, self.dim, self.expansion, self.heads, self.dropout, self.activation = layers, dim, expansion, heads, dropout, activation
-        self.cls_token = tf.Variable(initial_value=tf.random.truncated_normal(
+        self.class_token = tf.Variable(initial_value=tf.random.truncated_normal(
             (1, 1, dim), stddev=0.02), trainable=True)
         self.sa_layers = [SelfAttentionBlock(dim, heads, expansion, activation, dropout) for _ in range(layers)]
 
@@ -180,8 +180,8 @@ class Transformer(tf.keras.layers.Layer):
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         """
         mask = mask[:, tf.newaxis, :] & mask[:, :, tf.newaxis]
-        cls_tokens = tf.tile(self.cls_token, [tf.shape(inputs)[0], 1, 1])
-        hidden = tf.concat([cls_tokens, inputs], axis=1)
+        class_tokens = tf.tile(self.class_token, [tf.shape(inputs)[0], 1, 1])
+        hidden = tf.concat([class_tokens, inputs], axis=1)
         for sa_block in self.sa_layers:
             hidden = sa_block(hidden, mask)
         return hidden

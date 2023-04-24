@@ -57,8 +57,8 @@ def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,
                                 color_column: str = 'named_label',
                                 xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
-    corr_matrix = df.corr()
-    plot_corrolation_matrix(corr_matrix, os.path.join(folder, 'correlation_matrix.jpg'))
+    # corr_matrix = df.corr()
+    # plot_corrolation_matrix(corr_matrix, os.path.join(folder, 'correlation_matrix.jpg'))
 
     var_names = list(df.columns)
     var_names.remove(color_column)

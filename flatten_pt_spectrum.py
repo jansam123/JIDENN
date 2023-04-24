@@ -68,14 +68,14 @@ def main(args: argparse.Namespace) -> None:
 
     dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets, stop_on_empty_dataset=True)
     dataset = dataset.rejection_resample(
-        rebin_pt, target_dist=[1 / (100 * 2)] * 100 * 2, seed=42).map(lambda _, data: data)
+        rebin_pt, target_dist=[1 / (100 * 2)] * 100 * 2, seed=42).map(lambda x, data: data)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
     with open(os.path.join(args.save_path, 'element_spec'), 'wb') as f:
         pickle.dump(dataset.element_spec, f)
 
     @tf.function
-    def random_shards(_: ROOTVariables) -> tf.Tensor:
+    def random_shards(x: ROOTVariables) -> tf.Tensor:
         return tf.random.uniform(shape=[], minval=0, maxval=args.num_shards, dtype=tf.int64)
 
     # os.makedirs(f'{args.save_path}/checkpoints', exist_ok=True)

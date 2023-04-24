@@ -11,8 +11,8 @@ from tensorflow.python.keras.utils import tf_utils
 import tensorflow as tf
 import shutil
 import logging
+from datetime import datetime
 
-from jidenn.config import config
 
 
 log = logging.getLogger(__name__)
@@ -213,7 +213,7 @@ def get_callbacks(base_logdir: str,
 
     if backup is not None:
         os.makedirs(os.path.join(base_logdir, backup), exist_ok=True)
-        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(base_logdir, backup))
+        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(base_logdir, backup), delete_checkpoint=False)
         callbacks.append(backup_callback)
 
     return callbacks

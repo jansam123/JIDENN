@@ -17,7 +17,7 @@ from jidenn.data.get_dataset import get_preprocessed_dataset
 from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
 from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.evaluation.evaluation_metrics import calculate_metrics
-from .utils.const import LATEX_NAMING_CONVENTION
+from utils.const import LATEX_NAMING_CONVENTION
 
 
 cs = ConfigStore.instance()

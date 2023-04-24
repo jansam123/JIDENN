@@ -33,6 +33,11 @@ def main(args: config.JIDENNConfig) -> None:
         gpu_info = tf.config.experimental.get_device_details(gpu)
         log.info(
             f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+    
+    #CUDA logging
+    cuda_version = tf.sysconfig.get_build_info()["cuda_version"]
+    log.info(f"CUDA version: {cuda_version}")
+
 
     gpu_strategy = partial(choose_strategy, num_gpus=len(gpus))
 

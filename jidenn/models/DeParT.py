@@ -512,7 +512,7 @@ class DeParT(tf.keras.layers.Layer):
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
 
-        self.cls_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
 
     def stochastic_prob(self, step, total_steps, drop_rate):
         return drop_rate * step / total_steps
@@ -543,12 +543,12 @@ class DeParT(tf.keras.layers.Layer):
         for layer in self.sa_layers:
             hidden = layer(hidden, sa_mask, interaction)
 
-        cls_token = tf.tile(self.cls_token, (tf.shape(inputs)[0], 1, 1))
+        class_token = tf.tile(self.class_token, (tf.shape(inputs)[0], 1, 1))
         class_mask = mask[:, tf.newaxis, :]
         class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
         for layer in self.ca_layers:
-            cls_token = layer(hidden, cls_token=cls_token, mask=class_mask)
-        return cls_token
+            class_token = layer(hidden, class_token=class_token, mask=class_mask)
+        return class_token
 
 
 class FCEmbedding(tf.keras.layers.Layer):

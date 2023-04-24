@@ -183,7 +183,7 @@ class General:
         debug (bool): Debug mode. If `True`, tensorflow uses the `Eager` mode.
         base_logdir (str): Path to log directory where subfolders are created for each training session.
         logdir (str): Path to log directory of a given training session. Could be set manually,
-            but using `${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
+            but using `${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
             as it creates a unique folder for each training session inside the `base_logdir`.
         checkpoint (str, optional): Path to a checkpoint inside `logdir` checkpoint. If `None`, no checkpoint is made.
         backup (str, optional): Path to a backup of the model inside `logdir` checkpoint. If `None`, no backup is made.

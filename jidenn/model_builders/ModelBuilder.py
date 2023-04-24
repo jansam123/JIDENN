@@ -38,7 +38,7 @@ class ModelBuilder:
         model_getter = model_getter_lookup(self.model_name)
         model = model_getter(input_size=self.input_size,
                              output_layer=self.output_layer,
-                             args_model=getattr(self.args_models, self.model_name),
+                             args_model=getattr(self.args_model, self.model_name),
                              preprocess=self.preprocess)
         return model
 

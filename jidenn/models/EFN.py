@@ -98,15 +98,15 @@ class EFNModel(tf.keras.Model):
 
         input = tf.keras.layers.Input(shape=input_shape, ragged=True)
 
+        if preprocess is not None:
+            input = preprocess(input)
+
         angular = input[:, :, 6:]
         energy = input[:, :, :6].to_tensor()
 
         row_lengths = angular.row_lengths()
         mask = tf.sequence_mask(row_lengths)
         angular = angular.to_tensor()
-
-        if preprocess is not None:
-            angular = preprocess(angular)
 
         if batch_norm:
             angular = tf.keras.layers.BatchNormalization()(angular)

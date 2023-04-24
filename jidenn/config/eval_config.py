@@ -46,8 +46,6 @@ class EvalConfig:
         batch_size (int): Batch size for evaluation.
         take (int): Number of data samples to use for evaluation. 
         feature_importance (bool): If `True`, compute the feature importance of the model.
-        model (str): Model to use, options: `fc`, `highway`, `pfn`, `efn`, `transformer`, 
-            `part`, `depart`, `bdt`.
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
         threshold (float): Threshold for distinguishing quarks and gluons.
         include_base (bool): If `False`, and the binning is applied, the evaluation without
@@ -68,8 +66,6 @@ class EvalConfig:
     batch_size: int
     take: int
     feature_importance: bool
-    model: Literal['fc', 'highway', 'pfn',
-                   'efn', 'transformer', 'part', 'depart', 'bdt']
     binning: Binning
     threshold: float
     include_base: bool

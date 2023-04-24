@@ -10,7 +10,7 @@ from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Any
 import os
 import pickle
 #
-import jidenn.config.config
+import jidenn.config.config as config
 from jidenn.data.string_conversions import Cut, Expression
 
 
@@ -358,7 +358,7 @@ class JIDENNDataset:
             raise ValueError('Dataset not loaded yet.')
 
         @tf.function
-        def _data_only(_, data):
+        def _data_only(x, data):
             return data
         dataset = self.dataset.rejection_resample(resampling_func, target_dist=target_dist).map(_data_only)
         return self._set_dataset(dataset)
@@ -515,5 +515,6 @@ class JIDENNDataset:
             dataset = dataset.take(take)
             dataset = dataset.apply(tf.data.experimental.assert_cardinality(take)) if assert_length else dataset
         dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size))
+        # dataset = dataset.ragged_batch(batch_size)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset

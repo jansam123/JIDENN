@@ -1,13 +1,13 @@
 path: ./data/pythia # Path to data folder containing folder of *.root files.
 target: jets_PartonTruthLabelID
 labels: # list of labels to use.
-    - gluon
-    - quark
+  - gluon
+  - quark
 target_labels:
   - [21]
   - [1, 2, 3, 4, 5, 6]
 variable_unknown_labels: [-1, -999]
-cut: "(jets_pt>20_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+cut: "(jets_pt>20_000)" # " && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
 subfolders:
   - JZ01_r10724
   - JZ02_r10724

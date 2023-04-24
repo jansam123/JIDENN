@@ -37,12 +37,12 @@ def get_preprocessed_dataset(files: List[str],
         A JIDENNDataset object containing the preprocessed dataset.
     """
 
-    var_labels_1 = tf.constant(args_data.variable_labels[0], dtype=tf.int32)
-    var_labels_2 = tf.constant(args_data.variable_labels[1], dtype=tf.int32)
-    num_labels = len(args_data.variable_labels)
+    var_labels_1 = tf.constant(args_data.target_labels[0], dtype=tf.int32)
+    var_labels_2 = tf.constant(args_data.target_labels[1], dtype=tf.int32)
+    num_labels = len(args_data.target_labels)
 
     @tf.function
-    def resample(_: JIDENNVariables, x: int) -> int:
+    def resample(d: JIDENNVariables, x: int) -> int:
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):

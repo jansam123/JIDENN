@@ -4,9 +4,9 @@ defaults:
 
 hydra:
   run:
-    dir: ${params.logdir} #${params.base_logdir}/${now:%Y-%m-%d}__${now:%H_%M_%S}
+    dir: ${general.logdir} #${general.base_logdir}/${now:%Y-%m-%d}__${now:%H_%M_%S}
   sweep:
-    dir: ${params.logdir} #${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}
+    dir: ${general.logdir} #${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}
     subdir: ${hydra.job.num}
   job_logging:
     formatters:
@@ -21,7 +21,7 @@ params:
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
   debug: False # Debug mode.
-  logdir: ${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory.
+  logdir: ${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory.
   checkpoint: # Path to checkpoint directory (inside logdir). If nothing is set (or null), no checkpoints are saved.
   backup: "backup" # Path to backup directory (inside logdir). If nothing is set (or null), no backups are saved.
   load_checkpoint_path:
@@ -106,7 +106,7 @@ models:
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
 
   pfn:
-    # https://arxiv.org/abs/1810.05165 
+    # https://arxiv.org/abs/1810.05165
     Phi_sizes: [128, 128, 128] # Sizes of the per particle mapping.
     F_sizes: [128, 128, 128] # Sizes of jet mapping.
     Phi_backbone: cnn #  Backbone network to use, options: cnn, fc.
@@ -122,4 +122,4 @@ models:
     min_examples: 2_500 #  Minimum number of examples in a leaf.
     num_threads: 64 #  Number of threads to use.
     l2_regularization: 0.1 #  L2 regularization.
-    tmp_dir: ${params.logdir}/backup #  Temporary directory for BDT.
+    tmp_dir: ${general.logdir}/backup #  Temporary directory for BDT.
