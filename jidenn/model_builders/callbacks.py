@@ -14,7 +14,6 @@ import logging
 from datetime import datetime
 
 
-
 log = logging.getLogger(__name__)
 
 
@@ -180,7 +179,8 @@ def get_callbacks(base_logdir: str,
                   epochs: int,
                   log: Logger,
                   checkpoint: Optional[str] = 'checkpoints',
-                  backup: Optional[str] = 'backup') -> List[tf.keras.callbacks.Callback]:
+                  backup: Optional[str] = 'backup',
+                  backup_freq: Optional[int] = None) -> List[tf.keras.callbacks.Callback]:
     """
     Returns a list of Keras callbacks for a training session.
 
@@ -190,6 +190,7 @@ def get_callbacks(base_logdir: str,
         log (logging.Logger): A logger object to use for logging information during training.
         checkpoint (str): The directory to use for saving model checkpoints. If None, no checkpoints will be saved.
         backup (str): The directory to use for saving backups of the training session. If None, no backups will be saved.
+        backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session. If None, backups will only be saved at the end of each epoch.
 
     Returns:
         A list of Keras callbacks to use during training. The list contains a `tf.keras.callbacks.TensorBoard` callback for logging training information, a `jidenn.callbacks.LogCallback.LogCallback` callback for logging training information, a `jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint` callback for saving model checkpoints, and a `tf.keras.callbacks.BackupAndRestore` callback for saving backups of the training session.
@@ -213,7 +214,8 @@ def get_callbacks(base_logdir: str,
 
     if backup is not None:
         os.makedirs(os.path.join(base_logdir, backup), exist_ok=True)
-        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(base_logdir, backup), delete_checkpoint=False)
+        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(
+            base_logdir, backup), delete_checkpoint=False, save_freq=backup_freq if backup_freq is not None else "epoch")
         callbacks.append(backup_callback)
 
     return callbacks

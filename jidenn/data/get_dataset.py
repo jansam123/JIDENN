@@ -12,8 +12,7 @@ from jidenn.data.JIDENNDataset import JIDENNDataset, JIDENNVariables, ROOTVariab
 
 def get_preprocessed_dataset(files: List[str],
                              args_data: config.Data,
-                             files_labels: Optional[List[int]] = None,
-                             resample_labels: bool = True) -> JIDENNDataset:
+                             files_labels: Optional[List[int]] = None) -> JIDENNDataset:
     """Loads and preprocesses a dataset from a list of files into `JIDENNDataset` objects, performs the preprocessing steps specified in `args_data` 
     and combines the datasets into one. 
 
@@ -39,7 +38,6 @@ def get_preprocessed_dataset(files: List[str],
 
     var_labels_1 = tf.constant(args_data.target_labels[0], dtype=tf.int32)
     var_labels_2 = tf.constant(args_data.target_labels[1], dtype=tf.int32)
-    num_labels = len(args_data.target_labels)
 
     @tf.function
     def resample(d: JIDENNVariables, x: int) -> int:
@@ -96,10 +94,13 @@ def get_preprocessed_dataset(files: List[str],
             cut = None
 
         jidenn_dataset = jidenn_dataset.create_JIDENNVariables(
-            cut=cut, map_dataset=count_PFO) if cut is not None else jidenn_dataset
+            cut=cut, map_dataset=count_PFO)
 
-        jidenn_dataset = jidenn_dataset.resample_dataset(
-            resample, [1 / num_labels] * num_labels) if resample_labels else jidenn_dataset
+        if args_data.resample_labels is not None:
+            if len(args_data.target_labels) != len(args_data.resample_labels):
+                raise ValueError('The number of target labels and resample labels must be the same.')
+            jidenn_dataset = jidenn_dataset.resample_dataset(resample, args_data.resample_labels)
+
         jidenn_dataset = jidenn_dataset.create_train_input(stamp_origin_file(
             files_labels[i])) if files_labels is not None else jidenn_dataset
 

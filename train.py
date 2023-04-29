@@ -33,11 +33,10 @@ def main(args: config.JIDENNConfig) -> None:
         gpu_info = tf.config.experimental.get_device_details(gpu)
         log.info(
             f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
-    
-    #CUDA logging
+
+    # CUDA logging
     cuda_version = tf.sysconfig.get_build_info()["cuda_version"]
     log.info(f"CUDA version: {cuda_version}")
-
 
     gpu_strategy = partial(choose_strategy, num_gpus=len(gpus))
 
@@ -129,6 +128,10 @@ def main(args: config.JIDENNConfig) -> None:
     def build_model() -> tf.keras.Model:
         if args.preprocess.normalization_size is not None and args.preprocess.normalization_size > 0 and args.general.model != 'bdt':
             adapt = True if args.general.load_checkpoint_path is None else False
+            try:
+                adapt = adapt and len(os.listdir(args.general.backup)) == 0
+            except FileNotFoundError:
+                adapt = adapt
             normalizer = get_normalization(dataset=train,
                                            adapt=adapt,
                                            ragged=isinstance(input_size, tuple),
@@ -158,15 +161,12 @@ def main(args: config.JIDENNConfig) -> None:
 
     model = build_model()
 
-    # TODO1: rename load_checkpoint_path to load_weights_path for clarity
-    # TODO2: add option to load model instead of weights
-
     if args.general.load_checkpoint_path is not None:
         model.load_weights(args.general.load_checkpoint_path)
 
     # callbacks
     callbacks = get_callbacks(args.general.logdir, args.dataset.epochs, log,
-                              args.general.checkpoint, args.general.backup)
+                              args.general.checkpoint, args.general.backup, args.general.backup_freq)
 
     # running training
     history = model.fit(train,

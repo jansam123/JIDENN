@@ -102,14 +102,15 @@ class EFNModel(tf.keras.Model):
             input = preprocess(input)
 
         angular = input[:, :, 6:]
-        energy = input[:, :, :6].to_tensor()
-
         row_lengths = angular.row_lengths()
         mask = tf.sequence_mask(row_lengths)
+
+        energy = input[:, :, :6].to_tensor()
         angular = angular.to_tensor()
 
         if batch_norm:
             angular = tf.keras.layers.BatchNormalization()(angular)
+            energy = tf.keras.layers.BatchNormalization()(energy)
 
         if Phi_backbone == "cnn":
             angular = self.cnn_Phi(angular)

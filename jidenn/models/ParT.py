@@ -104,7 +104,6 @@ class MultiheadSelfAttention(tf.keras.layers.Layer):
         qkv = tf.reshape(qkv, [B, N, 3, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
         qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
         q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
-        print(q.shape, k.shape, v.shape)
 
         attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
 

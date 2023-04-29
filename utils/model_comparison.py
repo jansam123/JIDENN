@@ -23,7 +23,7 @@ parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 
 def main(args: argparse.Namespace):
     logdir = 'good_logs/comparison_12e/'
-    model_names = ['interacting_depart', 'interacting_depart_no_norm', 'interacting_part', 'highway',
+    model_names = ['interacting_depart', 'depart_flat_pT', 'interacting_part', 'highway',
                    'fc', 'transformer', 'part', 'depart', 'pfn', 'efn', 'depart_rel']
     # model_names += ['bdt']
     # used_models = ['interacting_part', 'fc', 'bdt']

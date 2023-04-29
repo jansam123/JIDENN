@@ -112,6 +112,9 @@ class Data:
         variable_unknown_labels (List[int]): List of unknown labels corresponding to undefined `target` (e.q. `[-1, -999]`). 
             These will be omiited from the dataset.
 
+        resample (List[float], optional): Resampling weights for each label. The list is the same length as `target_labels` 
+            giving each label a weight (`[0.5, 0.5]` means equal size of both labels). If `None`, no resampling is applied.
+
         variables (Variables): Variables to loaded from the dataset separated into `per_jet` and `per_event` and `per_jet_tuple` 
             using the `Variables` dataclass. The actual variables used as a training input are defined 
             from these in `jidenn.data.TrainInput`.
@@ -140,6 +143,7 @@ class Data:
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
     variable_unknown_labels: List[int]
+    resample_labels: Optional[List[float]]
     variables: Variables
     weight: Optional[str]
     cut: Optional[str]
@@ -187,6 +191,8 @@ class General:
             as it creates a unique folder for each training session inside the `base_logdir`.
         checkpoint (str, optional): Path to a checkpoint inside `logdir` checkpoint. If `None`, no checkpoint is made.
         backup (str, optional): Path to a backup of the model inside `logdir` checkpoint. If `None`, no backup is made.
+        backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session.
+            If None, backups will only be saved at the end of each epoch.
         load_checkpoint_path (str, optional): Path to a checkpoint to load. If `None`, no checkpoint is loaded.
     """
     model: Literal['fc', 'highway', 'pfn',
@@ -198,6 +204,7 @@ class General:
     logdir: str   # Path to log directory.
     checkpoint: Optional[str]   # Make checkpoint.
     backup: Optional[str]   # Backup model.
+    backup_freq: Optional[int]   # Backup frequency.
     load_checkpoint_path: Optional[str]   # Path to checkpoint to load.
 
 
@@ -227,6 +234,8 @@ class Optimizer:
         label_smoothing (float, optional): Label smoothing.
         decay_steps (int, optional): Number of steps to decay the learning rate with cosine decay. 
             If `None`, decay is calculated automatically as `decay_steps = epochs * take / batch_size - warmup_steps`.
+        min_learning_rate (float, optional): Minimum learning rate as a fraction of `learning_rate`. 
+            If `None`, no minimum learning rate is used, i.e. `min_learning_rate = 0.0`.
         warmup_steps (int, optional): Number of steps to warmup the learning rate with linear warmup.
         beta_1 (float, optional): Beta 1 for Adam and LAMB, default is 0.9.
         beta_2 (float, optional): Beta 2 for Adam and LAMB, default is 0.999.
@@ -234,10 +243,11 @@ class Optimizer:
         clipnorm (float, optional): Clipnorm for Adam and LAMB. If `None`, no clipping is done. Default is `None`.
         weight_decay (float, optional): Weight decay for LAMB and Adam, default is 0.0.
     """
-    name: Literal['LAMB', 'Adam']
+    name: Literal['LAMB', 'Adam', 'Lion']
     learning_rate: float
     label_smoothing: Optional[float]
     decay_steps: Optional[int]
+    min_learning_rate: Optional[float]
     warmup_steps: Optional[int]
     beta_1: Optional[float]
     beta_2: Optional[float]

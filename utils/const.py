@@ -57,6 +57,7 @@ LATEX_NAMING_CONVENTION = {
 
 
 MODEL_NAMING_SCHEMA = {
+    'depart_flat_pT': r'DeParT (Flat $p_{\mathrm{T}}$)',
     'fc': 'Fully Connected',
     'depart': 'DeParT',
     'part': 'ParT',

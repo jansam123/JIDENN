@@ -14,8 +14,9 @@ logging.basicConfig(level=logging.INFO)
 ROOTVariables = dict[str, tf.RaggedTensor]
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--save_path", type=str, default='data/dataset2_flat_b100/train', help="Path to save the dataset")
-parser.add_argument("--file_path", type=str, default='data/dataset2_3', help="Path to the root file")
+parser.add_argument("--save_path", type=str, default='data/pythia_flat/train', help="Path to save the dataset")
+parser.add_argument("--file_path", type=str, default='data/pythia', help="Path to the root file")
+parser.add_argument("--plot", type=int, default=0, help="Plot the dataset")
 parser.add_argument("--num_shards", type=int, default=256, help="Path to the root file")
 parser.add_argument("--dataset_type", type=str, default='train', help="train/dev/test")
 
@@ -32,20 +33,36 @@ def write_JZ_wrapper(jz_slice: int) -> Callable[[ROOTVariables], ROOTVariables]:
     return write_jz
 
 
+PT_BINS = 10
+ETA_BINS = 4
+
+
 @tf.function
 def rebin_pt(data: ROOTVariables) -> tf.Tensor:
-    nbins = 100
-    value_range = [20_000., 1_100_000.]
-    new_values = data['jets_pt']
-    new_values = tf.reshape(new_values, ())
-    index = tf.histogram_fixed_width_bins(new_values, value_range, nbins=nbins)
+    pt_range = [30_000., 1_000_000.]
+    # eta_bins = [0.0, 0.6, 1.2, 1.8, 2.4]
+    eta_range = [0.6, 2.0]
+    jet_pt = data['jets_pt']
+    jets_eta = data['jets_eta']
+    jets_eta = tf.abs(jets_eta)
+    jets_eta = tf.reshape(jets_eta, ())
+    jet_pt = tf.reshape(jet_pt, ())
+    index = tf.histogram_fixed_width_bins(jet_pt, pt_range, nbins=PT_BINS)
+    eta_index = tf.histogram_fixed_width_bins(jets_eta, eta_range, nbins=ETA_BINS)
     parton = data['jets_PartonTruthLabelID']
-    if tf.equal(parton, tf.constant(21)):
-        return index
-    elif tf.reduce_any(tf.equal(parton, tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32))):
-        return index + nbins
-    else:
-        return tf.constant(0)
+    id_index = 0 if tf.equal(parton, tf.constant(21)) else 1
+    multi_index = tf.stack([index, eta_index, id_index])
+    print(multi_index)
+    dims = tf.constant([PT_BINS, ETA_BINS, 2])
+    strides = tf.math.cumprod(dims, exclusive=True, reverse=True)
+    return tf.reduce_sum(multi_index * tf.expand_dims(strides, 1), axis=0)
+
+    # if tf.equal(parton, tf.constant(21)):
+    #     return index + PT_BINS * eta_index
+    # elif tf.reduce_any(tf.equal(parton, tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32))):
+    #     return index + PT_BINS * eta_index + PT_BINS * ETA_BINS
+    # else:
+    #     return tf.constant(0)
 
 
 def main(args: argparse.Namespace) -> None:
@@ -62,13 +79,14 @@ def main(args: argparse.Namespace) -> None:
         file = f'{args.file_path}/{jz_slice}/{args.dataset_type}'
         with open(os.path.join(file, 'element_spec'), 'rb') as f:
             element_spec = pickle.load(f)
-        ds = tf.data.experimental.load(file, compression='GZIP')
+        ds = tf.data.Dataset.load(file, compression='GZIP')
         ds = ds.map(write_JZ_wrapper(i + 1), num_parallel_calls=tf.data.AUTOTUNE)
         datasets.append(ds)
 
     dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets, stop_on_empty_dataset=True)
+    target_dist = [1 / (PT_BINS * ETA_BINS * 2)] * PT_BINS * ETA_BINS * 2
     dataset = dataset.rejection_resample(
-        rebin_pt, target_dist=[1 / (100 * 2)] * 100 * 2, seed=42).map(lambda x, data: data)
+        rebin_pt, target_dist=target_dist, seed=42).map(lambda x, data: data)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
     with open(os.path.join(args.save_path, 'element_spec'), 'wb') as f:
@@ -78,21 +96,15 @@ def main(args: argparse.Namespace) -> None:
     def random_shards(x: ROOTVariables) -> tf.Tensor:
         return tf.random.uniform(shape=[], minval=0, maxval=args.num_shards, dtype=tf.int64)
 
-    # os.makedirs(f'{args.save_path}/checkpoints', exist_ok=True)
-    # checkpoint_prefix = f'{args.save_path}/checkpoints'
-    # step_counter = tf.Variable(0, trainable=False)
-    # checkpoint_args = {
-    #     "checkpoint_interval": 50,
-    #     "step_counter": step_counter,
-    #     "directory": checkpoint_prefix,
-    #     "max_to_keep": 20,
-    # }
-    tf.data.experimental.save(dataset, path=args.save_path, compression='GZIP',
-                              shard_func=random_shards)  # , checkpoint_args=checkpoint_args)
+    dataset.save(path=args.save_path, compression='GZIP',
+                 shard_func=random_shards)
 
-    dataset = tf.data.experimental.load(args.save_path, compression='GZIP')
+
+def plot(args):
+    dataset = tf.data.Dataset.load(args.save_path, compression='GZIP')
     print(dataset.cardinality())
-    dataset = dataset.take(100_000)
+    if args.plot == 0:
+        dataset = dataset.take(100_000)
 
     @tf.function
     def get_labeled_pt(data):
@@ -117,7 +129,14 @@ def main(args: argparse.Namespace) -> None:
     # plt.yscale('log')
     plt.savefig(f'{args.save_path}/pt_spectrum.png')
 
+    sns.histplot(data=df, x='jets_eta', hue='Truth Label',
+                 stat='count', element="step", fill=True,
+                 palette='Set1', common_norm=False, hue_order=['quark', 'gluon'])
+    plt.savefig(f'{args.save_path}/eta_spectrum.png')
+
 
 if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
-    main(args)
+    if args.plot == 0:
+        main(args)
+    plot(args)

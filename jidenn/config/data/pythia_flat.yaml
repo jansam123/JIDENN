@@ -1,38 +1,31 @@
+path: ./data/pythia_flat_b100 # Path to data folder containing folder of *.root files.
+target: jets_PartonTruthLabelID
 labels: # list of labels to use.
   - gluon
   - quark
-num_labels: 2 # Number of labels to use.
-cut: "(jets_pt>20_000) && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
-gluon: 0
-quark: 1
-raw_gluon: 21
-raw_quarks: [1, 2, 3, 4, 5, 6]
-raw_unknown: [-1, -999]
-JZ_slices:
-  - JZ01_r10724
-  - JZ02_r10724
-  - JZ03_r10724
-  - JZ04_r10724
-  - JZ05_r10724
-JZ_cut: null
-JZ_weights: [0.2, 0.2, 0.2, 0.2, 0.2] #[0.34, 0.12, 0.29, 0.16, 0.09] # #[0.4, 0.12, 0.29, 0.16, 0.09] # [83, 26, 71, 39, 22]/241
-path: ./data/pythia # Path to data folder containing folder of *.root files.
+target_labels:
+  - [21]
+  - [1, 2, 3, 4, 5, 6]
+variable_unknown_labels: [-1, -999]
+resample_labels: 
+cut:  # " && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+subfolders:
+subfolder_cut:
+subfolder_weights: 
 cached:
-input_size: 8 #28 # Number of input features.
-target: jets_PartonTruthLabelID #taus_truth_matchJetPdgId
 weight: #weight_mc[0]
 variables:
-  perJet:
-    # - jets_ActiveArea4vec_eta
+  per_jet:
+    - jets_ActiveArea4vec_eta
     - jets_ActiveArea4vec_m
     - jets_ActiveArea4vec_phi
     - jets_ActiveArea4vec_pt
-    # - jets_DetectorEta
+    - jets_DetectorEta
     - jets_FracSamplingMax
     - jets_FracSamplingMaxIndex
     - jets_GhostMuonSegmentCount
     - jets_JVFCorr
-    # - jets_JetConstitScaleMomentum_eta
+    - jets_JetConstitScaleMomentum_eta
     - jets_JetConstitScaleMomentum_m
     - jets_JetConstitScaleMomentum_phi
     - jets_JetConstitScaleMomentum_pt
@@ -55,10 +48,10 @@ variables:
     - jets_NumChargedPFOPt1000[0]
     - jets_NumChargedPFOPt500[0]
     - jets_SumPtChargedPFOPt500[0]
-  perJetTuple:
+  per_jet_tuple:
     - jets_PFO_m
     - jets_PFO_pt
     - jets_PFO_eta
     - jets_PFO_phi
-  perEvent:
+  per_event:
     - corrected_averageInteractionsPerCrossing[0]

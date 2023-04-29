@@ -41,13 +41,16 @@ def get_normalization(dataset: tf.data.Dataset,
 
     log.info("Getting std and mean of the dataset...")
     log.info(f"Subsample size (num of batches): {normalization_steps}")
-    
+
     if not ragged:
-        def picker(*x): return x[0]
+        def picker(*x):
+            return x[0]
     elif interaction:
-        def picker(*x): return x[0][0].to_tensor()
+        def picker(*x):
+            return x[0][0].to_tensor()
     else:
-        def picker(*x): return x[0].to_tensor()
+        def picker(*x):
+            return x[0].to_tensor()
 
     try:
         normalizer.adapt(dataset.map(picker), steps=normalization_steps)
@@ -58,7 +61,7 @@ def get_normalization(dataset: tf.data.Dataset,
     if not interaction:
         log.info("No interaction normalization")
         return normalizer
-    
+
     log.info("Getting std and mean of the **interaction** dataset...")
 
     def picker_interaction(*x):

@@ -46,8 +46,8 @@ def main(args: eval_config.EvalConfig) -> None:
                                           per_jet_tuple_variables=args.data.variables.per_jet_tuple)
     model_input = tf.function(func=train_input_class)
 
-    file = [f'{args.data.path}/{file}/{args.test_subfolder}' for file in args.data.subfolders] if args.data.subfolders is not None else [
-        f'{args.data.path}/{file}/{args.test_subfolder}' for file in os.listdir(args.data.path)]
+    file = [f'{args.data.path}/{jz_slice}/{args.test_subfolder}' for jz_slice in args.data.subfolders] if args.data.subfolders is not None else [
+        f'{args.data.path}/{args.test_subfolder}']
 
     file_labels = [int(jz.split('_')[0].lstrip('JZ'))
                    for jz in args.data.subfolders] if args.data.subfolders is not None else None

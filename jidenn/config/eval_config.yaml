@@ -1,5 +1,5 @@
 defaults:
-  - data: data2
+  - data: pythia_flat
   - binning: pT
   - _self_
 
@@ -23,7 +23,7 @@ draw_distribution: 10_000
 feature_importance: False # Whether to draw feature importance.
 test_subfolder: test
 seed: 42
-batch_size: 256
+batch_size: 384
 take: 50_000
 input_type: constituents
 threshold: 0.5

@@ -1,5 +1,5 @@
 defaults:
-  - data: data2
+  - data: pythia
   - _self_
 
 hydra:
@@ -23,12 +23,14 @@ general:
   logdir: ${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory.
   checkpoint: # Path to checkpoint directory (inside logdir). If nothing is set (or null), no checkpoints are saved.
   backup: "backup" # Path to backup directory (inside logdir). If nothing is set (or null), no backups are saved.
+  backup_freq: 4_000 # Frequency of backups (in batches).
   load_checkpoint_path:
 
 optimizer:
-  name: LAMB # Optimizer to use, options: Adam, LAMB.
+  name: LAMB # Optimizer to use, options: Adam, LAMB, Lion.
   warmup_steps: 100 # Number of steps, when learning rate is increased linearly.
   learning_rate: 0.001 # Learning rate.
+  min_learning_rate: 0.01 # Minimal learning rate as a fraction of the initial learning rate.
   decay_steps: # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps
   clipnorm: # Gradient clipping (maximal norm of the gradient).
   weight_decay: # Weight decay (L2 regularization).
@@ -38,7 +40,7 @@ optimizer:
   epsilon: #part : 0.0001
 
 dataset:
-  epochs: 4 # Number of epochs.
+  epochs: 12 # Number of epochs.
   take: 5_000_000 # Length of data to use.
   batch_size: 512 # Batch size.
   dev_size: 0.1 # Size of dev dataset.
@@ -107,9 +109,9 @@ models:
   pfn:
     Phi_sizes: [512, 512, 512, 512, 512] # Sizes of the per particle mapping.
     F_sizes: [512, 512, 512, 512, 512, 512] # Sizes of jet mapping.
-    Phi_backbone: cnn #  Backbone network to use, options: cnn, fc.
+    Phi_backbone: fc #  Backbone network to use, options: cnn, fc.
     batch_norm: False #  Use batch normalization before PHI.
-    activation: relu #  Activation function to use (relu/elu/gelu/silu).
+    activation: gelu #  Activation function to use (relu/elu/gelu/silu).
     Phi_dropout: #  Dropout after PHI.
     F_dropout: #  Dropout after F.
     train_input: constituents
@@ -117,9 +119,9 @@ models:
   efn:
     Phi_sizes: [512, 512, 512, 512, 136] # Sizes of the per particle mapping.
     F_sizes: [512, 512, 512, 512, 512, 512] # Sizes of jet mapping.
-    Phi_backbone: cnn #  Backbone network to use, options: cnn, fc.
-    batch_norm: False #  Use batch normalization before PHI.
-    activation: relu #  Activation function to use (relu/elu/gelu/silu).
+    Phi_backbone: fc #  Backbone network to use, options: cnn, fc.
+    batch_norm: True #  Use batch normalization before PHI.
+    activation: gelu #  Activation function to use (relu/elu/gelu/silu).
     Phi_dropout: #  Dropout after PHI.
     F_dropout: #  Dropout after F.
     train_input: constituents
