@@ -40,7 +40,9 @@ def get_preprocessed_dataset(files: List[str],
     var_labels_2 = tf.constant(args_data.target_labels[1], dtype=tf.int32)
 
     @tf.function
-    def resample(d: JIDENNVariables, x: int) -> int:
+    def resample(d: JIDENNVariables, x: tf.Tensor) -> int:
+        if x.dtype != tf.int32:
+            x = tf.cast(x, tf.int32)
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):
@@ -50,6 +52,8 @@ def get_preprocessed_dataset(files: List[str],
 
     @tf.function
     def label_mapping(x: int) -> int:
+        if x.dtype != tf.int32:
+            x = tf.cast(x, tf.int32)
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):

@@ -1,0 +1,50 @@
+path: ./data/belle_II # Path to data folder containing folder of *.root files.
+target: qrCombined_bit
+labels: # list of labels to use.
+  - bkg
+  - sig
+target_labels:
+  - [0]
+  - [1]
+variable_unknown_labels:
+resample_labels:
+cut:
+subfolders:
+subfolder_cut:
+subfolder_weights:
+cached:
+weight:
+variables:
+  per_jet:
+    - __event__
+  per_jet_tuple:
+    - Electron
+    - IntermediateElectron
+    - Muon
+    - IntermediateMuon
+    - KinLepton
+    - IntermediateKinLepton
+    - Kaon
+    - SlowPion
+    - FastHadron
+    - Lambda
+    - FSC
+    - MaximumPstar
+    - KaonPion
+    - dx
+    - dy
+    - dz
+    - E
+    - charge
+    - px_c
+    - py_c
+    - pz_c
+    - electronID_c
+    - muonID_c
+    - pionID_c
+    - kaonID_c
+    - protonID_c
+    - deuteronID_c
+    - electronID_noSVD_noTOP_c
+  per_event:
+    - __event__
