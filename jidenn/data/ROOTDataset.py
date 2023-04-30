@@ -104,12 +104,12 @@ def read_ttree(tree: uproot.TTree, backend: Literal['pd', 'ak'] = 'pd', downcast
     output = {}
     for var in variables:
         var_branch = tree[var].array(library="ak")
-        if ak.size(ak.flatten(var_branch, axis=None)) == 0:
+        if ak.num(ak.flatten(var_branch, axis=None), axis=0) == 0:
             continue
         if backend == 'ak':
             tensor = awkward_to_tensor(var_branch)
         elif backend == 'pd':
-            var_branch = ak.to_pandas(var_branch)
+            var_branch = ak.to_dataframe(var_branch)
             if var_branch.empty:
                 continue
             tensor = pandas_to_tensor(var_branch['values'])
@@ -275,7 +275,7 @@ class ROOTDataset:
             file, 'element_spec') if element_spec_path is None else element_spec_path
         with open(element_spec_path, 'rb') as f:
             element_spec = pickle.load(f)
-        dataset = tf.data.experimental.load(
+        dataset = tf.data.Dataset.load(
             file, compression='GZIP', element_spec=element_spec)
         return cls(dataset, list(element_spec.keys()))
 
@@ -295,7 +295,20 @@ class ROOTDataset:
         element_spec_path = os.path.join(
             save_path, 'element_spec') if element_spec_path is None else element_spec_path
         element_spec = self._dataset.element_spec
-        tf.data.experimental.save(
-            self._dataset, save_path, compression='GZIP', shard_func=shard_func)
+        self._dataset.save(save_path, compression='GZIP', shard_func=shard_func)
         with open(element_spec_path, 'wb') as f:
             pickle.dump(element_spec, f)
+
+    def map(self, func: Callable[[ROOTVariables], ROOTVariables]) -> ROOTDataset:
+        """Maps a function to the dataset. The function should take a `ROOTVariables` object as input and return a `ROOTVariables` object as output.
+
+        Args:
+            func (Callable): Function to be mapped.
+            num_parallel_calls (int, optional): Number of parallel calls to use. Defaults to `None`.
+
+        Returns:
+            ROOTDataset: Mapped `ROOTDataset` object.
+        """
+        new_ds = self.dataset.map(func)
+        new_ds = new_ds.prefetch(tf.data.AUTOTUNE)
+        return ROOTDataset(new_ds, list(new_ds.element_spec.keys()))
