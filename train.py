@@ -96,7 +96,7 @@ def main(args: config.JIDENNConfig) -> None:
         dist_dataset = train.apply(lambda x: x.take(args.preprocess.draw_distribution))
         df = dist_dataset.to_pandas()
         df['named_label'] = df['label'].replace({0: args.data.labels[0], 1: args.data.labels[1]})
-        data_info.generate_data_distributions(df=df, folder=dir)
+        data_info.generate_data_distributions(df=df, folder=dir, hue_order=args.data.labels)
 
     # get proper dataset size
     if args.dataset.take is not None:
@@ -168,6 +168,9 @@ def main(args: config.JIDENNConfig) -> None:
     callbacks = get_callbacks(args.general.logdir, args.dataset.epochs, log,
                               args.general.checkpoint, args.general.backup, args.general.backup_freq)
 
+    if args.general.model == 'bdt' and args.dataset.epochs > 1:
+        log.warning("BDT does not support multiple epochs. Setting epochs to 1")
+        args.dataset.epochs = 1
     # running training
     history = model.fit(train,
                         epochs=args.dataset.epochs,

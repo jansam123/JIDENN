@@ -3,6 +3,7 @@ Module containing custom metrics for evaluating models mainly used in HEP applic
 """
 from typing import List, Dict, Literal, Optional, Union
 import tensorflow as tf
+# import tensorflow_probability as tfp
 import numpy as np
 
 
@@ -57,6 +58,7 @@ class BinaryEfficiency(tf.keras.metrics.Metric):
 
     def get_config(self):
         config = super(BinaryEfficiency, self).get_config()
+        config.update({'threshold': self.threshold, 'label_id': self.label_id})
         return config
 
 
@@ -109,6 +111,7 @@ class BinaryRejection(tf.keras.metrics.Metric):
 
     def get_config(self):
         config = super(BinaryRejection, self).get_config()
+        config.update({'threshold': self.threshold, 'label_id': self.label_id})
         return config
 
 
@@ -125,6 +128,7 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
     def __init__(self, efficiency: float = 0.5, label_id: Literal[0, 1] = 1, name='rejection_at_efficiency'):
         super(RejectionAtEfficiency, self).__init__(name=name, sensitivity=efficiency)
         self.label_id = label_id
+        self.efficiency = efficiency
 
     def update_state(self, y_true: Union[tf.Tensor, np.ndarray], y_pred: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
         """Accumulates the efficiency.
@@ -142,10 +146,63 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
 
     def get_config(self):
         config = super(RejectionAtEfficiency, self).get_config()
+        config.update({'efficiency': self.efficiency, 'label_id': self.label_id})
         return config
 
     def result(self):
         return 1 / super(RejectionAtEfficiency, self).result()
+
+
+class EffectiveTaggingEfficiency(tf.keras.metrics.Metric):
+
+    def __init__(self, bins: List[float] = [0, 0.1, 0.25, 0.5, 0.625, 0.75, 0.875, 1], threshold: float = 0.5, name='eff_tag_efficiency'):
+        super(EffectiveTaggingEfficiency, self).__init__(name=name)
+        for value in bins:
+            if value < 0 or value > 1:
+                raise ValueError('The bins must be between 0 and 1.')
+        self.bins = bins
+        self.threshold = threshold
+        self.bin_sums = self.add_weight(name='bin_sums', initializer='zeros', shape=(len(bins) - 1,))
+        self.bin_counts = self.add_weight(name='bin_counts', initializer='zeros', shape=(len(bins) - 1,))
+
+    def update_state(self, y_true: Union[tf.Tensor, np.ndarray], score: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
+        """Accumulates the metric.
+
+        Args:
+            y_true (Union[tf.Tensor, np.ndarray]): The true labels.
+            score (Union[tf.Tensor, np.ndarray]): The output of the model, i.e. number **between 0 and 1**.
+        """
+        score = tf.squeeze(score)
+        y_true = tf.squeeze(y_true)
+        dilusion_factor = tf.abs(2 * score - 1)
+        indicies = tf.searchsorted(self.bins, dilusion_factor)
+        pred = tf.cast(score > 0.5, tf.bool)
+        wrong_tag = tf.cast(tf.not_equal(pred, tf.cast(y_true, tf.bool)), tf.float32)
+
+        bin_counts = tf.cast(tf.math.bincount(indicies, minlength=len(self.bins)), tf.float32)
+        bin_counts = bin_counts[1:]
+        bin_sums = tf.math.bincount(indicies, weights=wrong_tag, minlength=len(self.bins))
+        bin_sums = bin_sums[1:]
+        self.bin_counts.assign_add(bin_counts)
+        self.bin_sums.assign_add(bin_sums)
+
+    def get_config(self):
+        config = super(EffectiveTaggingEfficiency, self).get_config()
+        config.update({'bins': self.bins, 'threshold': self.threshold})
+        return config
+
+    def result(self):
+        mask = tf.where(self.bin_counts > 0, True, False)
+        bin_counts = tf.boolean_mask(self.bin_counts, mask)
+        bin_sums = tf.boolean_mask(self.bin_sums, mask)
+        binned_wrong_tag_fraction = bin_sums / bin_counts
+        eff = bin_counts / tf.reduce_sum(bin_counts)
+        eff_tag_eff = tf.reduce_sum(eff * (1 - 2 * binned_wrong_tag_fraction)**2)
+        return eff_tag_eff
+
+    def reset_states(self):
+        self.bin_sums.assign(tf.zeros_like(self.bin_sums))
+        self.bin_counts.assign(tf.zeros_like(self.bin_counts))
 
 
 def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
@@ -166,6 +223,7 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
         BinaryRejection(name='quark_rejection', label_id=1, threshold=threshold),
         RejectionAtEfficiency(name='gluon_rej_at_quark_eff_0.9', label_id=0, efficiency=0.9),
         RejectionAtEfficiency(name='quark_rej_at_gluon_eff_0.9', label_id=1, efficiency=0.9),
+        EffectiveTaggingEfficiency(name='effective_tagging_efficiency', threshold=threshold),
         tf.keras.metrics.AUC(name='auc')]
     return metrics
 

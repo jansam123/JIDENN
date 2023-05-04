@@ -9,7 +9,7 @@ import tensorflow as tf
 from abc import ABC, abstractmethod, abstractproperty
 from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Type
 #
-from .four_vector_transform import to_e_px_py_pz
+from .four_vector_transform import to_e_px_py_pz, to_m_pt_eta_phi
 from .JIDENNDataset import JIDENNVariables, ROOTVariables
 
 
@@ -77,7 +77,7 @@ class HighLevelJetVariables(TrainInput):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.per_jet_tuple_variables is None:
+        if self.per_jet_variables is None:
             raise ValueError("per_jet_tuple_variables must be specified")
 
     def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
@@ -89,7 +89,7 @@ class HighLevelJetVariables(TrainInput):
         Returns:
             ROOTVariables: The output variables of the form `{'var_name': tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
         """
-        data = {var: tf.cast(sample['perJet'][var], tf.float32) for var in self.per_jet_tuple_variables}
+        data = {var: tf.cast(sample['perJet'][var], tf.float32) for var in self.per_jet_variables}
         if self.per_event_variables is None:
             return data
         data.update({var: tf.cast(sample['perEvent'][var], tf.float32) for var in self.per_event_variables})
@@ -114,12 +114,60 @@ class AllPerJetTuple(TrainInput):
 
     def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
         data = {var: tf.cast(sample['perJetTuple'][var], tf.float32) for var in self.per_jet_tuple_variables}
+        px, py, pz, e = data.pop('px_c'), data.pop('py_c'), data.pop('pz_c'), data.pop('E')
+        _, pt, eta, phi = to_m_pt_eta_phi(e, px, py, pz)
+        data.update({'log_pt': tf.math.log(pt), 'eta': eta, 'phi': phi, 'log_e': tf.math.log(e)})
         return data
 
     @property
     def input_shape(self) -> Tuple[None, int]:
         """The input shape is tuple `(None, len(per_jet_tuple_variables))`."""
-        return (None, len(self.per_jet_tuple_variables))
+        return (None, len(self.per_jet_tuple_variables) + 1)
+
+
+class AllPerJetTupleInteraction(TrainInput):
+    """Constructs the input variables characterizing the **jet constituents**, 
+    by stacking all the available variables from the `perJetTuple` dictionary.
+    Interaction variables are computed from the 4-momenta of the constituents.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.per_jet_variables is None:
+            raise ValueError("per_jet_variables must be specified")
+
+    def __call__(self, sample: JIDENNVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        data = {var: tf.cast(sample['perJetTuple'][var], tf.float32) for var in self.per_jet_tuple_variables}
+        px, py, pz, E = data.pop('px_c'), data.pop('py_c'), data.pop('pz_c'), data.pop('E')
+        _, pt, eta, phi = to_m_pt_eta_phi(E, px, py, pz)
+        data.update({'log_pt': tf.math.log(pt), 'eta': eta, 'phi': phi, 'log_e': tf.math.log(E)})
+
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(E))
+
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(E))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(E))
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(E))
+        m2 = tf.math.log(m2)
+
+        interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+
+        return data, interaction_vars
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
+        """The input shape is tuple `(None, len(per_jet_tuple_variables))`."""
+        return (None, len(self.per_jet_tuple_variables ) + 1), (None, None, 4)
 
 
 class HighLevelPFOVariables(TrainInput):
@@ -366,7 +414,8 @@ def input_classes_lookup(class_name: Literal['highlevel',
                    'constituents': ConstituentVariables,
                    'relative_constituents': RelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
-                   'all_per_jet': AllPerJetTuple}
+                   'all_per_jet': AllPerJetTuple,
+                   'all_per_jet_interaction': AllPerJetTupleInteraction}
 
     if class_name not in lookup_dict.keys():
         raise ValueError(f'Unknown input class name {class_name}')

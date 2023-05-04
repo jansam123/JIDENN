@@ -7,7 +7,7 @@ import os
 import numpy as np
 import os
 # import atlas_mpl_style as ampl
-from const import MODEL_NAMING_SCHEMA, MATRIC_NAMING_SCHEMA
+from const import MODEL_NAMING_SCHEMA, METRIC_NAMING_SCHEMA
 # ampl.use_atlas_style()
 sns.set_theme(style="ticks")
 # sns.set_context(rc={"grid.linecolor": "black"})
@@ -22,9 +22,9 @@ parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 
 
 def main(args: argparse.Namespace):
-    logdir = 'good_logs/comparison_12e/'
-    model_names = ['interacting_depart', 'depart_flat_pT', 'interacting_part', 'highway',
-                   'fc', 'transformer', 'part', 'depart', 'pfn', 'efn', 'depart_rel']
+    logdir = 'logs/2023-04-29__18-35-20/'
+    model_names = ['interacting_depart', 'interacting_part', 'highway',
+                   'fc', 'transformer', 'part', 'depart', 'pfn', 'efn']
     # model_names += ['bdt']
     # used_models = ['interacting_part', 'fc', 'bdt']
     base = 'Transformer'
@@ -133,7 +133,7 @@ def main(args: argparse.Namespace):
                            palette=palette, hue_order=rel_err['model'])
 
         plt.xlabel(ylabel)
-        plt.ylabel(MATRIC_NAMING_SCHEMA[metric] if metric in MATRIC_NAMING_SCHEMA else metric)
+        plt.ylabel(METRIC_NAMING_SCHEMA[metric] if metric in METRIC_NAMING_SCHEMA else metric)
         plt.savefig(save_dir + f'{metric}.jpg', dpi=300, bbox_inches='tight')
         plt.close()
 

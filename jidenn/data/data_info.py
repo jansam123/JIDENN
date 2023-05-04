@@ -56,6 +56,7 @@ def plot_corrolation_matrix(corr_matrix: pd.DataFrame, save_path: str) -> None:
 def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,
                                 color_column: str = 'named_label',
+                                hue_order: Optional[List[str]] = None,
                                 xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
     # corr_matrix = df.corr()
     # plot_corrolation_matrix(corr_matrix, os.path.join(folder, 'correlation_matrix.jpg'))
@@ -73,10 +74,15 @@ def generate_data_distributions(df: pd.DataFrame,
         if dtype == 'object':
             small_df = explode_nested_variables(small_df, var_name)
             small_df = small_df.loc[small_df[var_name] != 0]
+        try:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat='density', element="step", fill=True,
+                              palette='Set1', common_norm=False, hue_order=hue_order)
+        except:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat='density', element="step", fill=True,
+                              palette='Set1', common_norm=False, hue_order=hue_order, bins=100)
 
-        ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                          stat='density', element="step", fill=True,
-                          palette='Set1', common_norm=False, hue_order=['quark', 'gluon'])
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
         plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')

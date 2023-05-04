@@ -59,6 +59,7 @@ LATEX_NAMING_CONVENTION = {
 MODEL_NAMING_SCHEMA = {
     'depart_flat_pT': r'DeParT (Flat $p_{\mathrm{T}}$)',
     'fc': 'Fully Connected',
+    'basic_fc': 'Fully Connected',
     'depart': 'DeParT',
     'part': 'ParT',
     'highway': 'Highway',
@@ -69,11 +70,16 @@ MODEL_NAMING_SCHEMA = {
     'pfn': 'PFN',
     'efn': 'EFN',
     'transformer': 'Transformer',
+    'bdt': 'BDT',
 }
 
 
-MATRIC_NAMING_SCHEMA = {
+METRIC_NAMING_SCHEMA = {
+    'eff_tag_efficiency': r'$\varepsilon_{\mathrm{eff}}$',
     'binary_accuracy': 'Accuracy',
+    'relative_accuracy': 'Accuracy',
+    'relative_error': 'Relative Error',
+    'heatmap': 'Relative Error',
     'auc': 'AUC',
     'gluon_efficiency': r'$\varepsilon_g$',
     'quark_efficiency': r'$\varepsilon_q$',
@@ -82,4 +88,5 @@ MATRIC_NAMING_SCHEMA = {
     'gluon_rej_at_quark_eff_0.9': r'$\varphi_g @_{0.9} \varepsilon_q$',
     'quark_rej_at_gluon_eff_0.9': r'$\varphi_q @_{0.9} \varepsilon_g$',
     'loss': 'Loss',
+    'roc': 'ROC',
 }

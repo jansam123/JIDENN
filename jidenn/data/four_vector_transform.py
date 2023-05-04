@@ -2,7 +2,7 @@
 This module contains functions to transform 4-vectors between different representations.
 It also contains a functions for various 4-vector operations such as boosts and rotations.
 """
-
+from typing import Tuple
 import tensorflow as tf
 import numpy as np
 
@@ -26,21 +26,23 @@ def to_e_px_py_pz(x: tf.Tensor) -> tf.Tensor:
 
 
 @tf.function
-def to_m_pt_eta_phi(x: tf.Tensor) -> tf.Tensor:
+def to_m_pt_eta_phi(E: tf.Tensor, px: tf.Tensor, py: tf.Tensor, pz: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
     """Converts a 4-vector in the form (e, px, py, pz) to (mass, pt, eta, phi)
 
     Args:
-        x (tf.Tensor): tensor of shape (N, 4) with (E, px, py, pz)
+        E (tf.Tensor): tensor of shape (N,) with energy
+        px (tf.Tensor): tensor of shape (N,) with px
+        py (tf.Tensor): tensor of shape (N,) with py
+        pz (tf.Tensor): tensor of shape (N,) with pz
 
     Returns:
         tf.Tensor: tensor of shape (N, 4) with (mass, pt, eta, phi)
     """
-    E, px, py, pz = tf.unstack(x, axis=1)
     pt = tf.sqrt(px**2 + py**2)
-    eta = tf.math.atanh(pz/pt)
+    eta = tf.math.atanh(pz / pt)
     phi = tf.math.atan2(py, px)
     mass = tf.sqrt(E**2 - pt**2 - pz**2)
-    return tf.stack([mass, pt, eta, phi], axis=1)
+    return mass, pt, eta, phi
 
 
 @tf.function
@@ -54,10 +56,12 @@ def generate_boost_matrix(phi: float, n: tf.Tensor) -> tf.Tensor:
     Returns:
         tf.Tensor: boost matrix
     """
-    B = [[tf.cosh(phi), -n[0]*tf.sinh(phi), -n[1]*tf.sinh(phi), -n[2]*tf.sinh(phi)],
-         [-n[0]*tf.sinh(phi), 1 + (n[0]**2)*(tf.cosh(phi)-1), n[0]*n[1]*(tf.cosh(phi)-1), n[0]*n[2]*(tf.cosh(phi)-1)],
-         [-n[1]*tf.sinh(phi), n[1]*n[0]*(tf.cosh(phi)-1), 1 + (n[1]**2)*(tf.cosh(phi)-1), n[1]*n[2]*(tf.cosh(phi)-1)],
-         [-n[2]*tf.sinh(phi), n[2]*n[0]*(tf.cosh(phi)-1), n[2]*n[1]*(tf.cosh(phi)-1), 1 + (n[2]**2)*(tf.cosh(phi)-1)]]
+    B = [[tf.cosh(phi), -n[0] * tf.sinh(phi), -n[1] * tf.sinh(phi), -n[2] * tf.sinh(phi)],
+         [-n[0] * tf.sinh(phi), 1 + (n[0]**2) * (tf.cosh(phi) - 1), n[0] * n[1]
+          * (tf.cosh(phi) - 1), n[0] * n[2] * (tf.cosh(phi) - 1)],
+         [-n[1] * tf.sinh(phi), n[1] * n[0] * (tf.cosh(phi) - 1), 1 + (n[1]**2)
+          * (tf.cosh(phi) - 1), n[1] * n[2] * (tf.cosh(phi) - 1)],
+         [-n[2] * tf.sinh(phi), n[2] * n[0] * (tf.cosh(phi) - 1), n[2] * n[1] * (tf.cosh(phi) - 1), 1 + (n[2]**2) * (tf.cosh(phi) - 1)]]
     return tf.convert_to_tensor(B, dtype=tf.float32)
 
 
@@ -123,7 +127,7 @@ def random_lorentz_transform(x: tf.Tensor) -> tf.Tensor:
     phi = tf.math.atanh(phi)
     # Randomly generate direction n_b
     n_b = tf.random.normal(shape=(3,), dtype=tf.float32)
-    n_b = n_b/tf.norm(n_b)
+    n_b = n_b / tf.norm(n_b)
     # Randomly generate theta
     theta = tf.random.uniform(shape=(), minval=0, maxval=2 * np.pi)
     # Randomly generate n for rotation
@@ -153,5 +157,3 @@ def lorentz_dot_product(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
     """
     metric = tf.convert_to_tensor([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1]], dtype=tf.float32)
     return tf.einsum('nj,jk,mk->nm', x, metric, y)
-
-

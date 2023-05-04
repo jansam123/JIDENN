@@ -66,7 +66,7 @@ class EvalConfig:
     batch_size: int
     take: int
     feature_importance: bool
-    binning: Binning
+    binning: Optional[Binning]
     threshold: float
     include_base: bool
     input_type = Literal['highlevel',

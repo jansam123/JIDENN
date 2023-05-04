@@ -53,7 +53,6 @@ def main(args: eval_config.EvalConfig) -> None:
                    for jz in args.data.subfolders] if args.data.subfolders is not None else None
 
     test_ds = get_preprocessed_dataset(file, args.data, file_labels)
-    args.binning.cuts = [] if args.binning is None else args.binning.cuts
 
     names = args.binning.cut_names if args.binning is not None else []
     names = ['base'] + names if args.include_base else names
@@ -110,6 +109,7 @@ def main(args: eval_config.EvalConfig) -> None:
             data_info.generate_data_distributions(df=draw_df,
                                                   folder=dist_dir,
                                                   color_column='Truth Label',
+                                                  hue_order=args.data.labels,
                                                   xlabel_mapper=LATEX_NAMING_CONVENTION)
 
         results_df = pd.DataFrame({'score': score,

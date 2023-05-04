@@ -40,10 +40,10 @@ optimizer:
   epsilon: #part : 0.0001
 
 dataset:
-  epochs: 12 # Number of epochs.
-  take: 5_000_000 # Length of data to use.
+  epochs: 6 # Number of epochs.
+  take: 10_000_000 # Length of data to use.
   batch_size: 512 # Batch size.
-  dev_size: 0.1 # Size of dev dataset.
+  dev_size: 0.05 # Size of dev dataset.
   test_size: 0.1 # Size of test dataset.
   shuffle_buffer: 1000 # Size of shuffler buffer.
 

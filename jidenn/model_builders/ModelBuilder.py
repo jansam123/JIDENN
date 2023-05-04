@@ -8,14 +8,16 @@ from dataclasses import dataclass
 
 from jidenn.config import config
 from .optimizer_initialization import get_optimizer
+from ..evaluation.evaluation_metrics import EffectiveTaggingEfficiency
 
 from .model_initialization import model_getter_lookup
+
 
 @dataclass
 class ModelBuilder:
     """Class for building models from config.
     Provides a facade between pure model initialization and model building with output layer, optimizer, loss, and metrics, with subsequent compilation.
-    
+
     Args:
         model_name (str): Name of model to build. Options are 'fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'
         args_model (config.Models): Model config
@@ -23,7 +25,7 @@ class ModelBuilder:
         num_labels (int): Number of labels, i.e. size of output layer
         args_optimizer (config.Optimizer): Optimizer config
         preprocess (Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]], optional): Preprocessing layer(s). Defaults to None.
-    
+
     """
     model_name: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']
     args_model: config.Models
@@ -65,7 +67,8 @@ class ModelBuilder:
     def metrics(self) -> List[tf.keras.metrics.Metric]:
         """Metrics used in training."""
         metrics = [tf.keras.metrics.CategoricalAccuracy() if self.num_labels > 2 else tf.keras.metrics.BinaryAccuracy(),
-                   tf.keras.metrics.AUC()]
+                   tf.keras.metrics.AUC(),
+                   EffectiveTaggingEfficiency()]
         return metrics
 
     @property
