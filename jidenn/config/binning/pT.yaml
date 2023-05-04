@@ -1,5 +1,3 @@
-type: perJet
-
 cuts:
   - "(jets_pt>20_000) && (jets_pt<30_000)"
   - "(jets_pt>30_000) && (jets_pt<40_000)"

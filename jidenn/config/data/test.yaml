@@ -1,4 +1,4 @@
-path: ./data/pythia_flat_b100 # Path to data folder containing folder of *.root files.
+path: ./data/pythia # Path to data folder containing folder of *.root files.
 target: jets_PartonTruthLabelID
 labels: # list of labels to use.
   - gluon
@@ -7,13 +7,14 @@ target_labels:
   - [21]
   - [1, 2, 3, 4, 5, 6]
 variable_unknown_labels: [-1, -999]
-resample_labels:
-cut: # " && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+resample_labels: [0.5, 0.5]
+cut: "jets_pt>20_000" # " && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" # Cut to apply to data.
 subfolders:
+  - JZ05_r10724
 subfolder_cut:
-subfolder_weights:
+subfolder_weights: [1]
 cached:
-weight: #weight_mc[0]
+weight:
 variables:
   - jets_ActiveArea4vec_eta
   - jets_ActiveArea4vec_m

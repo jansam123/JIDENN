@@ -1,4 +1,3 @@
-type: perEvent
 cuts:
   - "(corrected_averageInteractionsPerCrossing[0]<20)"
   - "(corrected_averageInteractionsPerCrossing[0]>20) && (corrected_averageInteractionsPerCrossing[0]<25)"

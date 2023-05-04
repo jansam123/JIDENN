@@ -1,4 +1,3 @@
-type: perJet
 cuts:
   - "(jets_eta<0.1) && (jets_eta>-0.1)"
   - "((jets_eta<0.3) && (jets_eta>0.1)) || ((jets_eta>-0.3) && (jets_eta<-0.1))"

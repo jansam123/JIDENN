@@ -41,48 +41,6 @@ from typing import List, Optional, Literal
 from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN
 
 
-@dataclass
-class Variables:
-    """Variable names loaded from the saved `tf.data.Dataset`s. The `element_spec` of the loaded dataset
-    is expected to be `Dict[str, Union[tf.Tensor, tf.RaggedTensor]]` where the keys are the variable names.
-    From these variables, only variables defined in `per_jet` and `per_jet_tuple` and `per_event` are used.
-    They are then clustered into a dictionary of the following structure 
-    `Dict[Literal['perEvent','perJet','perJetTuple'], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]`.
-    Example:
-    ```python
-    # element_spec of the loaded dataset, ROOTDataset
-    element_spec_before = {
-        'jets_PFO_m': RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
-        'jets_pt': TensorSpec(shape=(), dtype=tf.float32, name=None)
-        'HLT_j60': TensorSpec(shape=(), dtype=tf.bool, name=None),
-    }
-    # element_spec after processing with JIDENNDataset
-    element_spec_after = {
-        'perEvent': {'HLT_j60': TensorSpec(shape=(), dtype=tf.bool, name=None)},
-        'perJet': {'jets_pt': TensorSpec(shape=(), dtype=tf.float32, name=None)}
-        'perJetTuple': {'jets_PFO_m': RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
-    }
-    ```
-    Optionally, the string may be expression which combine multiple variables, or slice them.
-    See the `jidenn.data.string_conversions.Expression` documentation for more information. 
-
-    These variables are then used to construct the model inputs with the `jidenn.data.TrainInput` class.
-
-    Args:
-        per_jet (List[str]): Variables to be loaded from the dataset and clustered into `perJet`.
-            Each variable is expected to have single input per jet, e.g. `jets_pt` 
-            which is a single value for the jet transverse momentum.
-        per_jet_tuple (List[str]): Variables to be loaded from the dataset and clustered into `perJetTuple`.
-            Each variable is expecetd to have multiple inputs per jet, e.g. `jets_PFO_m` which is a list of
-            masses of the constituents of the jet.
-        per_event (List[str]): Variables to be loaded from the dataset and clustered into `perEvent`.
-            Each variable is expected to have only one input per event, which is the same for all jets in the event.
-            It is tiled to the number of jets in the event.
-    """
-    per_jet: List[str]
-    per_jet_tuple: List[str]
-    per_event: List[str]
-
 
 @dataclass
 class Data:
@@ -115,9 +73,7 @@ class Data:
         resample (List[float], optional): Resampling weights for each label. The list is the same length as `target_labels` 
             giving each label a weight (`[0.5, 0.5]` means equal size of both labels). If `None`, no resampling is applied.
 
-        variables (Variables): Variables to loaded from the dataset separated into `per_jet` and `per_event` and `per_jet_tuple` 
-            using the `Variables` dataclass. The actual variables used as a training input are defined 
-            from these in `jidenn.data.TrainInput`.
+        variables (List[str]): Names of the variables loaded from the saved `tf.data.Dataset`s.
 
         weight (Optional[str]): Name of the weight variable inside the saved `tf.data.Dataset`s. If `None`, 
             no weights are used otherwise the weights are passed as a third input to the model.
@@ -144,7 +100,7 @@ class Data:
     labels: List[str]    # list of labels to use.
     variable_unknown_labels: List[int]
     resample_labels: Optional[List[float]]
-    variables: Variables
+    variables: List[str]
     weight: Optional[str]
     cut: Optional[str]
     subfolders: Optional[List[str]]   # Slices of JZ to use.

@@ -20,11 +20,9 @@ class Binning:
         cuts (List[str]): Cuts on the test data performing the binning. 
             See `jidenn.data.string_conversions.Cut` for more details.
         cut_names (List[str]): Names of the cuts displayed in the plots and subfolders.
-        type (str): Type of variable on which the cuts are applied. One of: 'perJet', 'perJetTuple', 'perEvent'.
     """
     cuts: List[str]
     cut_names: List[str]
-    type: Literal["perJet", "perJetTuple", "perEvent"]
 
 
 @dataclass

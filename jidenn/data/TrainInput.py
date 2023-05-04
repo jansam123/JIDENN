@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod, abstractproperty
 from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Type
 #
 from .four_vector_transform import to_e_px_py_pz, to_m_pt_eta_phi
-from .JIDENNDataset import JIDENNVariables, ROOTVariables
+from .JIDENNDataset import ROOTVariables
 
 
 class TrainInput(ABC):
@@ -22,24 +22,17 @@ class TrainInput(ABC):
 
     Example:
     ```python
-    train_input = HighLevelJetVariables(per_jet_variables=['jets_pt', 'jets_eta', 'jets_phi', 'jets_m'])
+    train_input = HighLevelJetVariables(variables=['jets_pt', 'jets_eta', 'jets_phi', 'jets_m'])
     dataset = dataset.map(tf.function(func=train_input))
     ```
 
     Args:
-        per_jet_variables (List[str], optional): List of variables that are per jet. Defaults to None.
-        per_event_variables (List[str], optional): List of variables that are per event. Defaults to None.
-        per_jet_tuple_variables (List[str], optional): List of variables that are per jet and are stored as tuples. Defaults to None.
+        variables (List[str], optional): List of available variables. Defaults to None.
 
     """
 
-    def __init__(self, per_jet_variables: Optional[List[str]] = None,
-                 per_event_variables: Optional[List[str]] = None,
-                 per_jet_tuple_variables: Optional[List[str]] = None):
-
-        self.per_jet_variables = per_jet_variables
-        self.per_event_variables = per_event_variables
-        self.per_jet_tuple_variables = per_jet_tuple_variables
+    def __init__(self, variables: Optional[List[str]] = None):
+        self.variables = variables
 
     @abstractproperty
     def input_shape(self) -> Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]:
@@ -49,12 +42,12 @@ class TrainInput(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
-        """Constructs the input variables from the `JIDENNVariables` object. 
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        """Constructs the input variables from the `ROOTVariables` object. 
         The output is a dictionary of the form `{'var_name': tf.Tensor}`, i.e. a `ROOTVariables` type.
 
         Args:
-            sample (JIDENNVariables): The input sample.    
+            sample (ROOTVariables): The input sample.    
 
         Returns:
             ROOTVariables: The output variables of the form `{'var_name': tf.Tensor}`.
@@ -65,99 +58,191 @@ class TrainInput(ABC):
 
 class HighLevelJetVariables(TrainInput):
     """Constructs the input variables characterizing the **whole jet**. 
-    The variables are taken from the `perJet` and `perEvent` dictionary of the `JIDENNVariables` object.
+    The variables are taken from the `variable` list on the input.
     These variables are used to train `jidenn.models.FC.FCModel` and `jidenn.models.Highway.HighwayModel`.
 
     Args:
-        per_jet_variables (List[str], optional): List of variables that are per jet. Defaults to None.
-        per_event_variables (List[str], optional): List of variables that are per event. Defaults to None.
-        per_jet_tuple_variables (List[str], optional): List of variables that are per jet and are stored as tuples. Defaults to None.
+        variables (List[str], optional): List of available variables. Defaults to None.
 
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.per_jet_variables is None:
-            raise ValueError("per_jet_tuple_variables must be specified")
+        if self.variables is None:
+            self.variables = [
+                'jets_ActiveArea4vec_eta',
+                'jets_ActiveArea4vec_m',
+                'jets_ActiveArea4vec_phi',
+                'jets_ActiveArea4vec_pt',
+                'jets_DetectorEta',
+                'jets_FracSamplingMax',
+                'jets_FracSamplingMaxIndex',
+                'jets_GhostMuonSegmentCount',
+                'jets_JVFCorr',
+                'jets_JetConstitScaleMomentum_eta',
+                'jets_JetConstitScaleMomentum_m',
+                'jets_JetConstitScaleMomentum_phi',
+                'jets_JetConstitScaleMomentum_pt',
+                'jets_JvtRpt',
+                'jets_fJVT',
+                'jets_passFJVT',
+                'jets_passJVT',
+                'jets_Timing',
+                'jets_Jvt',
+                'jets_EMFrac',
+                'jets_Width',
+                'jets_chf',
+                'jets_eta',
+                'jets_m',
+                'jets_phi',
+                'jets_pt',
+                'jets_PFO_n',
+                'jets_ChargedPFOWidthPt1000[0]',
+                'jets_TrackWidthPt1000[0]',
+                'jets_NumChargedPFOPt1000[0]',
+                'jets_SumPtChargedPFOPt500[0]',
+                'jets_NumChargedPFOPt500[0]',
+                'corrected_averageInteractionsPerCrossing[0]',
+            ]
 
-    def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
         """Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
 
         Args:
-            sample (JIDENNVariables): The input sample.
+            sample (ROOTVariables): The input sample.
 
         Returns:
             ROOTVariables: The output variables of the form `{'var_name': tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
         """
-        data = {var: tf.cast(sample['perJet'][var], tf.float32) for var in self.per_jet_variables}
-        if self.per_event_variables is None:
-            return data
-        data.update({var: tf.cast(sample['perEvent'][var], tf.float32) for var in self.per_event_variables})
-        return data
+
+        return {var: tf.cast(sample[var], tf.float32) for var in self.variables}
 
     @property
     def input_shape(self) -> int:
-        """The input shape is just an integer `len(per_jet_variables) + len(per_event_variables)`."""
-        return len(self.per_jet_variables) + (len(self.per_event_variables) if self.per_event_variables is not None else 0)
+        """The input shape is just an integer `len(self.variables)`."""
+        return len(self.variables)
 
 
-class AllPerJetTuple(TrainInput):
-    """Constructs the input variables characterizing the **jet constituents**, 
-    by stacking all the available variables from the `perJetTuple` dictionary.
-    Suited for all constituent based models.
-    """
-
+class QR(TrainInput):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.per_jet_variables is None:
-            raise ValueError("per_jet_variables must be specified")
+        if self.variables is None:
+            self.variables = [
+                'Electron',
+                'IntermediateElectron',
+                'Muon',
+                'IntermediateMuon',
+                'KinLepton',
+                'IntermediateKinLepton',
+                'Kaon',
+                'SlowPion',
+                'FastHadron',
+                'Lambda',
+                'FSC',
+                'MaximumPstar',
+                'KaonPion',
+                'dx',
+                'dy',
+                'dz',
+                'E',
+                'charge',
+                'px_c',
+                'py_c',
+                'pz_c',
+                'electronID_c',
+                'muonID_c',
+                'pionID_c',
+                'kaonID_c',
+                'protonID_c',
+                'deuteronID_c',
+                'electronID_noSVD_noTOP_c',
+            ]
 
-    def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
-        data = {var: tf.cast(sample['perJetTuple'][var], tf.float32) for var in self.per_jet_tuple_variables}
-        px, py, pz, e = data.pop('px_c'), data.pop('py_c'), data.pop('pz_c'), data.pop('E')
-        _, pt, eta, phi = to_m_pt_eta_phi(e, px, py, pz)
-        data.update({'log_pt': tf.math.log(pt), 'eta': eta, 'phi': phi, 'log_e': tf.math.log(e)})
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        data = {var: tf.cast(sample[var], tf.float32)
+                for var in self.variables}
+        px, py, pz, e = data.pop('px_c'), data.pop(
+            'py_c'), data.pop('pz_c'), data.pop('E')
+        p_norm = tf.norm(tf.stack([px, py, pz], axis=1), axis=1)
+        phi = tf.math.atan2(py, px)
+        theta = tf.math.atan2(tf.norm(tf.stack([px, py], axis=1), axis=1), pz)
+
+        data.update({'log_pt': tf.math.log(p_norm), 'theta': theta,
+                    'phi': phi, 'log_e': tf.math.log(e)})
         return data
 
     @property
     def input_shape(self) -> Tuple[None, int]:
         """The input shape is tuple `(None, len(per_jet_tuple_variables))`."""
-        return (None, len(self.per_jet_tuple_variables) + 1)
+        return (None, len(self.variables))
 
 
-class AllPerJetTupleInteraction(TrainInput):
-    """Constructs the input variables characterizing the **jet constituents**, 
-    by stacking all the available variables from the `perJetTuple` dictionary.
-    Interaction variables are computed from the 4-momenta of the constituents.
-    """
+class QRInteraction(TrainInput):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.per_jet_variables is None:
-            raise ValueError("per_jet_variables must be specified")
+        if self.variables is None:
+            self.variables = [
+                'Electron',
+                'IntermediateElectron',
+                'Muon',
+                'IntermediateMuon',
+                'KinLepton',
+                'IntermediateKinLepton',
+                'Kaon',
+                'SlowPion',
+                'FastHadron',
+                'Lambda',
+                'FSC',
+                'MaximumPstar',
+                'KaonPion',
+                'dx',
+                'dy',
+                'dz',
+                'E',
+                'charge',
+                'px_c',
+                'py_c',
+                'pz_c',
+                'electronID_c',
+                'muonID_c',
+                'pionID_c',
+                'kaonID_c',
+                'protonID_c',
+                'deuteronID_c',
+                'electronID_noSVD_noTOP_c',
+            ]
 
-    def __call__(self, sample: JIDENNVariables) -> Tuple[ROOTVariables, ROOTVariables]:
-        data = {var: tf.cast(sample['perJetTuple'][var], tf.float32) for var in self.per_jet_tuple_variables}
-        px, py, pz, E = data.pop('px_c'), data.pop('py_c'), data.pop('pz_c'), data.pop('E')
-        _, pt, eta, phi = to_m_pt_eta_phi(E, px, py, pz)
-        data.update({'log_pt': tf.math.log(pt), 'eta': eta, 'phi': phi, 'log_e': tf.math.log(E)})
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        data = {var: tf.cast(sample[var], tf.float32)
+                for var in self.variables}
+        px, py, pz, e = data.pop('px_c'), data.pop(
+            'py_c'), data.pop('pz_c'), data.pop('E')
+        p_norm = tf.norm(tf.stack([px, py, pz], axis=1), axis=1)
+        phi = tf.math.atan2(py, px)
+        theta = tf.math.atan2(tf.norm(tf.stack([px, py], axis=1), axis=1), pz)
 
-        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+        data.update({'log_pt': tf.math.log(p_norm), 'theta': theta,
+                    'phi': phi, 'log_e': tf.math.log(e)})
+
+        delta = tf.math.sqrt(tf.math.square(theta[:, tf.newaxis] - theta[tf.newaxis, :]) +
                              tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
         delta = tf.math.log(delta)
-        delta = tf.linalg.set_diag(delta, tf.zeros_like(E))
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(e))
 
-        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.minimum(
+            p_norm[:, tf.newaxis], p_norm[tf.newaxis, :]) * delta
         k_t = tf.math.log(k_t)
-        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(E))
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(e))
 
-        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
-        z = tf.linalg.set_diag(z, tf.zeros_like(E))
+        z = tf.math.minimum(p_norm[:, tf.newaxis], p_norm[tf.newaxis, :]) / \
+            (p_norm[:, tf.newaxis] + p_norm[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(e))
 
         m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
             tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
             tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
-        m2 = tf.linalg.set_diag(m2, tf.zeros_like(E))
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(e))
         m2 = tf.math.log(m2)
 
         interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
@@ -167,7 +252,7 @@ class AllPerJetTupleInteraction(TrainInput):
     @property
     def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
         """The input shape is tuple `(None, len(per_jet_tuple_variables))`."""
-        return (None, len(self.per_jet_tuple_variables ) + 1), (None, None, 4)
+        return (None, len(self.variables)), (None, None, 4)
 
 
 class HighLevelPFOVariables(TrainInput):
@@ -182,21 +267,22 @@ class HighLevelPFOVariables(TrainInput):
     - C variable $$C_1^{\\beta=0.2}=\\frac{\\sum_{a, b \\in \\mathrm{jet}}^{a \\neq b} p_{\\mathrm{T}}^a p_{\\mathrm{T}}^b \\left(\\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}\\right)^{\\beta=0.2}}{\\left(\\sum_{a \\in \\mathrm{jet}} p_{\\mathrm{T}}^{a}\\right)^2}$$
     """
 
-    def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
-        pt_jet = sample['perJet']['jets_pt']
-        eta_jet = sample['perJet']['jets_eta']
-        phi_jet = sample['perJet']['jets_phi']
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
 
-        pt_const = sample['perJetTuple']['jets_PFO_pt']
-        eta_const = sample['perJetTuple']['jets_PFO_eta']
-        phi_const = sample['perJetTuple']['jets_PFO_phi']
+        pt_const = sample['jets_PFO_pt']
+        eta_const = sample['jets_PFO_eta']
+        phi_const = sample['jets_PFO_phi']
 
-        N_PFO = sample['perJet']['jets_PFO_n']
+        N_PFO = sample['jets_PFO_n']
 
         delta_R_PFO_jet = tf.math.sqrt(tf.math.square(eta_jet - eta_const) +
                                        tf.math.square(phi_jet - phi_const))
 
-        W_PFO_jet = tf.math.reduce_sum(pt_const * delta_R_PFO_jet, axis=-1) / tf.math.reduce_sum(pt_const, axis=-1)
+        W_PFO_jet = tf.math.reduce_sum(
+            pt_const * delta_R_PFO_jet, axis=-1) / tf.math.reduce_sum(pt_const, axis=-1)
         delta_R_PFOs = tf.math.sqrt(tf.math.square(
             eta_const[:, tf.newaxis] - eta_const[tf.newaxis, :]) + tf.math.square(phi_const[:, tf.newaxis] - phi_const[tf.newaxis, :]))
         C1_PFO_jet = tf.einsum('i,ij,j', pt_const, tf.linalg.set_diag(
@@ -228,16 +314,16 @@ class ConstituentVariables(TrainInput):
     - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
     """
 
-    def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
-        m_const = sample['perJetTuple']['jets_PFO_m']
-        pt_const = sample['perJetTuple']['jets_PFO_pt']
-        eta_const = sample['perJetTuple']['jets_PFO_eta']
-        phi_const = sample['perJetTuple']['jets_PFO_phi']
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        m_const = sample['jets_PFO_m']
+        pt_const = sample['jets_PFO_pt']
+        eta_const = sample['jets_PFO_eta']
+        phi_const = sample['jets_PFO_phi']
 
-        m_jet = sample['perJet']['jets_m']
-        pt_jet = sample['perJet']['jets_pt']
-        eta_jet = sample['perJet']['jets_eta']
-        phi_jet = sample['perJet']['jets_phi']
+        m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
 
         PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
@@ -276,16 +362,16 @@ class RelativeConstituentVariables(TrainInput):
     - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
     """
 
-    def __call__(self, sample: JIDENNVariables) -> ROOTVariables:
-        m_const = sample['perJetTuple']['jets_PFO_m']
-        pt_const = sample['perJetTuple']['jets_PFO_pt']
-        eta_const = sample['perJetTuple']['jets_PFO_eta']
-        phi_const = sample['perJetTuple']['jets_PFO_phi']
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        m_const = sample['jets_PFO_m']
+        pt_const = sample['jets_PFO_pt']
+        eta_const = sample['jets_PFO_eta']
+        phi_const = sample['jets_PFO_phi']
 
-        m_jet = sample['perJet']['jets_m']
-        pt_jet = sample['perJet']['jets_pt']
-        eta_jet = sample['perJet']['jets_eta']
-        phi_jet = sample['perJet']['jets_phi']
+        m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
 
         PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
@@ -334,13 +420,14 @@ class InteractionConstituentVariables(TrainInput):
 
     """
 
-    def __call__(self, sample: JIDENNVariables) -> Tuple[ROOTVariables, ROOTVariables]:
-        m = sample['perJetTuple']['jets_PFO_m']
-        pt = sample['perJetTuple']['jets_PFO_pt']
-        eta = sample['perJetTuple']['jets_PFO_eta']
-        phi = sample['perJetTuple']['jets_PFO_phi']
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m = sample['jets_PFO_m']
+        pt = sample['jets_PFO_pt']
+        eta = sample['jets_PFO_eta']
+        phi = sample['jets_PFO_phi']
 
-        E, px, py, pz = tf.unstack(to_e_px_py_pz(tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+        E, px, py, pz = tf.unstack(to_e_px_py_pz(
+            tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
         delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
                              tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
         delta = tf.math.log(delta)
@@ -350,7 +437,8 @@ class InteractionConstituentVariables(TrainInput):
         k_t = tf.math.log(k_t)
         k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
 
-        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / \
+            (pt[:, tf.newaxis] + pt[tf.newaxis, :])
         z = tf.linalg.set_diag(z, tf.zeros_like(m))
 
         m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
@@ -361,10 +449,10 @@ class InteractionConstituentVariables(TrainInput):
 
         interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
-        m_jet = sample['perJet']['jets_m']
-        pt_jet = sample['perJet']['jets_pt']
-        eta_jet = sample['perJet']['jets_eta']
-        phi_jet = sample['perJet']['jets_phi']
+        m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
 
         PFO_E = tf.math.sqrt(pt**2 + m**2)
         jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
@@ -414,8 +502,8 @@ def input_classes_lookup(class_name: Literal['highlevel',
                    'constituents': ConstituentVariables,
                    'relative_constituents': RelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
-                   'all_per_jet': AllPerJetTuple,
-                   'all_per_jet_interaction': AllPerJetTupleInteraction}
+                   'qr': QR,
+                   'qr_interaction': QRInteraction}
 
     if class_name not in lookup_dict.keys():
         raise ValueError(f'Unknown input class name {class_name}')
@@ -423,4 +511,5 @@ def input_classes_lookup(class_name: Literal['highlevel',
     return lookup_dict[class_name]
 
 
-__pdoc__ = {f'{local_class.__name__}.__call__': True for local_class in TrainInput.__subclasses__() + [TrainInput]}
+__pdoc__ = {f'{local_class.__name__}.__call__':
+            True for local_class in TrainInput.__subclasses__() + [TrainInput]}

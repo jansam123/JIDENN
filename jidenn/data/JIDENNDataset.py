@@ -28,27 +28,6 @@ variables = {
 ```
 """
 
-JIDENNVariables = Dict[Union[Literal['perEvent'], Literal['perJet'], Literal['perJetTuple']], ROOTVariables]
-"""Type alias for a dictionary of JIDENN variables. The variables are separated into per-event, per-jet, 
-and per-jet-tuple variables to allow for more efficient processing of the data and preparation for training. 
-For each of these categories, the values are `ROOTVariables`.
-These variables are used in the `tf.data.Dataset` where the events have been flattened into individual jets, i.e.
-data sample from `tf.data.Dataset` are jets.
-
-Example:
-```python
-jet_1 = {
-    'perEvent': {'eventNumber': tf.Tensor([2], dtype=tf.int32), ... },
-    'perJet': { 'jets_pt': tf.Tensor([10_000], dtype=tf.float32), ... },
-    'perJetTuple': {'jets_PFO_pt': tf.RaggedTensor([5_000, 3_000, 2_000], dtype=tf.float32), ... }
-# jet from the same event
-jet_2 = {
-    'perEvent': {'eventNumber': tf.Tensor([2], dtype=tf.int32), ... },
-    'perJet': { 'jets_pt': tf.Tensor([500_000], dtype=tf.float32), ... },
-    'perJetTuple': {'jets_PFO_pt': tf.RaggedTensor([300_000, 100_000, 50_000, 25_000, 25_000], dtype=tf.float32), ... }
-```
-"""
-
 
 @tf.function
 def dict_to_stacked_array(data: Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]], label: int, weight: Optional[float] = None) -> Tuple[Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]], int, Union[float, None]]:
@@ -104,26 +83,24 @@ class JIDENNDataset:
         return sample
 
     @tf.function 
-    def train_input(sample: JIDENNVariables) -> ROOTVariables:
+    def train_input(sample: ROOTVariables) -> ROOTVariables:
         output = {
-            'N_PFO': sample['perJet']['jets_PFO_n'],
-            'pt': sample['perJet']['jets_pt'],
-            'width': sample['perJet']['jets_Width'],
-            'EMFrac': sample['perJet']['jets_EMFrac'],
-            'mu': sample['perEvent']['corrected_averageInteractionsPerCrossing[0]']
+            'N_PFO': sample['jets_PFO_n'],
+            'pt': sample['jets_pt'],
+            'width': sample['jets_Width'],
+            'EMFrac': sample['jets_EMFrac'],
+            'mu': sample['corrected_averageInteractionsPerCrossing[0]']
         }
         return output
 
-    variables = Variables(perEvent=['corrected_averageInteractionsPerCrossing[0]'],
-                            perJet=['jets_pt', 'jets_Width', 'jets_EMFrac'],
-                            perJetTuple=['jets_PFO_pt'])
+    variables = ['corrected_averageInteractionsPerCrossing[0]', 'jets_pt', 'jets_Width', 'jets_EMFrac','jets_PFO_pt']
 
     jidenn_dataset = JIDENNDataset(variables=variables,
                                    target='jets_TruthLabelID',
                                    weight=None)
     jidenn_dataset = jidenn_dataset.load_dataset('path/to/dataset')
 
-    jidenn_dataset = jidenn_dataset.create_JIDENNVariables(cut=Cut('jets_pt > 10_000'), map_dataset=count_PFO)
+    jidenn_dataset = jidenn_dataset.create_variables(cut=Cut('jets_pt > 10_000'), map_dataset=count_PFO)
     jidenn_dataset = jidenn_dataset.resample_dataset(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32), [0.5, 0.5])
     jidenn_dataset = jidenn_dataset.remap_labels(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32))
     jidenn_dataset = jidenn_dataset.create_train_input(train_input)
@@ -135,13 +112,13 @@ class JIDENNDataset:
     ```
 
     Args:
-        variables (jidenn.config.config_subclasses.Variables): The configuration dataclass of the variables to be used in the dataset.
+        variables (List[str]): The list of variables to be used in the dataset.
         target (str, optional): The name of the target variable. Defaults to `None`.
         weight (str, optional): The name of the weight variable. Defaults to `None`.
 
 
     """
-    variables: config.Variables
+    variables: List[str]
     """The configuration dataclass of the variables to be used in the dataset."""
     target: Optional[str] = None
     """The name of the target variable. `None` if no target variable is used."""
@@ -214,9 +191,9 @@ class JIDENNDataset:
             element_spec = pickle.load(f)
         return self._set_element_spec(element_spec)
 
-    def create_JIDENNVariables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -> JIDENNDataset:
-        """Creates a `JIDENNVariables` dataset from the `ROOTVariables` dataset and creates labels and weights.
-        The variables are selected according to the `variables` configuration dataclass and 
+    def create_variables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -> JIDENNDataset:
+        """Creates a 'tf.data.Dataset' from selected variables and creates labels and weights.
+        The variables are selected according to the `variables` loaded from config.
         the `target` and `weight` class variables are used to create labels and weights from the `ROOTVariables`.
 
         Optionally, a `Cut` can be applied to the dataset. It is done **before** the variables are selected.
@@ -231,7 +208,7 @@ class JIDENNDataset:
             ValueError: If the dataset is not loaded yet.
 
         Returns:
-            JIDENNDataset: The JIDENNDataset object with the signature of `(JIDENNVariables, label, weight)`.
+            JIDENNDataset: The JIDENNDataset object with the signature of `(ROOTVariables, label, weight)`.
         """
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
@@ -246,7 +223,7 @@ class JIDENNDataset:
 
     def remap_labels(self, label_mapping: Callable[[int], int]) -> JIDENNDataset:
         """Remaps the labels in the dataset using the `label_mapping` function.
-        Should be used after the `create_JIDENNVariables` method. 
+        Should be used after the `create_variables` method. 
 
         Args:
             label_mapping (Callable[[int], int]): The function that maps the labels.
@@ -305,7 +282,7 @@ class JIDENNDataset:
         """Sets the `tf.data.Dataset` object and the `element_spec` of the dataset.
 
         Args:
-            dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables` or `JIDENNVariables`.
+            dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables`.
             element_spec (Dict[str, Union[tf.TensorSpec, tf.RaggedTensorSpec]]): The `element_spec` of the dataset.
 
         Returns:
@@ -321,14 +298,10 @@ class JIDENNDataset:
     @property
     def _var_picker(self):
         @tf.function
-        def _pick_variables(sample: ROOTVariables) -> Union[Tuple[JIDENNVariables, tf.RaggedTensor, tf.RaggedTensor], JIDENNVariables, Tuple[JIDENNVariables, tf.RaggedTensor]]:
-            new_sample = {'perEvent': {}, 'perJet': {}, 'perJetTuple': {}}
-            for var in self.variables.per_event if self.variables.per_event is not None else []:
-                new_sample['perEvent'][var] = Expression(var)(sample)
-            for var in self.variables.per_jet if self.variables.per_jet is not None else []:
-                new_sample['perJet'][var] = Expression(var)(sample)
-            for var in self.variables.per_jet_tuple if self.variables.per_jet_tuple is not None else []:
-                new_sample['perJetTuple'][var] = Expression(var)(sample)
+        def _pick_variables(sample: ROOTVariables) -> Union[Tuple[ROOTVariables, tf.RaggedTensor, tf.RaggedTensor], ROOTVariables, Tuple[ROOTVariables, tf.RaggedTensor]]:
+
+            new_sample = {var: Expression(var)(sample)
+                          for var in self.variables}
 
             if self.target is None:
                 return new_sample
@@ -338,14 +311,14 @@ class JIDENNDataset:
                 return new_sample, Expression(self.target)(sample), Expression(self.weight)(sample)
         return _pick_variables
 
-    def resample_dataset(self, resampling_func: Callable[[JIDENNVariables, Any], int], target_dist: List[float]):
+    def resample_dataset(self, resampling_func: Callable[[ROOTVariables, Any], int], target_dist: List[float]):
         """Resamples the dataset using the `resampling_func` function. The function computes the bin index for each sample in the dataset. 
         The dataset is then resampled to match the `target_dist` distribution. Be careful that this may **slow down the training process**,
         if the target distribution is very different from the original one as the dataset is resampled on the fly and is waiting 
         for the appropriate sample to be drawn.
 
         Args:
-            resampling_func (Callable[[JIDENNVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
+            resampling_func (Callable[[ROOTVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
             target_dist (List[float]): The target distribution of the resampled dataset.
 
         Raises:
@@ -360,7 +333,8 @@ class JIDENNDataset:
         @tf.function
         def _data_only(x, data):
             return data
-        dataset = self.dataset.rejection_resample(resampling_func, target_dist=target_dist).map(_data_only)
+        dataset = self.dataset.rejection_resample(
+            resampling_func, target_dist=target_dist).map(_data_only)
         return self._set_dataset(dataset)
 
     @staticmethod
@@ -374,8 +348,10 @@ class JIDENNDataset:
         Returns:
             JIDENNDataset: Combined `JIDENNDataset` object.
         """
-        dataset = tf.data.Dataset.sample_from_datasets([dataset.dataset for dataset in datasets], weights=weights)
-        jidenn_dataset = JIDENNDataset(datasets[0].variables, datasets[0].target, datasets[0].weight)
+        dataset = tf.data.Dataset.sample_from_datasets(
+            [dataset.dataset for dataset in datasets], weights=weights)
+        jidenn_dataset = JIDENNDataset(
+            datasets[0].variables, datasets[0].target, datasets[0].weight)
         return jidenn_dataset._set_dataset(dataset)
 
     def apply(self, func: Callable[[tf.data.Dataset], tf.data.Dataset]) -> JIDENNDataset:
@@ -393,13 +369,13 @@ class JIDENNDataset:
         dataset = func(self.dataset)
         return self._set_dataset(dataset)
 
-    def create_train_input(self, func: Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -> JIDENNDataset:
-        """Creates a training input from the dataset using the `func` function. The function must take a `JIDENNVariables` object and return a `ROOTVariables` object.
+    def create_train_input(self, func: Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -> JIDENNDataset:
+        """Creates a training input from the dataset using the `func` function. The function must take a `ROOTVariables` object and return a `ROOTVariables` object.
         The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).
 
 
         Args:
-            func (Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
+            func (Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
 
         Raises:
             ValueError: If the dataset is not loaded yet.
@@ -430,7 +406,7 @@ class JIDENNDataset:
         df = jidenn_dataset.to_pandas()
         ```
 
-        If the dataset contains tuples, i.e. has `perJetTuple` variables, consider using `jidenn.data.data_info.explode_nested_variables` 
+        If the dataset contains nested tuples consider using `jidenn.data.data_info.explode_nested_variables` 
         on the tuple columns of the convereted dataframe.
 
         Raises:
@@ -460,11 +436,11 @@ class JIDENNDataset:
         df = df.rename(lambda x: x.replace('/', '.'), axis='columns')
         return df
 
-    def filter(self, filter: Callable[[JIDENNVariables], bool]) -> JIDENNDataset:
+    def filter(self, filter: Callable[[ROOTVariables], bool]) -> JIDENNDataset:
         """Filters the dataset using the `filter` function. 
 
         Args:
-            filter (Callable[[JIDENNVariables], bool]): Function to apply to the data.
+            filter (Callable[[ROOTVariables], bool]): Function to apply to the data.
 
         Raises:
             ValueError: If the dataset is not loaded yet.
@@ -510,11 +486,14 @@ class JIDENNDataset:
             dataset = self.dataset.map(map_func)
         else:
             dataset = self.dataset.map(dict_to_stacked_array)
-        dataset = dataset.shuffle(shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
+        dataset = dataset.shuffle(
+            shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
         if take is not None:
             dataset = dataset.take(take)
-            dataset = dataset.apply(tf.data.experimental.assert_cardinality(take)) if assert_length else dataset
-        dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size))
+            dataset = dataset.apply(tf.data.experimental.assert_cardinality(
+                take)) if assert_length else dataset
+        dataset = dataset.apply(
+            tf.data.experimental.dense_to_ragged_batch(batch_size))
         # dataset = dataset.ragged_batch(batch_size)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset

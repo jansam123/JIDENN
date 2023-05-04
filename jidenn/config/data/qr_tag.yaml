@@ -15,36 +15,32 @@ subfolder_weights:
 cached:
 weight:
 variables:
-  per_jet:
-    - __event__
-  per_jet_tuple:
-    - Electron
-    - IntermediateElectron
-    - Muon
-    - IntermediateMuon
-    - KinLepton
-    - IntermediateKinLepton
-    - Kaon
-    - SlowPion
-    - FastHadron
-    - Lambda
-    - FSC
-    - MaximumPstar
-    - KaonPion
-    - dx
-    - dy
-    - dz
-    - E
-    - charge
-    - px_c
-    - py_c
-    - pz_c
-    - electronID_c
-    - muonID_c
-    - pionID_c
-    - kaonID_c
-    - protonID_c
-    - deuteronID_c
-    - electronID_noSVD_noTOP_c
-  per_event:
-    - __event__
+  - Electron
+  - IntermediateElectron
+  - Muon
+  - IntermediateMuon
+  - KinLepton
+  - IntermediateKinLepton
+  - Kaon
+  - SlowPion
+  - FastHadron
+  - Lambda
+  - FSC
+  - MaximumPstar
+  - KaonPion
+  - dx
+  - dy
+  - dz
+  - E
+  - charge
+  - px_c
+  - py_c
+  - pz_c
+  - electronID_c
+  - muonID_c
+  - pionID_c
+  - kaonID_c
+  - protonID_c
+  - deuteronID_c
+  - electronID_noSVD_noTOP_c
+  - __event__
