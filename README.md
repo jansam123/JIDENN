@@ -1,8 +1,8 @@
 # Jet Identification Deep Neural Network (JIDENN) 
 Guark/gluon jet tagging with Transformers
 
-[Documentation](http://jansam.wieno.sk/JIDENN)
-[Bachelor Thesis](https://github.com/jansam123/bachelor_thesis)
+- [Documentation](http://jansam.wieno.sk/JIDENN)
+- [Bachelor Thesis](https://github.com/jansam123/bachelor_thesis)
 
 <p align="center">
 <img src="images/q_g_tagging.jpeg" width="450">
