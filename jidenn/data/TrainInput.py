@@ -222,7 +222,7 @@ class QRInteraction(TrainInput):
         phi = tf.math.atan2(py, px)
         theta = tf.math.atan2(tf.norm(tf.stack([px, py], axis=1), axis=1), pz)
 
-        data.update({'log_pt': tf.math.log(p_norm), 'theta': theta,
+        data.update({'log_norm_p': tf.math.log(p_norm), 'theta': theta,
                     'phi': phi, 'log_e': tf.math.log(e)})
 
         delta = tf.math.sqrt(tf.math.square(theta[:, tf.newaxis] - theta[tf.newaxis, :]) +
@@ -239,7 +239,7 @@ class QRInteraction(TrainInput):
             (p_norm[:, tf.newaxis] + p_norm[tf.newaxis, :])
         z = tf.linalg.set_diag(z, tf.zeros_like(e))
 
-        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+        m2 = tf.math.square(e[:, tf.newaxis] + e[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
             tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
             tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
         m2 = tf.linalg.set_diag(m2, tf.zeros_like(e))
@@ -247,11 +247,30 @@ class QRInteraction(TrainInput):
 
         interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
+        # dx, dy, dz = data['dx'], data['dy'], data['dz']
+        # poca_norm = tf.norm(tf.stack([dx, dy, dz], axis=1), axis=1)
+        # delta_poca = tf.math.sqrt(tf.math.square(dx[:, tf.newaxis] - dx[tf.newaxis, :]) +
+        #                           tf.math.square(dy[:, tf.newaxis] - dy[tf.newaxis, :]) +
+        #                           tf.math.square(dz[:, tf.newaxis] - dz[tf.newaxis, :]))
+        # delta_poca = tf.math.log(delta_poca)
+        # delta_poca = tf.linalg.set_diag(delta_poca, tf.zeros_like(e))
+
+        # k_t_poca = tf.math.minimum(
+        #     poca_norm[:, tf.newaxis], poca_norm[tf.newaxis, :]) * delta_poca
+        # k_t_poca = tf.math.log(k_t_poca)
+        # k_t_poca = tf.linalg.set_diag(k_t_poca, tf.zeros_like(e))
+
+        # z_poca = tf.math.minimum(poca_norm[:, tf.newaxis], poca_norm[tf.newaxis, :]) / \
+        #     (poca_norm[:, tf.newaxis] + poca_norm[tf.newaxis, :])
+        # z_poca = tf.linalg.set_diag(z_poca, tf.zeros_like(e))
+
+        # interaction_vars.update(
+        #     {'delta_poca': delta_poca, 'k_t_poca': k_t_poca, 'z_poca': z_poca})
+
         return data, interaction_vars
 
     @property
     def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
-        """The input shape is tuple `(None, len(per_jet_tuple_variables))`."""
         return (None, len(self.variables)), (None, None, 4)
 
 

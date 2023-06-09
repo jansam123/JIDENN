@@ -127,7 +127,7 @@ models:
     train_input: constituents
 
   bdt:
-    num_trees: 1000 #  Number of trees in the forest.
+    num_trees: 500 #  Number of trees in the forest.
     growing_strategy: BEST_FIRST_GLOBAL #  Growing strategy.
     max_depth: 30 #  Maximum depth of the tree.
     split_axis: SPARSE_OBLIQUE #  Split axis.

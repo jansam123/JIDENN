@@ -53,6 +53,7 @@ LATEX_NAMING_CONVENTION = {
     'k_t': r'$\log{k_{\mathrm{T}}}$',
     'z': r'$z$',
     'm2': r'$\log{m^2}$',
+    'log_norm_p': r'$\log{\norm{p}}$',
 }
 
 
@@ -64,13 +65,14 @@ MODEL_NAMING_SCHEMA = {
     'part': 'ParT',
     'highway': 'Highway',
     'depart_rel': 'DeParT (Relative)',
-    'interacting_depart': 'Interacting DeParT',
-    'interacting_depart_no_norm': 'Interacting DeParT (No Norm)',
-    'interacting_part': 'Interacting ParT',
+    'interacting_depart': 'iDeParT',
+    'interacting_depart_no_norm': 'iDeParT (No Norm)',
+    'interacting_part': 'iParT',
     'pfn': 'PFN',
     'efn': 'EFN',
     'transformer': 'Transformer',
     'bdt': 'BDT',
+    'depart_100M': 'iDeParT (100M jets)',
 }
 
 
@@ -89,4 +91,12 @@ METRIC_NAMING_SCHEMA = {
     'quark_rej_at_gluon_eff_0.9': r'$\varphi_q @_{0.9} \varepsilon_g$',
     'loss': 'Loss',
     'roc': 'ROC',
+}
+
+MC_NAMING_SCHEMA = {
+    'pythia': 'Pythia',
+    'sherpa': 'Sherpa',
+    'sherpa_lund': 'Sherpa (Lund)',
+    'herwig': 'Herwig7',
+    'herwig_dipole': 'Herwig7 (Dipole)',
 }

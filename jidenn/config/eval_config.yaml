@@ -19,12 +19,12 @@ base_logdir: logs # Base log directory for all runs.
 eval_logs: eval # Log directory for eval runs.
 logdir: ${base_logdir}/${eval_logs} # Log directory for eval runs.
 model_dir: ${base_logdir}/model
-draw_distribution: 10_000
+draw_distribution: 20_000
 feature_importance: False # Whether to draw feature importance.
 test_subfolder: test
 seed: 42
 batch_size: 384
-take: 50_000
+take: 20_000
 input_type: constituents
-threshold: 0.5
+threshold:
 include_base: True

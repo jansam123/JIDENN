@@ -28,7 +28,7 @@ class Binning:
 @dataclass
 class EvalConfig:
     """Configuration for evaluation of a model.
-    
+
     Args:
         base_logdir (str): Base path to the log directory of the training. 
         eval_logs (str): Subfolder of the base log directory for the evaluation.
@@ -45,14 +45,14 @@ class EvalConfig:
         take (int): Number of data samples to use for evaluation. 
         feature_importance (bool): If `True`, compute the feature importance of the model.
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
-        threshold (float): Threshold for distinguishing quarks and gluons.
+        threshold (str, optional): Location of csv file containing the threshold for the model to use.
         include_base (bool): If `False`, and the binning is applied, the evaluation without
             binning is not performed.
         input_type (str): Input type of the model. One of: 'highlevel', 'highlevel_constituents',
             'constituents', 'relative_constituents', 'interaction_constituents'.
-        
-            
-    
+
+
+
     """
     logdir: str
     base_logdir: str
@@ -64,8 +64,8 @@ class EvalConfig:
     batch_size: int
     take: int
     feature_importance: bool
-    binning: Optional[Binning]
-    threshold: float
+    binning: Binning
+    threshold: Optional[str]
     include_base: bool
     input_type = Literal['highlevel',
                          'highlevel_constituents',
