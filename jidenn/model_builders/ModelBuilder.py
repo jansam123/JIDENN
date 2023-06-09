@@ -66,9 +66,10 @@ class ModelBuilder:
     @property
     def metrics(self) -> List[tf.keras.metrics.Metric]:
         """Metrics used in training."""
-        metrics = [tf.keras.metrics.CategoricalAccuracy() if self.num_labels > 2 else tf.keras.metrics.BinaryAccuracy(),
-                   tf.keras.metrics.AUC(),
-                   EffectiveTaggingEfficiency()]
+        metrics = [tf.keras.metrics.CategoricalAccuracy() if self.num_labels >
+                   2 else tf.keras.metrics.BinaryAccuracy(),]
+        #    tf.keras.metrics.AUC(),
+        #    EffectiveTaggingEfficiency()]
         return metrics
 
     @property

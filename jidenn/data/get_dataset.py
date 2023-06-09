@@ -117,7 +117,4 @@ def get_preprocessed_dataset(files: List[str],
     if len(datasets) == 1:
         return datasets[0]
 
-    return JIDENNDataset.combine(datasets, args_data.subfolder_weights)
-
-
-
+    return JIDENNDataset.combine(datasets, args_data.subfolder_weights if args_data.subfolder_weights is not None else [1 / len(files)] * len(files))

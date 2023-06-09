@@ -31,7 +31,7 @@ def get_normalization(dataset: tf.data.Dataset,
     """
 
     if not adapt:
-        log.info("Normalization not adapting. Loading weights expected.")
+        log.warning("Normalization not adapting. Loading weights expected.")
         if not interaction:
             return tf.keras.layers.Normalization(axis=-1)
         else:
@@ -75,7 +75,8 @@ def get_normalization(dataset: tf.data.Dataset,
 
     normalizer_interaction = tf.keras.layers.Normalization(axis=-1)
     try:
-        normalizer_interaction.adapt(dataset.map(picker_interaction), steps=normalization_steps)
+        normalizer_interaction.adapt(dataset.map(
+            picker_interaction), steps=normalization_steps)
     except Exception as e:
         log.error(f"Interaction normalization failed: {e}")
         normalizer_interaction = None

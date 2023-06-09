@@ -1,0 +1,66 @@
+path: ./data/Sherpa_Lund # Path to data folder containing folder of saved tf.data.Datasets
+target: jets_PartonTruthLabelID # Name of the target variable, we want to predict in the loaded Dataset
+target_labels: # Original jets_PartonTruthLabelID labels put into two classes for classifing gluon (21) and quarks (1-6). First entry will pre predicted as 0, second as 1.
+  - [21]
+  - [1, 2, 3, 4, 5, 6]
+labels: # Names of the classes we want to tag. The first correspponds to predicting 0 - gluon, second to predicting 1 - quark.
+  - gluon
+  - quark
+variable_unknown_labels: [-1, -999] # Optional unknown labels, this is not needed.
+resample_labels: [0.5, 0.5] # Distribution of target labels you want to have. Balanced labels corresponds to [0.5, 0.5]
+cut: "jets_pt>20_000" # cut to apply on the individual jets
+subfolders: # if you have multiple file sources and you want to combine them, you can specify them here. For example individual JZ slices. If using train.py each subfolder must contain test, dev, test folders
+  - JZ1
+  - JZ2
+  - JZ3
+  - JZ4
+  - JZ5
+subfolder_cut: # if you want to apply different cuts on the individual subfolders, you can specify them here. For example pT cut on individual JZ slices
+  - "jets_pt>20_000"
+  - "jets_pt>60_000"
+  - "jets_pt>160_000"
+  - "jets_pt>400_000"
+  - "jets_pt>800_000"
+subfolder_weights: [0.2, 0.2, 0.2, 0.2, 0.2] # if you want to apply different weights on the individual subfolders, you can specify them here. For example pT weights on individual JZ slices
+weight: # Name of the variable corresponding to weight. Currently not working.
+# Variables to load from the files. You must also specify the variables used for cuts.
+variables:
+  - jets_ActiveArea4vec_eta
+  - jets_ActiveArea4vec_m
+  - jets_ActiveArea4vec_phi
+  - jets_ActiveArea4vec_pt
+  - jets_DetectorEta
+  - jets_FracSamplingMax
+  - jets_FracSamplingMaxIndex
+  - jets_GhostMuonSegmentCount
+  - jets_JVFCorr
+  - jets_JetConstitScaleMomentum_eta
+  - jets_JetConstitScaleMomentum_m
+  - jets_JetConstitScaleMomentum_phi
+  - jets_JetConstitScaleMomentum_pt
+  - jets_JvtRpt
+  - jets_fJVT
+  - jets_passFJVT
+  - jets_passJVT
+  - jets_Timing
+  - jets_Jvt
+  - jets_EMFrac
+  - jets_Width
+  - jets_chf
+  - jets_eta
+  - jets_m
+  - jets_phi
+  - jets_pt
+  - jets_PFO_n
+  - jets_ChargedPFOWidthPt1000[0]
+  - jets_TrackWidthPt1000[0]
+  - jets_NumChargedPFOPt1000[0]
+  - jets_NumChargedPFOPt500[0]
+  - jets_SumPtChargedPFOPt500[0]
+  #
+  - jets_PFO_m
+  - jets_PFO_pt
+  - jets_PFO_eta
+  - jets_PFO_phi
+  #
+  - corrected_averageInteractionsPerCrossing[0]
