@@ -1,0 +1,56 @@
+path: ./data/pythia_allJZ # Path to data folder containing folder of *.root files.
+target: jets_PartonTruthLabelID
+labels: # list of labels to use.
+  - gluon
+  - quark
+target_labels:
+  - [21]
+  - [1, 2, 3, 4, 5, 6]
+variable_unknown_labels: [-1, -999]
+resample_labels:
+cut: jets_PFO_n<100 # " && (jets_passFJVT==1) && (jets_passJVT==1) && (jets_Jvt>0.8) && (jets_PFO_n>5)" #" && (jets_eta>-2.5) && (jets_eta<2.5)" #" && (jets_TrackWidthPt1000[:,:1]>=0) && (jets_ChargedPFOWidthPt1000[:,:1]>=0)" # Cut to apply to data.
+subfolders:
+subfolder_cut:
+subfolder_weights:
+cached:
+weight: #weight_mc[0]
+variables:
+  - jets_ActiveArea4vec_eta
+  - jets_ActiveArea4vec_m
+  - jets_ActiveArea4vec_phi
+  - jets_ActiveArea4vec_pt
+  - jets_DetectorEta
+  - jets_FracSamplingMax
+  - jets_FracSamplingMaxIndex
+  - jets_GhostMuonSegmentCount
+  - jets_JVFCorr
+  - jets_JetConstitScaleMomentum_eta
+  - jets_JetConstitScaleMomentum_m
+  - jets_JetConstitScaleMomentum_phi
+  - jets_JetConstitScaleMomentum_pt
+  - jets_JvtRpt
+  - jets_fJVT
+  - jets_passFJVT
+  - jets_passJVT
+  - jets_Timing
+  - jets_Jvt
+  - jets_EMFrac
+  - jets_Width
+  - jets_chf
+  - jets_eta
+  - jets_m
+  - jets_phi
+  - jets_pt
+  - jets_PFO_n
+  - jets_ChargedPFOWidthPt1000[0]
+  - jets_TrackWidthPt1000[0]
+  - jets_NumChargedPFOPt1000[0]
+  - jets_NumChargedPFOPt500[0]
+  - jets_SumPtChargedPFOPt500[0]
+  #
+  - jets_PFO_m
+  - jets_PFO_pt
+  - jets_PFO_eta
+  - jets_PFO_phi
+  #
+  - corrected_averageInteractionsPerCrossing[0]

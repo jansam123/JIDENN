@@ -16,6 +16,7 @@ from jidenn.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
 from jidenn.data.string_conversions import Cut
 from jidenn.data.get_dataset import get_preprocessed_dataset
 from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
+from jidenn.evaluation.evaluation_metrics import EffectiveTaggingEfficiency
 from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.evaluation.evaluation_metrics import calculate_metrics
 from utils.const import LATEX_NAMING_CONVENTION
@@ -34,7 +35,8 @@ def main(args: eval_config.EvalConfig) -> None:
         np.random.seed(args.seed)
         tf.random.set_seed(args.seed)
 
-    custom_objects = {'LinearWarmup': LinearWarmup}
+    custom_objects = {'LinearWarmup': LinearWarmup,
+                      'EffectiveTaggingEfficiency': EffectiveTaggingEfficiency}
     model: tf.keras.Model = tf.keras.models.load_model(
         args.model_dir, custom_objects=custom_objects)
     model.summary(print_fn=log.info)
@@ -53,13 +55,23 @@ def main(args: eval_config.EvalConfig) -> None:
                    for jz in args.data.subfolders] if args.data.subfolders is not None else None
 
     test_ds = get_preprocessed_dataset(file, args.data, file_labels)
+    thresholds = pd.read_csv(args.threshold) if args.threshold is not None else None
+    print(thresholds)
 
-    names = args.binning.cut_names if args.binning is not None else []
+    names = args.binning.cut_names if args.binning.cut_names is not None else []
     names = ['base'] + names if args.include_base else names
-    cuts = args.binning.cuts if args.binning is not None else []
+    cuts = args.binning.cuts if args.binning.cuts is not None else []
     cuts = ['base'] + cuts if args.include_base else cuts
 
+    if os.path.isfile(os.path.join(args.logdir, 'results.csv')):
+        os.remove(os.path.join(args.logdir, 'results.csv'))
+
     for cut, cut_alias in zip(cuts, names):
+        if cut != 'base' and thresholds is not None:
+            threshold = thresholds[thresholds['cut'] == cut_alias]['threshold_at_fixed_quark_wp'].values[0]
+        else:
+            threshold = 0.5
+
         ds = test_ds.filter(lambda *x: Cut(cut)
                             (x[0])) if cut != 'base' else test_ds
         label = ds.get_prepared_dataset(
@@ -78,7 +90,7 @@ def main(args: eval_config.EvalConfig) -> None:
         log.info(
             f"Per Jet Prediction time for cut {cut}: {10**3 * inferendce_time / args.take:.2f} ms (batch size: {args.batch_size})")
 
-        prediction = np.where(score > args.threshold, 1, 0)
+        prediction = np.where(score > threshold, 1, 0)
 
         # dir creation
         dir_name = os.path.join(args.logdir, cut_alias)
@@ -93,7 +105,7 @@ def main(args: eval_config.EvalConfig) -> None:
         df['Truth Label'] = df['label'].replace(naming_schema)
 
         # calculate metrics
-        metrics = calculate_metrics(y_true=df['label'].to_numpy(), score=score)
+        metrics = calculate_metrics(y_true=df['label'].to_numpy(), score=score, threshold=threshold)
         log.info(f"Test evaluation for cut {cut}: {metrics}")
         if cut != 'base':
             new = pd.DataFrame({**metrics, 'cut': cut_alias}, index=[0])
@@ -104,6 +116,10 @@ def main(args: eval_config.EvalConfig) -> None:
             else:
                 new.to_csv(os.path.join(args.logdir, 'results.csv'),
                            mode='a', header=False, index=False)
+        else:
+            base_metrics = pd.DataFrame(metrics, index=[0])
+            base_metrics.to_csv(os.path.join(
+                args.logdir, 'base_results.csv'), index=False)
 
         if args.draw_distribution is not None:
             draw_df = ds.apply(lambda x: x.take(
@@ -128,7 +144,10 @@ def main(args: eval_config.EvalConfig) -> None:
         results_df['named_prediction'] = results_df['prediction'].replace(
             naming_schema)
 
-        plot_validation_figs(results_df, dir_name, log=log)
+        plot_validation_figs(df=results_df,
+                             logdir=dir_name,
+                             log=log,
+                             class_names=args.data.labels,)
 
     plot_metrics_per_cut(metrics_per_cut, args.logdir, log=log)
 

@@ -92,8 +92,14 @@ def main(args: config.JIDENNConfig) -> None:
     dev = dev.create_train_input(model_input)
     test = test.create_train_input(model_input)
 
+    try:
+        restoring_from_backup = len(os.listdir(os.path.join(
+            args.general.logdir, args.general.backup))) > 0
+    except FileNotFoundError:
+        restoring_from_backup = False
+
     # draw input data distribution
-    if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0:
+    if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0 and not restoring_from_backup:
         log.info(
             f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
         dir = os.path.join(args.general.logdir, 'dist')
@@ -141,12 +147,9 @@ def main(args: config.JIDENNConfig) -> None:
         # this helps with faster convergence of the models
         if args.preprocess.normalization_size is not None and args.preprocess.normalization_size > 0 and args.general.model != 'bdt':
             adapt = True if args.general.load_checkpoint_path is None else False
-            try:
-                adapt = adapt and len(os.listdir(args.general.backup)) == 0
-            except FileNotFoundError:
-                adapt = adapt
+            adapt = adapt and not restoring_from_backup
             normalizer = get_normalization(dataset=train,
-                                           adapt=adapt,
+                                           adapt=True,
                                            ragged=isinstance(
                                                input_size, tuple),
                                            normalization_steps=args.preprocess.normalization_size,

@@ -15,7 +15,7 @@ import tensorflow as tf
 import numpy as np
 from sklearn.metrics import roc_curve, confusion_matrix, auc
 from io import BytesIO
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Optional
 
 
 sns.set_theme(style="ticks")
@@ -56,7 +56,8 @@ class ValidationFigure:
 
     def save_fig(self, path: str, format: str = 'png'):
         """Saves the figure to the specified path."""
-        self._fig.savefig(os.path.join(path, self._name + f".{format}"), dpi=300, bbox_inches='tight')
+        self._fig.savefig(os.path.join(path, self._name +
+                          f".{format}"), dpi=300, bbox_inches='tight')
 
     def save_data(self, path: str):
         """Saves the data to the specified path as a csv file."""
@@ -97,16 +98,19 @@ class ValidationROC(ValidationFigure):
     """
 
     def get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
-        fp, tp, th = roc_curve(self._df['label'].values, self._df['score'].values)
+        fp, tp, th = roc_curve(
+            self._df['label'].values, self._df['score'].values)
         self._data = pd.DataFrame({'FPR': fp, 'TPR': tp, 'threshold': th})
         auc_score = auc(fp, tp)
 
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
-        sns.lineplot(x=100 * fp, y=100 * tp, label=f'AUC = {auc_score:.3f}', linewidth=2)
+        sns.lineplot(x=100 * fp, y=100 * tp,
+                     label=f'AUC = {auc_score:.3f}', linewidth=2)
         sns.lineplot(x=[0, 50, 100], y=[0, 50, 100], label=f'Random',
                      linewidth=1, linestyle='--', color='darkred', alpha=0.5)
-        plt.plot([0, 0, 100], [0, 100, 100], color='darkgreen', linestyle='-.', label='Ideal', alpha=0.5)
+        plt.plot([0, 0, 100], [0, 100, 100], color='darkgreen',
+                 linestyle='-.', label='Ideal', alpha=0.5)
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
         plt.grid(True)
@@ -120,12 +124,15 @@ class ValidationCM(ValidationFigure):
     """Plots the confusion matrix."""
 
     def get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
-        cm = confusion_matrix(self._df['label'].values, self._df['prediction'].values)
+        cm = confusion_matrix(
+            self._df['label'].values, self._df['prediction'].values)
         if fig is None:
             fig = plt.figure(figsize=(6, 6))
 
-        cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 1000, decimals=0).astype(int)
-        df_cm = pd.DataFrame(cm, index=self._class_names, columns=self._class_names)
+        cm = np.around(cm.astype('float') / cm.sum(axis=1)
+                       [:, np.newaxis] * 1000, decimals=0).astype(int)
+        df_cm = pd.DataFrame(cm, index=self._class_names,
+                             columns=self._class_names)
         self._data = df_cm
         sns.heatmap(df_cm, annot=True, fmt='4d', cmap=plt.cm.Blues, cbar=False)
         plt.title("Confusion matrix")
@@ -143,7 +150,7 @@ class ValidationScoreHistogram(ValidationFigure):
         self._data = self._df[['score', 'Truth Label']]
         ax = sns.histplot(data=self._df, x='score', hue='Truth Label',
                           palette='Set1', stat='count', element="step", fill=True,
-                          hue_order=['quark', 'gluon'],)
+                          hue_order=self._class_names)
         sns.move_legend(ax, 'upper center')
         plt.xlabel('Score')
         return fig
@@ -159,13 +166,13 @@ class ValidationLabelHistogram(ValidationFigure):
             fig = plt.figure(figsize=(8, 8))
         self._data = self._df[['Truth Label', 'named_prediction']]
         sns.histplot(self._df, x='named_prediction', hue='Truth Label',
-                     stat='count', multiple='stack', hue_order=['quark', 'gluon'],
+                     stat='count', multiple='stack', hue_order=self._class_names,
                      palette='Set1')
         plt.xlabel('Predicted Tag')
         return fig
 
 
-def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats: List[str] = ['jpg', 'pdf']):
+def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats: List[str] = ['jpg', 'pdf'], class_names: Optional[List[str]] = None):
     """Plots the validation figures and saves them to disk.
     Args:
         df (pd.DataFrame): The dataframe containing the truth lables, the model output scores and the predictions.
@@ -185,12 +192,13 @@ def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats: Li
         format_path.append(os.path.join(base_path, format))
         os.makedirs(format_path[-1], exist_ok=True)
 
-    figure_classes = [ValidationROC, ValidationCM, ValidationScoreHistogram, ValidationLabelHistogram]
+    figure_classes = [ValidationROC, ValidationCM,
+                      ValidationScoreHistogram, ValidationLabelHistogram]
     figure_names = ['roc', 'confusion_matrix', 'score_hist', 'prediction_hist']
 
     for validation_fig, name in zip(figure_classes, figure_names):
         log.info(f"Generating figure {name}")
-        val_fig = validation_fig(df, name, ['gluon', 'quark'])
+        val_fig = validation_fig(df, name, class_names=class_names)
         for fmt, path in zip(formats, format_path):
             val_fig.save_fig(path, fmt)
         val_fig.save_data(csv_path)
