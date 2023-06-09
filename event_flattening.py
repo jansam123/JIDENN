@@ -19,22 +19,6 @@ tf.config.threading.set_inter_op_parallelism_threads(0)
 tf.config.threading.set_intra_op_parallelism_threads(0)
 
 
-def split_dataset(dataset: tf.data.Dataset, size: float) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
-    if dataset.cardinality() == tf.data.UNKNOWN_CARDINALITY:
-        raise ValueError("Cannot split dataset with unknown cardinility.")
-    if dataset.cardinality() == tf.data.INFINITE_CARDINALITY:
-        raise ValueError("Cannot split dataset with infinite cardinility.")
-
-    return dataset.take(int(size * dataset.cardinality().numpy())), dataset.skip(int(size * dataset.cardinality().numpy()))
-
-
-def split_train_dev_test(dataset: tf.data.Dataset, test_size: float, dev_size: float) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
-    train_size = 1 - test_size - dev_size
-    train, dev_test = split_dataset(dataset, train_size)
-    dev, test = split_dataset(dev_test, dev_size / (1 - train_size))
-    return train, dev, test
-
-
 @tf.function
 def no_pile_up(sample: ROOTVariables) -> ROOTVariables:
     sample = sample.copy()
@@ -66,45 +50,85 @@ def flatten_toJet(sample: ROOTVariables) -> ROOTVariables:
             continue
     return tf.data.Dataset.from_tensor_slices(sample)
 
+@tf.function
+def gen_random_number(sample: ROOTVariables) -> Tuple[ROOTVariables, tf.Tensor]:
+    return sample, tf.random.uniform(shape=[], minval=0, maxval=9, dtype=tf.int32)
+
+@tf.function
+def filter_test(sample: ROOTVariables, random_number: tf.Tensor) -> tf.Tensor:
+    return tf.equal(random_number, 0)
+
+@tf.function
+def filter_dev(sample: ROOTVariables, random_number: tf.Tensor) -> tf.Tensor:
+    return tf.equal(random_number, 1)
+
+@tf.function
+def filter_train(sample: ROOTVariables, random_number: tf.Tensor) -> tf.Tensor:
+    return tf.not_equal(random_number, 0) and tf.not_equal(random_number, 1)
+
+@tf.function
+def delete_random_number(sample: ROOTVariables, random_number: tf.Tensor) -> ROOTVariables:
+    return sample
 
 def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
     base_dir = args.file_path
-    files = [os.path.join(base_dir, f) for f in os.listdir(base_dir) if f.startswith('_')]
+    base_files = [f for f in os.listdir(base_dir) if f.startswith('_')]
+    files = [os.path.join(base_dir, f) for f in base_files]
     logging.info(f"Found {len(files)} files")
     logging.info(f"Files: {files}")
 
     def load_dataset_file(element_spec, file: str) -> tf.data.Dataset:
-        root_dt = tf.data.experimental.load(file, compression='GZIP', element_spec=element_spec)
-        root_dt = root_dt.map(no_pile_up, num_parallel_calls=tf.data.AUTOTUNE,
-                              deterministic=False).filter(filter_empty_jets)
-        root_dt = root_dt.prefetch(tf.data.AUTOTUNE)
+        root_dt = tf.data.Dataset.load(file, compression='GZIP', element_spec=element_spec)
+        root_dt = root_dt.map(no_pile_up).filter(filter_empty_jets)
         return root_dt
     
-    with open(os.path.join(files[0], 'element_spec'), 'rb') as f:
-        element_spec = pickle.load(f)
-    dataset = load_dataset_file(element_spec, files[0])
-    
-    for file in files[1:]:
-        with open(os.path.join(file, 'element_spec'), 'rb') as f:
-            element_spec = pickle.load(f)
-        dataset = dataset.concatenate(load_dataset_file(element_spec, file))
-        
-    dataset = dataset.interleave(flatten_toJet, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
-    dataset = dataset.shuffle(1000, reshuffle_each_iteration=False)
-    dataset = dataset.prefetch(tf.data.AUTOTUNE)
-
-    with open(os.path.join(args.save_path, 'element_spec'), 'wb') as f:
-        pickle.dump(dataset.element_spec, f)
-
     @tf.function
     def random_shards(x: ROOTVariables) -> tf.Tensor:
         return tf.random.uniform(shape=[], minval=0, maxval=args.num_shards, dtype=tf.int64)
-
-    tf.data.experimental.save(dataset, path=args.save_path, compression='GZIP', shard_func=random_shards)
-    dataset = tf.data.experimental.load(args.save_path, compression='GZIP')
-    for i in dataset.take(1):
-        print(i)
+    
+    try:
+        with open(os.path.join(files[0], 'element_spec'), 'rb') as f:
+            element_spec = pickle.load(f)
+    except FileNotFoundError:
+        files[0] = os.path.join(files[0], base_files[0])
+        with open(os.path.join(files[0], 'element_spec'), 'rb') as f:
+            element_spec = pickle.load(f)
+            
+    dataset = load_dataset_file(element_spec, files[0])
+    
+    for file, b_file in zip(files[1:], base_files[1:]):
+        try:
+            with open(os.path.join(file, 'element_spec'), 'rb') as f:
+                element_spec = pickle.load(f)
+        except FileNotFoundError:
+            file = os.path.join(file, b_file)
+            with open(os.path.join(file, 'element_spec'), 'rb') as f:
+                element_spec = pickle.load(f)
+        dataset = dataset.concatenate(load_dataset_file(element_spec, file))
+        
+    dataset = dataset.interleave(flatten_toJet)
+    dataset = dataset.shuffle(1000, reshuffle_each_iteration=False)
+    dataset = dataset.map(gen_random_number)
+    
+    train_dataset = dataset.filter(filter_train).map(delete_random_number).prefetch(tf.data.AUTOTUNE)
+    test_dataset = dataset.filter(filter_test).map(delete_random_number).prefetch(tf.data.AUTOTUNE)
+    dev_dataset = dataset.filter(filter_dev).map(delete_random_number).prefetch(tf.data.AUTOTUNE)
+    
+    for name, ds in zip(['train', 'test', 'dev'], [train_dataset, test_dataset, dev_dataset]):
+        logging.info(f"Saving {name} dataset to {args.save_path}/{name}")
+        
+        save_path = os.path.join(args.save_path, name)
+        os.makedirs(save_path, exist_ok=True)
+        
+        with open(os.path.join(save_path, 'element_spec'), 'wb') as f:
+            pickle.dump(ds.element_spec, f)
+        ds.save(path=save_path, compression='GZIP', shard_func=random_shards)
+        
+        ds = tf.data.Dataset.load(save_path, compression='GZIP')
+        print(ds.cardinality().numpy())
+        for i in ds.take(1):
+            print(i)
 
 
 if __name__ == "__main__":
