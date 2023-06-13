@@ -13,15 +13,6 @@ parser.add_argument("--file_path", type=str, help="Path to the root file")
 
 
 def main(args: argparse.Namespace) -> None:
-    jz_slices = ['JZ1', 'JZ2', 'JZ3', 'JZ4', 'JZ5']
-    is_correct = False
-    for jz in jz_slices:
-        if jz in args.save_path:
-            is_correct = True
-            break
-    if not is_correct:
-        raise ValueError("The file path does not contain the correct JZ slice")
-
     os.makedirs(args.save_path, exist_ok=True)
     root_dt = ROOTDataset.from_root_file(args.file_path, backend='pd')
     root_dt.save(args.save_path)
