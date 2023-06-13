@@ -255,12 +255,12 @@ def test(args: argparse.Namespace):
 
 
 def dl_model_comparison(args: argparse.Namespace):
-    models = ['interacting_depart', 'interacting_part', 'highway',
+    models = ['idepart', 'ipart', 'highway', 'idepart_rel',
               'fc', 'transformer', 'part', 'depart', 'pfn', 'efn']
     # models.append('depart_100M')
     base = 'transformer'
-    file_string = '/home/jankovys/JIDENN/good_logs/ragged/{model}/evaluation/pythia_50wp/pT/results.csv'.format
-    save_dir = 'good_logs/ragged/figs/compare_50_wp'
+    file_string = '/home/jankovys/JIDENN/logs/ragged_allJZ/{model}/evaluation/pythia_th/pT/results.csv'.format
+    save_dir = 'logs/ragged_allJZ/figs/compare'
     os.makedirs(save_dir, exist_ok=True)
     base_source = DataSource(file_string(model=base), 'Transformer')
     data_sources = []

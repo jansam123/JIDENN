@@ -183,7 +183,7 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         B, N, C = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2]
 
         qkv = self.linear_qkv(inputs)  # (B, N, C * 3)
-        qkv = tf.reshape(qkv, [B, N, 3, self.heads, C // self.heads]) # (B, N, 3, H, C // H)
+        qkv = tf.reshape(qkv, [B, N, 3, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
         qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
         q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
 
@@ -263,12 +263,12 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
         B, N, C = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2]
 
         kv = self.linear_kv(inputs)  # (B, N, C * 3)
-        kv = tf.reshape(kv, [B, N, 2, self.heads, C // self.heads]) # (B, N, 3, H, C // H)
+        kv = tf.reshape(kv, [B, N, 2, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
         kv = tf.transpose(kv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
         k, v = kv[0], kv[1]  # 2 x (B, H, N, C // H)
 
         q = self.linear_q(class_token)  # (B, 1, C)
-        q = tf.reshape(q, [B, self.heads, 1, C // self.heads]) # (B, H, 1, C // H)
+        q = tf.reshape(q, [B, self.heads, 1, C // self.heads])  # (B, H, 1, C // H)
 
         attention_weights = tf.linalg.matmul(
             q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
@@ -277,7 +277,7 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
             attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
         attention_weights = tf.transpose(
             attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
-        mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N) 
+        mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
         attention = tf.keras.layers.Softmax()(
             attention_weights, mask=mask)  # (B, H, 1, N)
         attention = self.linear_talking_2(tf.transpose(
@@ -426,7 +426,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
 
         self.pre_mhca_ln = tf.keras.layers.LayerNormalization()
-        self.mhca = TalkingMultiheadClassAttention(dim, heads, dropout)
+        self.mhca = MultiheadClassAttention(dim, heads, dropout)
         self.post_mhca_scale = LayerScale(layer_scale_init_value, dim)
         self.post_mhca_stoch_depth = StochasticDepth(drop_prob=stoch_drop_prob)
 
@@ -528,7 +528,7 @@ class DeParT(tf.keras.layers.Layer):
                                               activation,
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
-        
+
         self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
 
     def stochastic_prob(self, step, total_steps, drop_rate):
