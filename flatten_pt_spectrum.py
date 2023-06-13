@@ -43,10 +43,14 @@ def rebin_wrapper(n_bins, pt_range: List[float] = [60_000., 5_600_000.]) -> Call
     def rebin_pt(data: ROOTVariables) -> tf.Tensor:
         jet_pt = data['jets_pt']
         jet_pt = tf.reshape(jet_pt, ())
-        index = tf.histogram_fixed_width_bins(jet_pt, pt_range, nbins=n_bins + 1)
-        index = index - 1
-        if index < 0:
-            index = tf.constant(0, dtype=tf.int32)
+        index = tf.histogram_fixed_width_bins(jet_pt, pt_range, nbins=n_bins)
+        # index = tf.histogram_fixed_width_bins(jet_pt, pt_range, nbins=n_bins + 2)
+        # if index == n_bins + 1:
+        #     index = tf.constant(n_bins, dtype=tf.int32)
+        # index = index - 1
+        # if index < 0:
+        #     index = tf.constant(0, dtype=tf.int32)
+
         return index
         # parton = data['jets_PartonTruthLabelID']
         # if tf.equal(parton, tf.constant(21)):
@@ -89,6 +93,7 @@ def plot_pt_dist(dataset: tf.data.Dataset, save_path: str = 'figs.png') -> None:
     plt.savefig(save_path.replace('.png', '_all.png'))
     plt.yscale('log')
     plt.savefig(save_path.replace('.png', '_all_log.png'))
+    plt.close()
 
 
 def main(args: argparse.Namespace) -> None:
@@ -153,42 +158,69 @@ def main(args: argparse.Namespace) -> None:
 
     datasets = []
     sizes = []
-    quarks = []
-    gluons = []
     for i, jz_slice in enumerate(JZ_slices):
         file = f'{args.file_path}/{jz_slice}/{args.dataset_type}'
         with open(os.path.join(file, 'element_spec'), 'rb') as f:
             element_spec = pickle.load(f)
         ds = tf.data.Dataset.load(file, compression='GZIP')
         sizes += [ds.cardinality().numpy()]
-        ds = ds.filter(up_cut_pt_wrapper(pt_cuts[i]))
+
+        # ds = ds.filter(up_cut_pt_wrapper(pt_cuts[i]))
+        # ds = ds.filter(down_cut_pt_wrapper(pt_cuts[i + 1])) if i < len(pt_cuts ) - 1 else ds
+        if i < len(pt_cuts) - 1:
+            ds = ds.filter(double_cut_pt_wrapper(pt_cuts[i + 1], pt_cuts[i]))
+        else:
+            ds = ds.filter(double_cut_pt_wrapper(5_800_000, pt_cuts[i]))
+
+        # os.makedirs(f'{args.save_path}/spectrum_{jz_slice}', exist_ok=True)
+        # plot_pt_dist(ds.take(50_000).prefetch(tf.data.AUTOTUNE),
+        #              save_path=f'{args.save_path}/spectrum_{jz_slice}/pt_spectrum.png')
         # ds = ds.rejection_resample(split_q_g, target_dist=[0.5, 0.5]).map(lambda x, y: y)
-        # pt_ranges = [pt_cuts[i], pt_cuts[i + 1]] if i < len(pt_cuts) - 1 else [pt_cuts[i], 5_800_000]
-        # ds = ds.rejection_resample(rebin_wrapper(args.bins, pt_ranges), target_dist=[
-        #                            1 / (args.bins * 2)] * args.bins * 2, seed=42).map(lambda w, z: z)
+        # if i > 7:
+        #     ds = ds.repeat(2)
+
+        pt_ranges = [pt_cuts[i], pt_cuts[i + 1]] if i < len(pt_cuts) - 1 else [pt_cuts[i], 5_800_000]
+
+        gluons = ds.filter(lambda x: tf.equal(x['jets_PartonTruthLabelID'], tf.constant(21)))
+        quarks = ds.filter(lambda x: tf.reduce_any(
+            tf.equal(x['jets_PartonTruthLabelID'], tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32))))
+
+        gluons = gluons.rejection_resample(rebin_wrapper(args.bins, pt_ranges), target_dist=[
+            1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
+        quarks = quarks.rejection_resample(rebin_wrapper(args.bins, pt_ranges), target_dist=[
+            1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
+
+        ds = tf.data.Dataset.sample_from_datasets([gluons, quarks], [0.5, 0.5], stop_on_empty_dataset=True)
         ds = ds.map(write_JZ_wrapper(i + 1))
-        if i > 5:
-            ds = ds.repeat()
-        gluons.append(ds.filter(lambda x: tf.equal(x['jets_PartonTruthLabelID'], tf.constant(21))))
-        quarks.append(ds.filter(lambda x: tf.reduce_any(
-            tf.equal(x['jets_PartonTruthLabelID'], tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32)))))
+
+        ds = ds.cache()
+        os.makedirs(f'{args.save_path}/spectrum_{jz_slice}', exist_ok=True)
+        plot_pt_dist(ds.take(50_000).prefetch(tf.data.AUTOTUNE),
+                     save_path=f'{args.save_path}/spectrum_{jz_slice}/pt_spectrum_rebinned.png')
+        # if i > 5:
+        #     ds = ds.repeat()
+        # gluons.append(ds.filter(lambda x: tf.equal(x['jets_PartonTruthLabelID'], tf.constant(21))))
+        # quarks.append(ds.filter(lambda x: tf.reduce_any(
+        #     tf.equal(x['jets_PartonTruthLabelID'], tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32)))))
 
         datasets.append(ds)
 
     sizes = tf.constant(sizes, dtype=tf.float32)
     sizes = sizes / tf.reduce_sum(sizes)
-    # dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets, sizes)
-    gluons = tf.data.Dataset.sample_from_datasets(gluons, sizes[::-1])
-    gluons = gluons.rejection_resample(rebin_wrapper(args.bins), target_dist=[
-        1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
-    quarks = tf.data.Dataset.sample_from_datasets(quarks, sizes[::-1])
-    quarks = quarks.rejection_resample(rebin_wrapper(args.bins), target_dist=[
-        1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
-    dataset = tf.data.Dataset.sample_from_datasets([gluons, quarks], [0.5, 0.5], stop_on_empty_dataset=True)
+    dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets, sizes)
+    dataset = dataset.shuffle(100_000, seed=42)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
+    # gluons = tf.data.Dataset.sample_from_datasets(gluons, sizes[::-1])
+    # gluons = gluons.rejection_resample(rebin_wrapper(args.bins), target_dist=[
+    #     1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
+    # quarks = tf.data.Dataset.sample_from_datasets(quarks, sizes[::-1])
+    # quarks = quarks.rejection_resample(rebin_wrapper(args.bins), target_dist=[
+    #     1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
+    # dataset = tf.data.Dataset.sample_from_datasets([gluons, quarks], [0.5, 0.5], stop_on_empty_dataset=True)
+    # dataset = dataset.prefetch(tf.data.AUTOTUNE)
+
     # logging.info(f'Plotting pt spectrum before resampling.')
-    # plot_pt_dist(dataset.take(1_000_000), save_path=f'{args.save_path}/pt_spectrum.png')
     logging.info(f'Resampling dataset.')
 
     # bins = np.logspace(np.log10(60_000), np.log10(5_600_000), args.bins)

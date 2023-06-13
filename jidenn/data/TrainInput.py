@@ -247,26 +247,6 @@ class QRInteraction(TrainInput):
 
         interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
-        # dx, dy, dz = data['dx'], data['dy'], data['dz']
-        # poca_norm = tf.norm(tf.stack([dx, dy, dz], axis=1), axis=1)
-        # delta_poca = tf.math.sqrt(tf.math.square(dx[:, tf.newaxis] - dx[tf.newaxis, :]) +
-        #                           tf.math.square(dy[:, tf.newaxis] - dy[tf.newaxis, :]) +
-        #                           tf.math.square(dz[:, tf.newaxis] - dz[tf.newaxis, :]))
-        # delta_poca = tf.math.log(delta_poca)
-        # delta_poca = tf.linalg.set_diag(delta_poca, tf.zeros_like(e))
-
-        # k_t_poca = tf.math.minimum(
-        #     poca_norm[:, tf.newaxis], poca_norm[tf.newaxis, :]) * delta_poca
-        # k_t_poca = tf.math.log(k_t_poca)
-        # k_t_poca = tf.linalg.set_diag(k_t_poca, tf.zeros_like(e))
-
-        # z_poca = tf.math.minimum(poca_norm[:, tf.newaxis], poca_norm[tf.newaxis, :]) / \
-        #     (poca_norm[:, tf.newaxis] + poca_norm[tf.newaxis, :])
-        # z_poca = tf.linalg.set_diag(z_poca, tf.zeros_like(e))
-
-        # interaction_vars.update(
-        #     {'delta_poca': delta_poca, 'k_t_poca': k_t_poca, 'z_poca': z_poca})
-
         return data, interaction_vars
 
     @property
@@ -367,7 +347,7 @@ class ConstituentVariables(TrainInput):
         return (None, 8)
 
 
-class RelativeConstituentVariables(TrainInput):
+class InteractingRelativeConstituentVariables(TrainInput):
     """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
     It is the same as `ConstituentVariables` but containg only variables relative to the jet.
     These are used as alternative input to models mentioned in `ConstituentVariables`.
@@ -381,38 +361,67 @@ class RelativeConstituentVariables(TrainInput):
     - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
     """
 
-    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
-        m_const = sample['jets_PFO_m']
-        pt_const = sample['jets_PFO_pt']
-        eta_const = sample['jets_PFO_eta']
-        phi_const = sample['jets_PFO_phi']
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m = sample['jets_PFO_m']
+        pt = sample['jets_PFO_pt']
+        eta = sample['jets_PFO_eta']
+        phi = sample['jets_PFO_phi']
 
         m_jet = sample['jets_m']
         pt_jet = sample['jets_pt']
         eta_jet = sample['jets_eta']
         phi_jet = sample['jets_phi']
 
-        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
-        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
-        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
-        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
-        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+        E, px, py, pz = tf.unstack(to_e_px_py_pz(
+            tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
+        E_jet = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        px_jet = pt_jet * tf.math.cos(phi_jet)
+        py_jet = pt_jet * tf.math.sin(phi_jet)
+        pz_jet = pt_jet * tf.math.tanh(eta_jet)
 
-        logPT = tf.math.log(pt_const)
+        E = E / E_jet
+        px = px / px_jet
+        py = py / py_jet
+        pz = pz / pz_jet
+        pt = pt / tf.math.reduce_mean(pt_jet)
+        eta = eta - tf.math.reduce_mean(eta_jet)
+        phi = phi - tf.math.reduce_mean(phi_jet)
 
-        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
-        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
-        logE = tf.math.log(PFO_E)
-        m = m_const
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / \
+            (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+        m2 = tf.math.log(m2)
+
+        interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+
+        deltaR = tf.math.sqrt(eta**2 + phi**2)
+
+        logPT_PTjet = tf.math.log(pt)
+        logE_Ejet = tf.math.log(E)
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
-        return {'log_PT|PTjet': logPT_PTjet, 'log_E|Ejet': logE_Ejet,
-                'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+        vars = {'log_PT|PTjet': logPT_PTjet, 'log_E|Ejet': logE_Ejet,
+                'm': m, 'deltaEta': eta, 'deltaPhi': phi, 'deltaR': deltaR}
+        return vars, interaction_vars
 
     @property
-    def input_shape(self) -> Tuple[None, int]:
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
         """The input shape is `(None, 6)`, where `None` indicates that the number of constituents is not fixed, 
         and `6` is the number of variables per constituent."""
-        return (None, 6)
+        return (None, 6), (None, None, 4)
 
 
 class InteractionConstituentVariables(TrainInput):
@@ -519,7 +528,7 @@ def input_classes_lookup(class_name: Literal['highlevel',
     lookup_dict = {'highlevel': HighLevelJetVariables,
                    'highlevel_constituents': HighLevelPFOVariables,
                    'constituents': ConstituentVariables,
-                   'relative_constituents': RelativeConstituentVariables,
+                   'irelative_constituents': InteractingRelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
                    'qr': QR,
                    'qr_interaction': QRInteraction}
