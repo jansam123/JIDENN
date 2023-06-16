@@ -163,10 +163,6 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
         return 1 / super(RejectionAtEfficiency, self).result()
 
 
-    
-    
-
-
 class EffectiveTaggingEfficiency(tf.keras.metrics.Metric):
 
     def __init__(self, bins: List[float] = [0, 0.1, 0.25, 0.5, 0.625, 0.75, 0.875, 1], threshold: float = 0.5, name='eff_tag_efficiency', **kwargs):
@@ -446,12 +442,22 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
                          label_id=0, threshold=threshold),
         BinaryEfficiency(name='quark_efficiency',
                          label_id=1, threshold=threshold),
-        EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at__quark_wp',
+        EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_50wp',
                                       fixed_label_id=1, working_point=0.5, returned_label_id=0),
-        EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_quark_wp',
+        EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_quark_50wp',
                                       fixed_label_id=1, working_point=0.5, returned_label_id=1),
-        ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_wp',
+        RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_50wp',
+                                     fixed_label_id=1, working_point=0.5, returned_label_id=0),
+        ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_50wp',
                                      fixed_label_id=1, working_point=0.5),
+        EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_80wp',
+                                      fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_quark_80wp',
+                                      fixed_label_id=1, working_point=0.8, returned_label_id=1),
+        RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_80wp',
+                                     fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_80wp',
+                                     fixed_label_id=1, working_point=0.8),
         EffectiveTaggingEfficiency(
             name='effective_tagging_efficiency', threshold=threshold),
         tf.keras.metrics.AUC(name='auc')]

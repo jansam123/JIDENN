@@ -96,7 +96,7 @@ def plot_metric(df: pd.DataFrame,
                 ylim: Optional[Tuple[float, float]] = None,):
 
     palette = 'coolwarm'
-    fig_big = plt.figure(figsize=(16, 12))
+    fig_big = plt.figure(figsize=(20, 12))
     gs = fig_big.add_gridspec(2, hspace=0, height_ratios=[2.5, 1])
     ax1, ax2 = gs.subplots(sharex=True, sharey=False)
     sns.pointplot(x='cut', y=metric, data=df, hue='model', ci=95,
@@ -282,7 +282,7 @@ def dl_model_comparison(args: argparse.Namespace):
         if metric == 'model' or metric == 'cut':
             continue
         ylim = (0.3, 1.0) if 'rej' not in metric and 'tag' not in metric else None
-        plot_metric(df, rel_df, metric, '$p_{\mathrm{T}}$ [GeV]', save_dir +
+        plot_metric(df, rel_df, metric, '$p_{\mathrm{T}}$ [TeV]', save_dir +
                     f'/{metric}.png', order=order, ylim=ylim, title=metric)
 
 
