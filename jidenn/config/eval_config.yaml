@@ -21,10 +21,11 @@ logdir: ${base_logdir}/${eval_logs} # Log directory for eval runs.
 model_dir: ${base_logdir}/model
 draw_distribution: 20_000
 feature_importance: False # Whether to draw feature importance.
-test_subfolder: test
+test_subfolder: train
 seed: 42
 batch_size: 384
 take: 20_000
 input_type: constituents
 threshold:
+threshold_name: threshold_at_fixed_quark_50wp
 include_base: True

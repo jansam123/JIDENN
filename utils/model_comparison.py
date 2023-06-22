@@ -119,6 +119,9 @@ def plot_metric(df: pd.DataFrame,
 def formater(x):
     return f'{x*100:.1f}'
 
+# def formater(x):
+#     return f'{x:.1f}'
+
 
 def bar_plot(df: pd.DataFrame,
              rel_df: pd.DataFrame,
@@ -126,7 +129,8 @@ def bar_plot(df: pd.DataFrame,
              rel_column_name: str,
              save_dir: str,
              hue_order: Optional[List[str]] = None,
-             order: Optional[List[str]] = None,) -> None:
+             order: Optional[List[str]] = None,
+             ylim: Optional[Tuple[float, float]] = (0, 1.2)) -> None:
 
     palette = 'Set1'
     fig = plt.figure(figsize=(16, 8))
@@ -136,14 +140,14 @@ def bar_plot(df: pd.DataFrame,
                 hue='model', ci=None, palette=palette, hue_order=hue_order, ax=ax1, order=order)
     for container in ax1.containers:
         ax1.bar_label(container, fmt=formater, fontsize='xx-small')
-    ax1.set_ylim(0, 1.2)
+    ax1.set_ylim(*ylim) if ylim is not None else None
 
     sns.barplot(data=rel_df, x='DL Model', y=rel_column_name,
                 hue='model', ci=None, palette=palette, hue_order=hue_order, ax=ax2, order=order)
     for container in ax2.containers:
         ax2.bar_label(container, fmt=formater, fontsize='xx-small')
     ax2.get_legend().set_visible(False)
-    ax2.set_ylim(-0.05, 0.05)
+    ax2.set_ylim(-0.03, 0.01)
     fig.savefig(save_dir, dpi=400, bbox_inches='tight')
 
 
@@ -152,7 +156,8 @@ def dep_bar_plot(df: pd.DataFrame,
                  save_dir: str,
                  order: Optional[List[str]] = None,
                  title: Optional[str] = None,
-                 ylabel: Optional[str] = None,):
+                 ylabel: Optional[str] = None,
+                 ylim: Optional[Tuple[float, float]] = (-0.1, 0.1)) -> None:
 
     palette = 'coolwarm'
     fig = plt.figure(figsize=(16, 6))
@@ -164,7 +169,7 @@ def dep_bar_plot(df: pd.DataFrame,
     # sns.barplot(data=rel_df, x='cut', y=rel_column_name,
     #             hue='DL Model', ci=None, palette=palette, hue_order=order, ax=ax2)
     # ax2.get_legend().set_visible(False)
-    plt.ylim(-0.1, 0.1)
+    plt.ylim(*ylim) if ylim is not None else None
     plt.xlabel('pT [GeV]')
     if ylabel is not None:
         plt.ylabel(ylabel)
@@ -174,7 +179,7 @@ def dep_bar_plot(df: pd.DataFrame,
 
 
 def test(args: argparse.Namespace):
-    models = ['interacting_depart', 'interacting_part', 'highway',
+    models = ['idepart', 'ipart', 'highway', 'idepart_rel',
               'fc', 'transformer', 'part', 'depart', 'pfn', 'efn']
     # models.append('depart_100M')
 
@@ -185,24 +190,27 @@ def test(args: argparse.Namespace):
     bar_name = METRIC_NAMING_SCHEMA[metric_name] if metric_name in METRIC_NAMING_SCHEMA else metric_name
     # bar_name = 'Tagging Efficiency'
     rel_bar_name = 'Difference from Pythia'
-    x_label = '$p_{\mathrm{T}}$ [GeV]'
-    cut_order = ['20-30', '30-40', '40-60', '60-100', '100-150', '150-200', '200-300',
-                 '300-400', '400-500', '500-600', '600-800', '800-1000', '1000-1200', '1200+']
+    x_label = '$p_{\mathrm{T}}$ [TeV]'
+    # cut_order = ['20-30', '30-40', '40-60', '60-100', '100-150', '150-200', '200-300',
+    #              '300-400', '400-500', '500-600', '600-800', '800-1000', '1000-1200', '1200+']
+    cut_order = ["0.02-0.1", "0.1-0.15", "0.15-0.20", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1",
+                 "1-1.3", "1.3-1.6", "1.6-1.8", "1.8-2.2", "2.2-2.5", "2.5-2.8", "2.8-3.2", "3.2-3.6", "3.6-3.9"]
 
-    file_string = '/home/jankovys/JIDENN/good_logs/ragged/{model}/evaluation/{mc}_50wp/pT/results.csv'.format
-    save_dir = '/home/jankovys/JIDENN/good_logs/ragged/figs/mc_qeff'
+    file_string = '/home/jankovys/JIDENN/logs/stepwise_flat/{model}/evaluation/{mc}_stepwise_80wp/pT/results.csv'.format
+    save_dir = '/home/jankovys/JIDENN/logs/stepwise_flat/figs/mc_qeff_80wp'
 
-    mc_models = ['pythia', 'sherpa_lund', 'herwig', 'sherpa']  # ,'herwig_dipole']
+    mc_models = ['pythia', 'sherpa_lund', 'herwig7', 'sherpa']  # ,'herwig_dipole']
     named_mc_models = [MC_NAMING_SCHEMA[mc] for mc in mc_models]
 
     os.makedirs(save_dir, exist_ok=True)
 
+    ylim = (0., 1.2) if 'rej' not in metric_name and 'tag' not in metric_name else None
+    ylim = (0, 7) if 'rej' in metric_name else ylim
     all_df = []
     all_rel_df = []
     for model in models:
         data_sources = [DataSource(file_string(model=model, mc=mc), named_mc)
                         for named_mc, mc in zip(named_mc_models, mc_models)]
-
         for data_source in data_sources:
             data_source.relative_to(data_sources[0])
 
@@ -212,7 +220,7 @@ def test(args: argparse.Namespace):
 
         order = list(means['model'].values)
         plot_metric(df, rel_df, metric_name, x_label, os.path.join(save_dir, model + '.png'),
-                    order=order, ylim=(0., 1.), title=MODEL_NAMING_SCHEMA[model] if model in MODEL_NAMING_SCHEMA else model)
+                    order=order, ylim=ylim, title=MODEL_NAMING_SCHEMA[model] if model in MODEL_NAMING_SCHEMA else model)
 
         # means[rel_name] = - means[rel_name]
         rel_means['DL Model'] = MODEL_NAMING_SCHEMA[model] if model in MODEL_NAMING_SCHEMA else model
@@ -234,7 +242,7 @@ def test(args: argparse.Namespace):
     order = order.groupby('DL Model').sum(
     ).sort_values(by=rel_bar_name, ascending=True).index.tolist()
     bar_plot(means, rel_means, bar_name, rel_bar_name, os.path.join(
-        save_dir, 'bar_plot.png'), hue_order=named_mc_models, order=order)
+        save_dir, 'bar_plot.png'), hue_order=named_mc_models, order=order, ylim=ylim)
 
     df = pd.concat(all_df)
     rel_df = pd.concat(all_rel_df)
@@ -245,7 +253,7 @@ def test(args: argparse.Namespace):
     for named_mc, mc in zip(named_mc_models, mc_models):
         dep_bar_plot(rel_df[rel_df['model'] == named_mc], metric_name, os.path.join(
             save_dir, 'diff_of_' + mc + '_from_pythia.png'), order=order, title=MC_NAMING_SCHEMA[mc] if mc in MC_NAMING_SCHEMA else mc,
-            ylabel=f'{bar_name} Difference from Pythia')
+            ylabel=f'{bar_name} Difference from Pythia', ylim=(-0.3, 0.1))
 
     total_rel_means = rel_df[[metric_name, 'DL Model', 'cut']].groupby(['DL Model', 'cut']).sum(
     ).sort_values(by='cut', key=lambda x: pd.Categorical(x, cut_order)).reset_index()
@@ -259,8 +267,8 @@ def dl_model_comparison(args: argparse.Namespace):
               'fc', 'transformer', 'part', 'depart', 'pfn', 'efn']
     # models.append('depart_100M')
     base = 'transformer'
-    file_string = '/home/jankovys/JIDENN/logs/ragged_allJZ/{model}/evaluation/pythia_th/pT/results.csv'.format
-    save_dir = 'logs/ragged_allJZ/figs/compare'
+    file_string = '/home/jankovys/JIDENN/logs/stepwise_flat/{model}/evaluation/pythia_th/pT/results.csv'.format
+    save_dir = 'logs/stepwise_flat/figs/compare'
     os.makedirs(save_dir, exist_ok=True)
     base_source = DataSource(file_string(model=base), 'Transformer')
     data_sources = []
