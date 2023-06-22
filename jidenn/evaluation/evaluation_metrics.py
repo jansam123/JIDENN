@@ -110,7 +110,8 @@ class BinaryRejection(tf.keras.metrics.Metric):
         self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
-        return self.total / self.tp
+        tpr = self.tp / self.total
+        return 1.0 / (1 - tpr)
 
     def reset_state(self):
         self.tp.assign(0.)
@@ -385,7 +386,7 @@ class RejectionAtFixedWorkingPoint(EfficiencyAtFixedWorkingPoint):
             tf.Tensor: The rejection at the working point.
         """
 
-        return 1.0 / super().result()
+        return 1.0 / (1 - super().result())
 
 
 class ThresholdAtFixedWorkingPoint(FixedWorkingPointBase):
@@ -442,6 +443,10 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
                          label_id=0, threshold=threshold),
         BinaryEfficiency(name='quark_efficiency',
                          label_id=1, threshold=threshold),
+        BinaryRejection(name='gluon_rejection',
+                        label_id=0, threshold=threshold),
+        BinaryRejection(name='quark_rejection',
+                        label_id=1, threshold=threshold),
         EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_50wp',
                                       fixed_label_id=1, working_point=0.5, returned_label_id=0),
         EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_quark_50wp',

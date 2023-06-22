@@ -100,5 +100,6 @@ MC_NAMING_SCHEMA = {
     'sherpa': 'Sherpa',
     'sherpa_lund': 'Sherpa (Lund)',
     'herwig': 'Herwig7',
+    'herwig7': 'Herwig7',
     'herwig_dipole': 'Herwig7 (Dipole)',
 }

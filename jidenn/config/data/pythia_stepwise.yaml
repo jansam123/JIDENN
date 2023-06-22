@@ -1,4 +1,4 @@
-path: ./data/pythia_allJZ_flat # Path to data folder containing folder of *.root files.
+path: ./data/pythia_stepwise # Path to data folder containing folder of *.root files.
 target: jets_PartonTruthLabelID
 labels: # list of labels to use.
   - gluon

@@ -46,6 +46,7 @@ class EvalConfig:
         feature_importance (bool): If `True`, compute the feature importance of the model.
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
         threshold (str, optional): Location of csv file containing the threshold for the model to use.
+        threshold_name (str, optional): Name of the threshold to use. 
         include_base (bool): If `False`, and the binning is applied, the evaluation without
             binning is not performed.
         input_type (str): Input type of the model. One of: 'highlevel', 'highlevel_constituents',
@@ -66,6 +67,7 @@ class EvalConfig:
     feature_importance: bool
     binning: Binning
     threshold: Optional[str]
+    threshold_name: Optional[str]
     include_base: bool
     input_type = Literal['highlevel',
                          'highlevel_constituents',

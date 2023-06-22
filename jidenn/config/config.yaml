@@ -98,7 +98,7 @@ models:
     class_attn_layers: 2
     dropout: 0. # Dropout after FFN layer.
     class_dropout: 0. # Dropout after FFN layer.
-    layer_scale_init_value: 1.0e-05
+    layer_scale_init_value: 5.0e-3
     stochastic_depth_drop_rate: 0.1
     class_stochastic_depth_drop_rate: 0.
     interaction_embedding_layers: 3 # Number of embedding layers. Last one must be heads

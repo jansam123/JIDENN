@@ -55,8 +55,6 @@ def main(args: eval_config.EvalConfig) -> None:
                    for jz in args.data.subfolders] if args.data.subfolders is not None else None
 
     test_ds = get_preprocessed_dataset(file, args.data, file_labels)
-    thresholds = pd.read_csv(args.threshold) if args.threshold is not None else None
-    print(thresholds)
 
     names = args.binning.cut_names if args.binning.cut_names is not None else []
     names = ['base'] + names if args.include_base else names
@@ -66,11 +64,15 @@ def main(args: eval_config.EvalConfig) -> None:
     if os.path.isfile(os.path.join(args.logdir, 'results.csv')):
         os.remove(os.path.join(args.logdir, 'results.csv'))
 
+    thresholds = pd.read_csv(args.threshold) if args.threshold is not None else None
+
     for cut, cut_alias in zip(cuts, names):
         if cut != 'base' and thresholds is not None:
-            threshold = thresholds[thresholds['cut'] == cut_alias]['threshold_at_fixed_quark_wp'].values[0]
+            threshold = thresholds[thresholds['cut'] == cut_alias][args.threshold_name].values[0]
         else:
             threshold = 0.5
+            if args.threshold is not None:
+                log.error(f"Threshold for cut {cut} not found in {args.threshold}. Using default value of 0.5")
 
         ds = test_ds.filter(lambda *x: Cut(cut)
                             (x[0])) if cut != 'base' else test_ds
