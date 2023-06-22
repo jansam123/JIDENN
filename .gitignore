@@ -22,4 +22,5 @@ bash_scripts
 data_for_plot
 tmp
 _*.py
+_*.csv
 tests
