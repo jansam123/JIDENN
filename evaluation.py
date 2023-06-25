@@ -1,25 +1,29 @@
+from dataclasses import dataclass
 import tensorflow as tf
-import tensorflow_addons as tfa  # this is necessary for the LAMB optimizer to work
+import tensorflow_addons as tfa
 # this is necessary for the BDT model to work
-import tensorflow_decision_forests as tfdf
 import numpy as np
 import os
 import logging
 import hydra
 import pandas as pd
-import time
+from multiprocessing import Pool
 from hydra.core.config_store import ConfigStore
+import seaborn as sns
+import ast
 #
-import jidenn.data.data_info as data_info
+from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.config import eval_config
-from jidenn.evaluation.plotter import plot_validation_figs, plot_metrics_per_cut
-from jidenn.data.string_conversions import Cut
+from jidenn.evaluation.plotter import plot_validation_figs, plot_data_distributions, plot_var_dependence
 from jidenn.data.get_dataset import get_preprocessed_dataset
 from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
 from jidenn.evaluation.evaluation_metrics import EffectiveTaggingEfficiency
-from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.evaluation.evaluation_metrics import calculate_metrics
-from utils.const import LATEX_NAMING_CONVENTION
+from jidenn.evaluation.evaluator import evaluate_multiple_models, calculate_binned_metrics
+from utils.const import METRIC_NAMING_SCHEMA, LATEX_NAMING_CONVENTION, MODEL_NAMING_SCHEMA
+
+CUSTOM_OBJECTS = {'LinearWarmup': LinearWarmup,
+                  'EffectiveTaggingEfficiency': EffectiveTaggingEfficiency}
 
 
 cs = ConfigStore.instance()
@@ -30,128 +34,116 @@ cs.store(name="args", node=eval_config.EvalConfig)
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
 
-    if args.seed is not None:
-        log.info(f"Setting seed to {args.seed}")
-        np.random.seed(args.seed)
-        tf.random.set_seed(args.seed)
+    log.info(f'Using models: {args.model_names}')
+    variable = args.binning.variable
+    log.info(f'Binning in variable: {variable}')
+    labels = args.data.labels
 
-    custom_objects = {'LinearWarmup': LinearWarmup,
-                      'EffectiveTaggingEfficiency': EffectiveTaggingEfficiency}
-    model: tf.keras.Model = tf.keras.models.load_model(
-        args.model_dir, custom_objects=custom_objects)
-    model.summary(print_fn=log.info)
-
-    metrics_per_cut = pd.DataFrame(columns=['cut'])
-    naming_schema = {0: args.data.labels[0], 1: args.data.labels[1]}
-
-    train_input_class = input_classes_lookup(args.input_type)
-    train_input_class = train_input_class()
-    model_input = tf.function(func=train_input_class)
-
-    file = [f'{args.data.path}/{jz_slice}/{args.test_subfolder}' for jz_slice in args.data.subfolders] if args.data.subfolders is not None else [
+    data_path = [f'{args.data.path}/{jz_slice}/{args.test_subfolder}' for jz_slice in args.data.subfolders] if args.data.subfolders is not None else [
         f'{args.data.path}/{args.test_subfolder}']
+    full_dataset = get_preprocessed_dataset(data_path, args.data, None)
+    os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
 
-    file_labels = [int(jz.split('_')[0].lstrip('JZ'))
-                   for jz in args.data.subfolders] if args.data.subfolders is not None else None
+    def distribution_drawer(x: JIDENNDataset):
+        print('Convert to pandas')
+        df = x.apply(lambda ds: ds.take(args.take)).to_pandas()
+        return plot_data_distributions(df,
+                                       folder=f'{args.logdir}/data_dist',
+                                       named_labels=labels,
+                                       xlabel_mapper=LATEX_NAMING_CONVENTION)
+    log.info('Evaluating models')
+    full_dataset = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],
+                                            model_names=args.model_names,
+                                            model_input_name=args.model_input_types,
+                                            dataset=full_dataset,
+                                            custom_objects=CUSTOM_OBJECTS,
+                                            batch_size=args.batch_size,
+                                            log=log,
+                                            take=args.take,
+                                            distribution_drawer=distribution_drawer)
 
-    test_ds = get_preprocessed_dataset(file, args.data, file_labels)
+    variables = [f'{model}_score' for model in args.model_names] + [variable]
+    log.info('Converting to pandas')
+    df = full_dataset.to_pandas(variables=variables)
 
-    names = args.binning.cut_names if args.binning.cut_names is not None else []
-    names = ['base'] + names if args.include_base else names
-    cuts = args.binning.cuts if args.binning.cuts is not None else []
-    cuts = ['base'] + cuts if args.include_base else cuts
+    if args.binning.log_bin_base is not None:
+        bins = np.logspace(np.log10(args.binning.min_bin), np.log10(args.binning.max_bin),
+                           args.binning.bins, base=args.binning.log_bin_base)
+    else:
+        bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins)
 
-    if os.path.isfile(os.path.join(args.logdir, 'results.csv')):
-        os.remove(os.path.join(args.logdir, 'results.csv'))
+    overall_metrics = pd.DataFrame()
 
-    thresholds = pd.read_csv(args.threshold) if args.threshold is not None else None
+    dfs = []
 
-    for cut, cut_alias in zip(cuts, names):
-        if cut != 'base' and thresholds is not None:
-            threshold = thresholds[thresholds['cut'] == cut_alias][args.threshold_name].values[0]
+    for model_name in args.model_names:
+        if args.threshold_path is not None and args.threshold_file_name is not None and args.threshold_var_name is not None:
+            threshold = pd.read_csv(f'{args.threshold_path}/{model_name}/{args.threshold_file_name}')
         else:
             threshold = 0.5
-            if args.threshold is not None:
-                log.error(f"Threshold for cut {cut} not found in {args.threshold}. Using default value of 0.5")
 
-        ds = test_ds.filter(lambda *x: Cut(cut)
-                            (x[0])) if cut != 'base' else test_ds
-        label = ds.get_prepared_dataset(
-            batch_size=args.take, take=args.take, map_func=lambda *d: d[1])
-        ds = ds.create_train_input(model_input)
-        tf_ds = ds.get_prepared_dataset(batch_size=args.batch_size,
-                                        take=args.take)
+        log.info(f'Calculating metrics for model: {model_name}')
 
-        # get model predictions
-        start = time.time()
-        score = model.predict(tf_ds).ravel()
-        end = time.time()
-        inferendce_time = end - start
-        log.info(
-            f"Total prediction time for cut {cut}: {inferendce_time:.2f} s (batch size: {args.batch_size})")
-        log.info(
-            f"Per Jet Prediction time for cut {cut}: {10**3 * inferendce_time / args.take:.2f} ms (batch size: {args.batch_size})")
+        os.makedirs(f'{args.logdir}/{model_name}', exist_ok=True)
+        plot_validation_figs(df=df[[f'{model_name}_score', 'label']].copy(),
+                             logdir=os.path.join(args.logdir, model_name),
+                             score_name=f'{model_name}_score',
+                             class_names=labels)
 
-        prediction = np.where(score > threshold, 1, 0)
+        overall_metrics = pd.concat([overall_metrics,
+                                    pd.DataFrame(calculate_metrics(df['label'], df[f'{model_name}_score']), index=[model_name])])
 
-        # dir creation
-        dir_name = os.path.join(args.logdir, cut_alias)
-        os.makedirs(dir_name, exist_ok=True)
-        dist_dir = os.path.join(dir_name, 'dist')
-        os.makedirs(dist_dir, exist_ok=True)
+        def validation_plotter(x: pd.DataFrame):
+            bin_center_name = x['bin'].apply(lambda x: x.mid * 1e-6).iloc[0]
+            plot_validation_figs(df=x[[f'{model_name}_score', 'label']].copy(),
+                                 logdir=os.path.join(args.logdir, model_name, f'{bin_center_name:.2f}'),
+                                 score_name=f'{model_name}_score',
+                                 class_names=labels)
 
-        # convert to pandas
-        log.info(f"Convert to pandas for cut {cut}")
-        label = label.as_numpy_iterator().next()
-        df = pd.DataFrame({'label': label, 'weight': np.ones_like(label)})
-        df['Truth Label'] = df['label'].replace(naming_schema)
+        model_df = calculate_binned_metrics(df=df,
+                                            binned_variable=variable,
+                                            score_variable=f'{model_name}_score',
+                                            bins=bins,
+                                            validation_plotter=validation_plotter,
+                                            threshold=threshold,
+                                            threshold_name=args.threshold_var_name,
+                                            )
 
-        # calculate metrics
-        metrics = calculate_metrics(y_true=df['label'].to_numpy(), score=score, threshold=threshold)
-        log.info(f"Test evaluation for cut {cut}: {metrics}")
-        if cut != 'base':
-            new = pd.DataFrame({**metrics, 'cut': cut_alias}, index=[0])
-            metrics_per_cut = pd.concat([metrics_per_cut, new])
-            if not os.path.isfile(os.path.join(args.logdir, 'results.csv')):
-                new.to_csv(os.path.join(
-                    args.logdir, 'results.csv'), index=False)
-            else:
-                new.to_csv(os.path.join(args.logdir, 'results.csv'),
-                           mode='a', header=False, index=False)
+        os.makedirs(f'{args.logdir}/{model_name}', exist_ok=True)
+
+        if variable == 'jets_pt':
+            model_df['bin_mid'] = model_df['bin'].apply(lambda x: x.mid * 1e-6)
+            model_df['bin_width'] = model_df['bin'].apply(lambda x: x.length * 1e-6)
         else:
-            base_metrics = pd.DataFrame(metrics, index=[0])
-            base_metrics.to_csv(os.path.join(
-                args.logdir, 'base_results.csv'), index=False)
+            model_df['bin_mid'] = model_df['bin'].apply(lambda x: x.mid)
+            model_df['bin_width'] = model_df['bin'].apply(lambda x: x.length)
 
-        if args.draw_distribution is not None:
-            draw_df = ds.apply(lambda x: x.take(
-                args.draw_distribution)).to_pandas()
-            if cut == 'base' and args.feature_importance:
-                data_info.feature_importance(draw_df, dir_name)
-            draw_df['Truth Label'] = draw_df['label'].replace(naming_schema)
-            draw_df.to_csv(os.path.join(
-                dir_name, 'distributions.csv'), index=False)
-            data_info.generate_data_distributions(df=draw_df,
-                                                  folder=dist_dir,
-                                                  color_column='Truth Label',
-                                                  hue_order=args.data.labels,
-                                                  xlabel_mapper=LATEX_NAMING_CONVENTION)
+        model_df.to_csv(f'{args.logdir}/{model_name}/binned_metrics.csv')
+        log.info(model_df)
+        dfs.append(model_df)
 
-        results_df = pd.DataFrame({'score': score,
-                                   'label': df['label'],
-                                   'weight': df['weight'],
-                                   'Truth Label': df['Truth Label'],
-                                   'prediction': prediction, })
+    overall_metrics.to_csv(f'{args.logdir}/overall_metrics.csv')
+    log.info('Overall metrics for all models:')
+    log.info(overall_metrics)
 
-        results_df['named_prediction'] = results_df['prediction'].replace(
-            naming_schema)
-
-        plot_validation_figs(df=results_df,
-                             logdir=dir_name,
-                             log=log,
-                             class_names=args.data.labels,)
-
-    plot_metrics_per_cut(metrics_per_cut, args.logdir, log=log)
+    os.makedirs(f'{args.logdir}/compare_models', exist_ok=True)
+    acc_sorted_models = overall_metrics.sort_values(by='binary_accuracy', ascending=False).index
+    colours = sns.color_palette("coolwarm", len(args.model_names))
+    sorted_colours = [colours[acc_sorted_models.get_loc(model)] for model in args.model_names]
+    log.info(f'Plotting variable dependence for models: {acc_sorted_models}')
+    plot_var_dependence(dfs=dfs,
+                        labels=[MODEL_NAMING_SCHEMA[model] for model in args.model_names if model in acc_sorted_models],
+                        ratio_reference_label=MODEL_NAMING_SCHEMA[
+                            args.reference_model] if args.reference_model and args.reference_model in acc_sorted_models is not None else None,
+                        bin_midpoint_name='bin_mid',
+                        bin_width_name='bin_width',
+                        metric_names=args.metrics_to_plot,
+                        ylims=args.ylims,
+                        xlabel=LATEX_NAMING_CONVENTION[variable],
+                        ylabel_mapper=METRIC_NAMING_SCHEMA,
+                        save_path=f'{args.logdir}/compare_models',
+                        colours=sorted_colours,
+                        )
 
 
 if __name__ == "__main__":

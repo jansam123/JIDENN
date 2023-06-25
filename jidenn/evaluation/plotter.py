@@ -15,7 +15,9 @@ import tensorflow as tf
 import numpy as np
 from sklearn.metrics import roc_curve, confusion_matrix, auc
 from io import BytesIO
-from typing import List, Union, Dict, Optional
+from typing import List, Union, Dict, Optional, Tuple
+import atlasify
+import puma
 
 
 sns.set_theme(style="ticks")
@@ -172,15 +174,30 @@ class ValidationLabelHistogram(ValidationFigure):
         return fig
 
 
-def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats: List[str] = ['jpg', 'pdf'], class_names: Optional[List[str]] = None):
+def plot_validation_figs(df: pd.DataFrame,
+                         logdir: str,
+                         formats: List[str] = ['jpg', 'pdf'],
+                         class_names: Optional[List[str]] = None,
+                         log: Optional[Logger] = None,
+                         score_name: str = 'score'):
     """Plots the validation figures and saves them to disk.
     Args:
-        df (pd.DataFrame): The dataframe containing the truth lables, the model output scores and the predictions.
+        df (pd.DataFrame): The dataframe containing the truth lables, the model output scores.
         logdir (str): The directory where the figures are saved.
         log (Logger): The logger.
         formats (list, optional): The formats in which the figures are saved. Defaults to ['jpg', 'pdf'].
+        score_name (str, optional): The name of the model output score. Defaults to 'score'.
 
     """
+    if score_name != 'score':
+        df = df.rename(columns={score_name: 'score'})
+
+    df['prediction'] = df['score'].apply(lambda x: 1 if x > 0.5 else 0)
+    df['Truth Label'] = df['label'].apply(
+        lambda x: class_names[x]) if class_names is not None else df['label'].apply(str)
+    df['named_prediction'] = df['prediction'].apply(
+        lambda x: class_names[x]) if class_names is not None else df['prediction'].apply(str)
+
     base_path = os.path.join(logdir, "figs")
     tb_base_path = os.path.join(logdir, "plots")
     csv_path = os.path.join(base_path, 'csv')
@@ -197,7 +214,7 @@ def plot_validation_figs(df: pd.DataFrame, logdir: str, log: Logger, formats: Li
     figure_names = ['roc', 'confusion_matrix', 'score_hist', 'prediction_hist']
 
     for validation_fig, name in zip(figure_classes, figure_names):
-        log.info(f"Generating figure {name}")
+        log.info(f"Generating figure {name}") if log else None
         val_fig = validation_fig(df, name, class_names=class_names)
         for fmt, path in zip(formats, format_path):
             val_fig.save_fig(path, fmt)
@@ -251,3 +268,161 @@ def plot_train_history(data: List[float], logdir: str, name: str, epochs: int):
     plt.grid(True)
     fig.savefig(f'{logdir}/{name}.png')
     plt.close()
+
+
+def explode_nested_variables(df: pd.DataFrame, exploding_column: str, max_iterations: int = 5) -> pd.DataFrame:
+    """Explode a DataFrame by a column containing nested lists or arrays. 
+    This allows to plot the distributions of the variables in the nested lists or arrays, such
+    as the jet constituents.
+
+    Args:
+        df (pd.DataFrame): DataFrame to explode.
+        exploding_column (str): Name of the column containing the nested lists or arrays.
+        max_iterations (int, optional): Maximum number of iterations to perform. If the column still contains
+            non-numeric values after this many iterations, the function will raise a ValueError. Default is 5.
+            Set to higher values if the nesting is very deep.
+
+    Returns:
+        pd.DataFrame: Exploded DataFrame.
+
+    Raises:
+        ValueError: If the column still contains non-numeric values after the maximum number of iterations.
+
+    """
+    for _ in range(max_iterations):
+        try:
+            df[exploding_column] = pd.to_numeric(df[exploding_column])
+            break
+        except (ValueError, TypeError):
+            df = df.explode(exploding_column, ignore_index=True)
+            df = df.sample(n=len(df.index)).reset_index(drop=True)
+            continue
+    return df
+
+
+def plot_data_distributions(df: pd.DataFrame,
+                            folder: str,
+                            named_labels: Optional[List[str]] = None,
+                            xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
+    r"""Plot the data distributions of the variables in a DataFrame for different truth values.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the input variables to plot and a column named 'label'
+            containing the truth values.
+        folder (str): Path to the directory where the plots will be saved.
+        named_labels (List[str], optional): List of named labels for the truth values in the 'label' column.
+            If not provided, the labels will be '0' and '1'. For example, if the 'label' column contains
+            0 and 1, and the `named_labels` are ['gluon', 'quark'].
+        xlabel_mapper (Dict[str, str], optional): Dictionary mapping variable names to custom x-axis labels.
+            If not provided, the variable names will be used as labels. This is useful to convert stadarized
+            variable names such as 'jets_pt' to a latex formatted label such as '$p_{\mathrm{T}}^\mathrm{jet}$'.
+
+    """
+
+    named_labels = ['0', '1'] if named_labels is None else named_labels
+    hue_order = named_labels
+    df['Truth Label'] = df['label'].apply(lambda x: named_labels[x])
+    color_column = 'Truth Label'
+    var_names = list(df.columns)
+    var_names.remove(color_column)
+    os.makedirs(os.path.join(folder, 'jpg'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'pdf'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'jpg_log'), exist_ok=True)
+    os.makedirs(os.path.join(folder, 'pdf_log'), exist_ok=True)
+    for var_name in var_names + ['label', 'weight']:
+        small_df = df[[var_name, color_column]].copy()
+        dtype = small_df[var_name].dtype
+
+        if dtype == 'object':
+            small_df = explode_nested_variables(small_df, var_name)
+            small_df = small_df.loc[small_df[var_name] != 0]
+        try:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat='density', element="step", fill=True,
+                              palette='Set1', common_norm=False, hue_order=hue_order)
+        except:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat='density', element="step", fill=True,
+                              palette='Set1', common_norm=False, hue_order=hue_order, bins=100)
+
+        plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
+
+        atlasify.atlasify(subtext="Simulation Internal")
+        plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(folder, 'pdf', f'{var_name}.pdf'), bbox_inches='tight')
+        plt.yscale('log')
+        atlasify.atlasify(subtext="Simulation Internal")
+        plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
+
+        plt.close('all')
+
+
+def plot_var_dependence(dfs: List[pd.DataFrame],
+                        labels: List[str],
+                        bin_midpoint_name: str,
+                        bin_width_name: str,
+                        metric_names: List[str],
+                        save_path: str,
+                        ratio_reference_label: Optional[str] = None,
+                        xlabel: Optional[str] = None,
+                        ylabel_mapper: Optional[Dict[str, str]] = None,
+                        ylims: Optional[List[Tuple[float, float]]] = None,
+                        colours: Optional[List[str]] = None,
+                        ):
+    """Plot the dependence of multiple metrics on a variable in a DataFrame for multiple models.
+    The Dataframe must contain columns corresponding to individual metrics, and columns containing
+    the information about the binning of the variable. The binning information must be in the form
+    of the bin midpoints and bin widths.
+
+    Args:
+        dfs (List[pd.DataFrame]): List of DataFrames containing the data to plot. Each DataFrame is plotted
+            as a separate line (e.g. ML model comparison or MC simluations comparison).
+        labels (List[str]): Names of the labels for each DataFrame displayed in the legend.
+        bin_midpoint_name (str): Name of the column containing the bin midpoints.
+        bin_width_name (str): Name of the column containing the bin widths.
+        metric_names (List[str]): List of names of the metrics to plot inside **each** DataFrame.
+        save_path (str): Path to the directory where the plots will be saved.
+        ratio_reference_label (str, optional): Label of the DataFrame to use as reference for the ratio plot.
+            If not provided, no ratio plot will be drawn. Default is None.
+        xlabel (str, optional): Label for the x-axis. 
+        ylabel_mapper (Dict[str, str], optional): Dictionary mapping metric names to custom y-axis labels.
+            If not provided, the metric names will be used as labels.
+        ylims (List[Tuple[float, float]], optional): List of y-axis limits for each metric plot.
+            If not provided, the limits will be automatically determined. Default is None.
+        colours (List[str], optional): List of colours to use for each label. If not provided, the default
+            colour cycle will be used.
+
+    """
+
+    for i, metric_name in enumerate(metric_names):
+
+        plot = puma.VarVsVarPlot(
+            ylabel=ylabel_mapper[metric_name] if ylabel_mapper is not None and metric_name in ylabel_mapper else metric_name,
+            xlabel=xlabel,
+            logy=False,
+            ymin=ylims[i][0] if ylims is not None else None,
+            ymax=ylims[i][1] if ylims is not None else None,
+            n_ratio_panels=1 if ratio_reference_label is not None else 0,
+            figsize=(5, 4),
+        )
+
+        for df, label in zip(dfs, labels):
+            x_var = df[bin_midpoint_name].to_numpy()
+            x_width = df[bin_width_name].to_numpy()
+            y_var_mean = df[metric_name].to_numpy()
+            y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / df['num_events'].to_numpy())
+            plot.add(
+                puma.VarVsVar(
+                    x_var=x_var,
+                    x_var_widths=x_width,
+                    y_var_mean=y_var_mean,
+                    y_var_std=y_var_std,
+                    plot_y_std=False,
+                    label=label,
+                    colour=colours[labels.index(label)] if colours is not None else None,
+                ),
+                reference=True if ratio_reference_label is not None and label == ratio_reference_label else False,
+            )
+        plot.draw()
+        plot.savefig(os.path.join(save_path, f'{metric_name}.png'), dpi=300)

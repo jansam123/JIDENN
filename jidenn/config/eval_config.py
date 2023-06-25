@@ -6,71 +6,74 @@ They are specified by different cuts on the test data, such as the `jets_pt` or 
 These binning based on cuts are specified in the `jidenn.config.eval_config.Binning` configuration.
 """
 from dataclasses import dataclass
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Tuple, Union
 
 from .config import Data
 
 
 @dataclass
 class Binning:
-    """Configuration for binning of test data.
-    Each bin is defined by a cut on the test data.
+    """Configuration for binning a continuous variable.
 
     Args:
-        cuts (List[str]): Cuts on the test data performing the binning. 
-            See `jidenn.data.string_conversions.Cut` for more details.
-        cut_names (List[str]): Names of the cuts displayed in the plots and subfolders.
+        variable (str): Name of the variable to bin.
+        bins (int): Number of bins to use.
+        max_bin (Union[float, int]): Maximum value of the variable. Values above this will be put in the last bin.
+        min_bin (Union[float, int]): Minimum value of the variable. Values below this will be put in the first bin.
+        log_bin_base (Optional[int]): If not `None`, use logarithmic binning with the specified base.
     """
-    cuts: List[str]
-    cut_names: List[str]
+    variable: str
+    bins: int
+    max_bin: Union[float, int]
+    min_bin: Union[float, int]
+    log_bin_base: Optional[int]
 
 
 @dataclass
 class EvalConfig:
-    """Configuration for evaluation of a model.
+    """Configuration for evaluating a machine learning model.
 
     Args:
-        base_logdir (str): Base path to the log directory of the training. 
-        eval_logs (str): Subfolder of the base log directory for the evaluation.
-        logdir (str): Path to the log directory of the evaluation. Could be set manually,
-            but using `${base_logdir}/${eval_logs}` is recommended, 
-            as it creates a unique folder for each training session inside the `base_logdir`.
-        data (jidenn.config.config.Data): Configuration for the test data.
+        data (jidenn.config.config.Data): Configuration for the data.
+        logdir (str): Path to the log directory of the evaluation. 
+        models_path (str): Path to the directory where the models to evaluate are saved. 
+            Inside this directory, there should be a subdirectory for each model with 
+            the same name as in the `model_names` list. Each of these subdirectories must
+            include a subdirectory `model` containing the saved model.
+        model_names (List[str]): List of names of the models to evaluate.
+        model_input_types (List[str]): List of types of input data expected by the models.
         seed (int): Seed for reproducibility.
-        draw_distribution (int, optional): Draw the distribution of the train input variables 
-            for the first `draw_distribution` events. If `None`, no distribution is drawn.
-        test_subfolder (str): Subfolder of the data folder to use, One of 'test', 'train', 'dev'.
-        model_dir (str): Path to the saved model directory, using `tf.keras.Model.save`.
+        draw_distribution (int, optional): If not `None`, draw the distribution of the train input
+            variables for the first `draw_distribution` events.
+        test_subfolder (str): Subfolder of the data folder to use for evaluation. 
+            One of 'test', 'train', 'dev'.
         batch_size (int): Batch size for evaluation.
         take (int): Number of data samples to use for evaluation. 
-        feature_importance (bool): If `True`, compute the feature importance of the model.
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
-        threshold (str, optional): Location of csv file containing the threshold for the model to use.
-        threshold_name (str, optional): Name of the threshold to use. 
-        include_base (bool): If `False`, and the binning is applied, the evaluation without
-            binning is not performed.
-        input_type (str): Input type of the model. One of: 'highlevel', 'highlevel_constituents',
-            'constituents', 'relative_constituents', 'interaction_constituents'.
-
-
-
+        threshold_path (Optional[str]): Path to a folder where for each model there is a subfolder with the name of the model.
+            contains a csv file with the name `threshold_file_name` containing a column with the name `threshold_var_name`.
+            Folder structure: `threshold_path`/`model_name`/`threshold_file_name`.
+        threshold_var_name (Optional[str]): Name of the column in the threshold file containing the threshold value.
+        threshold_file_name (Optional[str]): Name of the threshold file.
+        metrics_to_plot (List[str]): List of metrics to plot. See `jidenn.evaluation.evaluation_metrics.get_metrics` for options.
+        ylims (List[List[float]]): List of y-axis limits for each metric plot.
+        reference_model (str): Name of the model to use as reference for ratio plots.
     """
-    logdir: str
-    base_logdir: str
     data: Data
+    logdir: str
+    models_path: str
+    model_names: List[str]
+    model_input_types: List[str]
+    save_path: str
     seed: int
     draw_distribution: Optional[int]
     test_subfolder: str
-    model_dir: str
     batch_size: int
     take: int
-    feature_importance: bool
     binning: Binning
-    threshold: Optional[str]
-    threshold_name: Optional[str]
-    include_base: bool
-    input_type = Literal['highlevel',
-                         'highlevel_constituents',
-                         'constituents',
-                         'relative_constituents',
-                         'interaction_constituents']
+    threshold_path: Optional[str]
+    threshold_var_name: Optional[str]
+    threshold_file_name: Optional[str]
+    metrics_to_plot: List[str]
+    reference_model: str
+    ylims: List[List[float]]

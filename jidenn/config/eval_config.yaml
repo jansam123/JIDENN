@@ -15,17 +15,27 @@ hydra:
         format: "[%(asctime)s][%(levelname)s] - %(message)s"
   output_subdir: config
 
-base_logdir: logs # Base log directory for all runs.
-eval_logs: eval # Log directory for eval runs.
-logdir: ${base_logdir}/${eval_logs} # Log directory for eval runs.
-model_dir: ${base_logdir}/model
-draw_distribution: 20_000
-feature_importance: False # Whether to draw feature importance.
-test_subfolder: train
+logdir: good_logs/cpre3 # Log directory for eval runs.
 seed: 42
-batch_size: 384
-take: 20_000
-input_type: constituents
+draw_distribution: 1_000
+test_subfolder: train
+batch_size: 32
+take: 1_000
 threshold:
-threshold_name: threshold_at_fixed_quark_50wp
-include_base: True
+threshold_name:
+binning:
+  variable: jets_pt
+  bins: 10
+  max_bin: 1_600_000
+  min_bin: 20_000
+  log_bin_base: 10
+metrics_to_plot:
+  ["gluon_efficiency", "quark_efficiency", "binary_accuracy", "auc"]
+reference_model:
+ylims: [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1]]
+models_path: "good_logs"
+model_names: ["depart", "part", "fc"]
+model_input_types: ["constituents", "constituents", "highlevel"]
+threshold_path: # good_logs/cpre
+threshold_var_name: #
+threshold_file_name: # binned_metrics.csv
