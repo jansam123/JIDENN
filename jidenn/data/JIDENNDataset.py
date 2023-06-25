@@ -392,7 +392,7 @@ class JIDENNDataset:
         dataset = self.dataset.map(input_wrapper)
         return self._set_dataset(dataset)
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self, variables: Optional[List[str]] = None) -> pd.DataFrame:
         """Converts the dataset to a pandas DataFrame. The dataset must be loaded before calling this function.
         The function uses `tensorflow_datasets.as_dataframe` to convert the dataset to a pandas DataFrame, so 
         the `tensorflow_datasets` package must be installed.
@@ -409,6 +409,9 @@ class JIDENNDataset:
         If the dataset contains nested tuples consider using `jidenn.data.data_info.explode_nested_variables` 
         on the tuple columns of the convereted dataframe.
 
+        Args:
+            variables (Optional[List[str]], optional): List of variables to convert to a pandas DataFrame. If `None`, all variables are converted. Defaults to `None`.
+        
         Raises:
             ImportError: If `tensorflow_datasets` is not installed.
             ValueError: If the dataset is not loaded yet.
@@ -424,12 +427,20 @@ class JIDENNDataset:
                 'Please install tensorflow_datasets to use this function. Use `pip install tensorflow_datasets`.')
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
-
-        @tf.function
-        def tuple_to_dict(data, label, weight=None):
-            if isinstance(data, tuple):
-                data = {**data[0], **data[1]}
-            return {**data, 'label': label, 'weight': weight}
+        
+        if variables is None:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                return {**data, 'label': label, 'weight': weight}
+        else:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                data = {var: data[var] for var in variables}
+                return {**data, 'label': label, 'weight': weight}
 
         dataset = self.dataset.map(tuple_to_dict)
         df = tfds.as_dataframe(dataset)
