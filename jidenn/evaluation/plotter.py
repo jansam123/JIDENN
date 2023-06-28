@@ -404,14 +404,16 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             ymin=ylims[i][0] if ylims is not None else None,
             ymax=ylims[i][1] if ylims is not None else None,
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
-            figsize=(5, 4),
+            figsize=(9, 7),
+            atlas_second_tag='13 TeV'
         )
 
         for df, label in zip(dfs, labels):
             x_var = df[bin_midpoint_name].to_numpy()
             x_width = df[bin_width_name].to_numpy()
             y_var_mean = df[metric_name].to_numpy()
-            y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / df['num_events'].to_numpy())
+            y_var_std = np.zeros_like(y_var_mean)
+            # np.sqrt(y_var_mean * (1 - y_var_mean) / df['num_events'].to_numpy())
             plot.add(
                 puma.VarVsVar(
                     x_var=x_var,
@@ -419,8 +421,13 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                     y_var_mean=y_var_mean,
                     y_var_std=y_var_std,
                     plot_y_std=False,
+                    marker='o',
+                    markersize=20,
+                    markeredgewidth=20,
+                    is_marker=True,
                     label=label,
                     colour=colours[labels.index(label)] if colours is not None else None,
+                    # linestyle='-',
                 ),
                 reference=True if ratio_reference_label is not None and label == ratio_reference_label else False,
             )

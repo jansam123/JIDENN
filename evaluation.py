@@ -46,7 +46,7 @@ def main(args: eval_config.EvalConfig) -> None:
 
     def distribution_drawer(x: JIDENNDataset):
         print('Convert to pandas')
-        df = x.apply(lambda ds: ds.take(args.take)).to_pandas()
+        df = x.apply(lambda ds: ds.take(args.draw_distribution)).to_pandas()
         return plot_data_distributions(df,
                                        folder=f'{args.logdir}/data_dist',
                                        named_labels=labels,
@@ -60,7 +60,8 @@ def main(args: eval_config.EvalConfig) -> None:
                                             batch_size=args.batch_size,
                                             log=log,
                                             take=args.take,
-                                            distribution_drawer=distribution_drawer)
+                                            distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
+                                            )
 
     variables = [f'{model}_score' for model in args.model_names] + [variable]
     log.info('Converting to pandas')
@@ -84,9 +85,9 @@ def main(args: eval_config.EvalConfig) -> None:
 
         log.info(f'Calculating metrics for model: {model_name}')
 
-        os.makedirs(f'{args.logdir}/{model_name}', exist_ok=True)
+        os.makedirs(f'{args.logdir}/models/{model_name}', exist_ok=True)
         plot_validation_figs(df=df[[f'{model_name}_score', 'label']].copy(),
-                             logdir=os.path.join(args.logdir, model_name),
+                             logdir=os.path.join(args.logdir, 'models', model_name),
                              score_name=f'{model_name}_score',
                              class_names=labels)
 
@@ -96,7 +97,7 @@ def main(args: eval_config.EvalConfig) -> None:
         def validation_plotter(x: pd.DataFrame):
             bin_center_name = x['bin'].apply(lambda x: x.mid * 1e-6).iloc[0]
             plot_validation_figs(df=x[[f'{model_name}_score', 'label']].copy(),
-                                 logdir=os.path.join(args.logdir, model_name, f'{bin_center_name:.2f}'),
+                                 logdir=os.path.join(args.logdir, 'models', model_name, f'{bin_center_name:.2f}'),
                                  score_name=f'{model_name}_score',
                                  class_names=labels)
 
@@ -109,7 +110,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                             threshold_name=args.threshold_var_name,
                                             )
 
-        os.makedirs(f'{args.logdir}/{model_name}', exist_ok=True)
+        os.makedirs(f'{args.logdir}/models/{model_name}', exist_ok=True)
 
         if variable == 'jets_pt':
             model_df['bin_mid'] = model_df['bin'].apply(lambda x: x.mid * 1e-6)
@@ -118,7 +119,7 @@ def main(args: eval_config.EvalConfig) -> None:
             model_df['bin_mid'] = model_df['bin'].apply(lambda x: x.mid)
             model_df['bin_width'] = model_df['bin'].apply(lambda x: x.length)
 
-        model_df.to_csv(f'{args.logdir}/{model_name}/binned_metrics.csv')
+        model_df.to_csv(f'{args.logdir}/models/{model_name}/binned_metrics.csv')
         log.info(model_df)
         dfs.append(model_df)
 
