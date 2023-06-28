@@ -1,6 +1,5 @@
 defaults:
-  - data: pythia_flat
-  - binning: pT
+  - data: pythia_allJZ
   - _self_
 
 hydra:
@@ -15,27 +14,59 @@ hydra:
         format: "[%(asctime)s][%(levelname)s] - %(message)s"
   output_subdir: config
 
-logdir: good_logs/cpre3 # Log directory for eval runs.
+logdir: logs/stepwise_flat/eval
+models_path: logs/stepwise_flat
 seed: 42
-draw_distribution: 1_000
-test_subfolder: train
-batch_size: 32
-take: 1_000
-threshold:
-threshold_name:
+draw_distribution: 20_000
+test_subfolder: test
+batch_size: 384
+take: 600_000
 binning:
   variable: jets_pt
-  bins: 10
-  max_bin: 1_600_000
+  bins: 20
+  max_bin: 6_000_000
   min_bin: 20_000
-  log_bin_base: 10
+  log_bin_base:
 metrics_to_plot:
-  ["gluon_efficiency", "quark_efficiency", "binary_accuracy", "auc"]
-reference_model:
-ylims: [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1]]
-models_path: "good_logs"
-model_names: ["depart", "part", "fc"]
-model_input_types: ["constituents", "constituents", "highlevel"]
+  [
+    "gluon_efficiency",
+    "quark_efficiency",
+    "binary_accuracy",
+    "auc",
+    "effective_tagging_efficiency",
+  ]
+reference_model: transformer
+ylims: # [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1], [0.10, 0.5]]
+model_names: [
+    "idepart",
+    "ipart",
+    #
+    "idepart_rel",
+    #
+    "depart",
+    "part",
+    "transformer",
+    "efn",
+    "pfn",
+    #
+    "fc",
+    "highway",
+  ]
+model_input_types: [
+    "interaction_constituents",
+    "interaction_constituents",
+    #
+    "irelative_constituents",
+    #
+    "constituents",
+    "constituents",
+    "constituents",
+    "constituents",
+    "constituents",
+    #
+    "highlevel",
+    "highlevel",
+  ]
 threshold_path: # good_logs/cpre
 threshold_var_name: #
-threshold_file_name: # binned_metrics.csv
+threshold_file_name: binned_metrics.csv

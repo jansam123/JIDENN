@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Tuple, Union, Callable
+from typing import Optional, List, Dict, Tuple, Union, Callable, Literal
 import tensorflow as tf
 import tensorflow_addons as tfa
 import numpy as np
@@ -99,6 +99,8 @@ def calculate_binned_metrics(df: pd.DataFrame,
     df['bin'] = pd.cut(df[binned_variable], bins=bins)
 
     def calculator(x):
+        if x.empty:
+            return
         if isinstance(threshold, pd.DataFrame) and threshold_name is not None:
             threshold_val = threshold.loc[threshold['bin'] == str(x['bin'].iloc[0]), threshold_name]
             threshold_val = float(threshold_val.iloc[0])
@@ -122,7 +124,11 @@ def calculate_binned_metrics(df: pd.DataFrame,
 def evaluate_multiple_models(model_paths: List[str],
                              model_names: List[str],
                              dataset: JIDENNDataset,
-                             model_input_name: List[str],
+                             model_input_name: List[Literal['highlevel',
+                                                            'highlevel_constituents',
+                                                            'constituents',
+                                                            'relative_constituents',
+                                                            'interaction_constituents']],
                              batch_size: int,
                              take: Optional[int] = None,
                              score_name: str = 'score',
@@ -159,7 +165,7 @@ def evaluate_multiple_models(model_paths: List[str],
     # iterate over all input types to reduce the number of times the dataset is prepared
     log.info(f'Batches will be of size: {batch_size}, total number of events: {take}') if log is not None else None
     for input_type in set(model_input_name):
-        train_input_class = input_classes_lookup('constituents')
+        train_input_class = input_classes_lookup(input_type)
         train_input_class = train_input_class()
         model_input = tf.function(func=train_input_class)
         ds = dataset.create_train_input(model_input)

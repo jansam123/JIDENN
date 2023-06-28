@@ -4,7 +4,7 @@ import argparse
 import json
 import subprocess
 
-from const import MODEL_NAMING_SCHEMA, METRIC_NAMING_SCHEMA
+from utils.const import MODEL_NAMING_SCHEMA, METRIC_NAMING_SCHEMA
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir", type=str, help="Directory.")

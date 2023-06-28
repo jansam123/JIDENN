@@ -8,7 +8,7 @@ import os
 import numpy as np
 import os
 # import atlas_mpl_style as ampl
-from const import MODEL_NAMING_SCHEMA, METRIC_NAMING_SCHEMA, MC_NAMING_SCHEMA
+from utils.const import MODEL_NAMING_SCHEMA, METRIC_NAMING_SCHEMA, MC_NAMING_SCHEMA
 # ampl.use_atlas_style()
 sns.set_theme(style="ticks")
 # sns.set_context(rc={"grid.linecolor": "black"})
