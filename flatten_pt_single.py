@@ -5,7 +5,7 @@ import argparse
 import pickle
 import logging
 #
-from jidenn.preprocessing.flattening_fns import (
+from jidenn.preprocess.resampling import (
     get_bin_fn,
     get_label_bin_fn,
     write_new_variable,
@@ -13,7 +13,7 @@ from jidenn.preprocessing.flattening_fns import (
     get_cut_fn,
     get_filter_fn
 )
-from jidenn.preprocessing.plotter import plot_pt_dist
+from jidenn.preprocess.plotter import plot_pt_dist
 
 logging.basicConfig(level=logging.INFO)
 ROOTVariables = dict[str, tf.RaggedTensor]
@@ -77,11 +77,11 @@ def main(args: argparse.Namespace) -> None:
     dataset = dataset.filter(get_cut_fn(lower_limit=pt_range[0], upper_limit=pt_range[1]))
 
     gluons = dataset.filter(get_filter_fn(variable='jets_PartonTruthLabelID', values=[21]))
-    gluons = gluons.rejection_resample(get_bin_fn(n_bins=args.bins, lower_pt_limit=pt_range[0], upper_pt_limit=pt_range[1]), target_dist=[
+    gluons = gluons.rejection_resample(get_bin_fn(n_bins=args.bins, lower_var_limit=pt_range[0], upper_var_limit=pt_range[1]), target_dist=[
                                        1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
 
     quarks = dataset.filter(get_filter_fn(variable='jets_PartonTruthLabelID', values=[1, 2, 3, 4, 5, 6]))
-    quarks = quarks.rejection_resample(get_bin_fn(n_bins=args.bins, lower_pt_limit=pt_range[0], upper_pt_limit=pt_range[1]), target_dist=[
+    quarks = quarks.rejection_resample(get_bin_fn(n_bins=args.bins, lower_var_limit=pt_range[0], upper_var_limit=pt_range[1]), target_dist=[
                                        1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
 
     dataset = tf.data.Dataset.sample_from_datasets([gluons, quarks], [0.5, 0.5], stop_on_empty_dataset=True)

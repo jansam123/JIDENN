@@ -49,7 +49,7 @@ def main(args: eval_config.EvalConfig) -> None:
         df = x.apply(lambda ds: ds.take(args.draw_distribution)).to_pandas()
         return plot_data_distributions(df,
                                        folder=f'{args.logdir}/data_dist',
-                                       named_labels=labels,
+                                       named_labels={i: label for i, label in enumerate(labels)},
                                        xlabel_mapper=LATEX_NAMING_CONVENTION)
     log.info('Evaluating models')
     full_dataset = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],

@@ -12,6 +12,7 @@ import pickle
 #
 import jidenn.config.config as config
 from jidenn.data.string_conversions import Cut, Expression
+from jidenn.evaluation.plotter import plot_data_distributions
 
 
 ROOTVariables = Dict[str, Union[tf.RaggedTensor, tf.Tensor]]
@@ -118,8 +119,9 @@ class JIDENNDataset:
 
 
     """
-    variables: List[str]
-    """The configuration dataclass of the variables to be used in the dataset."""
+    variables: Optional[List[str]] = None
+    """The configuration dataclass of the variables to be used in the dataset. 
+        If `None`, the variables are set automatically during loading with JIDENNDataset.load()."""
     target: Optional[str] = None
     """The name of the target variable. `None` if no target variable is used."""
     weight: Optional[str] = None
@@ -149,6 +151,39 @@ class JIDENNDataset:
         dataset = tf.data.Dataset.load(
             file, compression='GZIP', element_spec=jidenn_dataset.element_spec)
         return jidenn_dataset._set_dataset(dataset)
+
+    @staticmethod
+    def load(path: str, element_spec_path: Optional[str] = None) -> JIDENNDataset:
+        """Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
+        The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
+
+        Args:
+            path (str): The path to the dataset directory.
+            element_spec_path (str, optional): The path to the `element_spec` file. Defaults to `None`. 
+                If `None`, the `element_spec` is loaded from the `element_spec` file inside the dataset directory.
+
+        Raises:
+            ValueError: If the `element_spec` is not a dictionary or a tuple whose first element is a dictionary.
+
+        Returns:
+            JIDENNDataset: The JIDENNDataset object with set dataset and `element_spec`.
+        """
+        
+        if element_spec_path is None:
+            element_spec_path = os.path.join(path, 'element_spec')
+        with open(element_spec_path, 'rb') as f:
+            element_spec = pickle.load(f)
+
+        if isinstance(element_spec, dict):
+            variables = list(element_spec.keys())
+
+        elif isinstance(element_spec[0], dict):
+            variables = list(element_spec[0].keys())
+
+        else:
+            raise ValueError('Element spec is not a dictionary.')
+
+        return JIDENNDataset(variables=variables).load_dataset(path)
 
     def save_dataset(self, file: str, num_shards: Optional[int] = None) -> None:
         """Saves the dataset to a file. The dataset is stored in the `tf.data.Dataset` format.
@@ -411,7 +446,7 @@ class JIDENNDataset:
 
         Args:
             variables (Optional[List[str]], optional): List of variables to convert to a pandas DataFrame. If `None`, all variables are converted. Defaults to `None`.
-        
+
         Raises:
             ImportError: If `tensorflow_datasets` is not installed.
             ValueError: If the dataset is not loaded yet.
@@ -427,20 +462,35 @@ class JIDENNDataset:
                 'Please install tensorflow_datasets to use this function. Use `pip install tensorflow_datasets`.')
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
-        
-        if variables is None:
+
+        if isinstance(self.element_spec, tuple) and variables is None:
             @tf.function
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
                     data = {**data[0], **data[1]}
-                return {**data, 'label': label, 'weight': weight}
+                data = {**data, 'label': label, 'weight': weight}
+                return data
+
+        elif isinstance(self.element_spec, tuple) and variables is not None:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                data = {**data, 'label': label, 'weight': weight}
+                return {k: data[k] for k in variables}
+
+        elif isinstance(self.element_spec, dict) and variables is not None:
+            @tf.function
+            def tuple_to_dict(data):
+                return {k: data[k] for k in variables}
+
+        elif isinstance(self.element_spec, dict) and variables is None:
+            @tf.function
+            def tuple_to_dict(data):
+                return data
+
         else:
-            @tf.function
-            def tuple_to_dict(data, label, weight=None):
-                if isinstance(data, tuple):
-                    data = {**data[0], **data[1]}
-                data = {var: data[var] for var in variables}
-                return {**data, 'label': label, 'weight': weight}
+            raise ValueError('The dataset must be a tuple or a dict.')
 
         dataset = self.dataset.map(tuple_to_dict)
         df = tfds.as_dataframe(dataset)
@@ -508,3 +558,29 @@ class JIDENNDataset:
         # dataset = dataset.ragged_batch(batch_size)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset
+
+    def plot_data_distributions(self,
+                                folder: str,
+                                variables: Optional[List[str]] = None,
+                                hue_variable: Optional[str] = None,
+                                named_labels: Optional[Dict[int, str]] = None,
+                                xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
+        """Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
+        The function uses `jidenn.evaluation.plotter.plot_data_distributions` to plot the data distributions.
+
+        Args:
+            folder (str): The path to the directory where the plots are saved.
+            variables (Optional[List[str]], optional): List of variables to plot. If `None`, all variables are plotted. Defaults to `None`.
+            named_labels (Dict[int, str], optional): Dictionary mapping truth values to custom labels.
+                If not provided, the truth values will be used as labels. 
+
+        Raises:
+            ValueError: If the dataset is not loaded yet.
+
+        Returns:
+            None
+        """
+        if self.dataset is None:
+            raise ValueError('Dataset not loaded yet.')
+        df = self.to_pandas(variables)
+        plot_data_distributions(df, folder=folder, named_labels=named_labels, xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)
