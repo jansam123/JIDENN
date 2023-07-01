@@ -109,11 +109,7 @@ def main(args: argparse.Namespace) -> None:
     for i in dataset.take(1):
         print(i)
 
-    @tf.function
-    def gen_random_number(sample) -> tf.Tensor:
-        return tf.random.uniform(shape=[], minval=0, maxval=256, dtype=tf.int64)
-
-    dataset.save(args.save_path, compression='GZIP', shard_func=gen_random_number)
+    save_dataset(dataset, args.save_path, args.num_shards)
 
     try:
         os.makedirs(f'{args.save_path}/plots_after', exist_ok=True)
