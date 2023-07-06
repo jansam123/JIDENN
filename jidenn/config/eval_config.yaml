@@ -68,7 +68,6 @@ model_input_types: [
     "highlevel",
     "highlevel",
   ]
-threshold_path: # good_logs/cpre
-threshold_var_name: #
-threshold_file_name: binned_metrics.csv
+working_point_path: # good_logs/cpre
+working_point_file_name: 
 threads:

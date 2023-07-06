@@ -19,6 +19,7 @@ from jidenn.data.get_dataset import get_preprocessed_dataset
 from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
 from jidenn.evaluation.evaluation_metrics import EffectiveTaggingEfficiency
 from jidenn.evaluation.evaluation_metrics import calculate_metrics
+from jidenn.evaluation.WorkingPoint import WorkingPoint
 from jidenn.evaluation.evaluator import evaluate_multiple_models, calculate_binned_metrics
 from utils.const import METRIC_NAMING_SCHEMA, LATEX_NAMING_CONVENTION, MODEL_NAMING_SCHEMA
 
@@ -74,7 +75,6 @@ def main(args: eval_config.EvalConfig) -> None:
         bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins)
 
     overall_metrics = pd.DataFrame()
-
     dfs = []
 
     if args.threads is not None and args.threads > 1 and args.validation_plots_in_bins:
@@ -82,8 +82,16 @@ def main(args: eval_config.EvalConfig) -> None:
         args.validation_plots_in_bins = False
 
     for model_name in args.model_names:
-        if args.threshold_path is not None and args.threshold_file_name is not None and args.threshold_var_name is not None:
-            threshold = pd.read_csv(f'{args.threshold_path}/{model_name}/{args.threshold_file_name}')
+
+        if args.working_point_path is not None and args.working_point_file_name is not None:
+            # threshold = pd.read_csv(f'{args.threshold_path}/{model_name}/{args.threshold_file_name}')
+            threshold = WorkingPoint.load(os.path.join(args.working_point_path,
+                                          model_name, args.working_point_file_name))
+
+            if threshold.binning != args.binning:
+                raise ValueError(
+                    f'Working point binning {threshold.binning} does not match evaluation binning {args.binning}')
+
         else:
             threshold = 0.5
 
@@ -111,7 +119,6 @@ def main(args: eval_config.EvalConfig) -> None:
                                             bins=bins,
                                             validation_plotter=validation_plotter if args.validation_plots_in_bins else None,
                                             threshold=threshold,
-                                            threshold_name=args.threshold_var_name,
                                             threads=args.threads,
                                             )
 
@@ -126,6 +133,13 @@ def main(args: eval_config.EvalConfig) -> None:
 
         model_df.to_csv(f'{args.logdir}/models/{model_name}/binned_metrics.csv')
         log.info(model_df)
+
+        if args.working_point_path is None and args.working_point_file_name is None:
+            for col in model_df.columns:
+                if col.startswith('threshold'):
+                    wp = WorkingPoint(binning=args.binning, thresholds=model_df[col].values)
+                    wp.save(os.path.join(args.logdir, 'models', model_name, f'{col}.pkl'))
+
         dfs.append(model_df)
 
     overall_metrics.to_csv(f'{args.logdir}/overall_metrics.csv')

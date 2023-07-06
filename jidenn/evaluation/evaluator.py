@@ -9,6 +9,7 @@ import time
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.data.TrainInput import input_classes_lookup
 from .evaluation_metrics import calculate_metrics
+from .WorkingPoint import BinnedVariable
 from multiprocessing import Pool
 
 
@@ -48,18 +49,16 @@ def add_score_to_dataset(dataset: JIDENNDataset,
 
     return JIDENNDataset(variables).set_dataset(dataset, element_spec=dataset.element_spec)
 
+
 def _calculate_metrics_in_bin(x):
-    y, score_variable, threshold, threshold_name, validation_plotter = x
+    y, score_variable, threshold, validation_plotter = x
     inter, x = y
     if x.empty:
         return
-    # check if both class labels are present
     if len(x['label'].unique()) < 2:
         return
-    if isinstance(threshold, pd.DataFrame) and threshold_name is not None:
-        where_to_find = threshold['bin'] == str(x['bin'].iloc[0])
-        threshold_val = threshold.loc[where_to_find, threshold_name]
-        threshold_val = float(threshold_val.iloc[0])
+    if isinstance(threshold, BinnedVariable):
+        threshold_val = threshold[x['bin'].iloc[0]]
     else:
         threshold_val = threshold
     if validation_plotter is not None:
@@ -69,13 +68,13 @@ def _calculate_metrics_in_bin(x):
     ret['bin'] = inter
     return ret
 
+
 def calculate_binned_metrics(df: pd.DataFrame,
                              binned_variable: str,
                              score_variable: str,
                              bins: Union[List[Union[float, int]], np.ndarray],
                              validation_plotter: Optional[Callable[[pd.DataFrame], None]] = None,
-                             threshold: Union[pd.DataFrame, float] = 0.5,
-                             threshold_name: Optional[str] = None,
+                             threshold: Union[BinnedVariable, float] = 0.5,
                              threads: Optional[int] = None) -> pd.DataFrame:
     """Calculate metrics for a binary classification problem binned by a continuous variable.
 
@@ -118,18 +117,17 @@ def calculate_binned_metrics(df: pd.DataFrame,
 
     """
 
-
     df['bin'] = pd.cut(df[binned_variable], bins=bins)
 
     grouped_metrics = df.groupby('bin')
-    args = [(x, score_variable, threshold, threshold_name, validation_plotter) for x in grouped_metrics]
-    
+    args = [(x, score_variable, threshold, validation_plotter) for x in grouped_metrics]
+
     if threads is not None and threads > 1:
         with Pool(threads) as pool:
             metrics = pool.map(_calculate_metrics_in_bin, args)
     else:
         metrics = map(_calculate_metrics_in_bin, args)
-    
+
     metrics = [x for x in metrics if x is not None]
     metrics = pd.DataFrame(metrics)
     return metrics
