@@ -58,6 +58,7 @@ class EvalConfig:
         metrics_to_plot (List[str]): List of metrics to plot. See `jidenn.evaluation.evaluation_metrics.get_metrics` for options.
         ylims (List[List[float]]): List of y-axis limits for each metric plot.
         reference_model (str): Name of the model to use as reference for ratio plots.
+        threads (Optional[int]): Number of threads to use for evaluation. If `None`, single-threaded evaluation is used.
     """
     data: Data
     logdir: str
@@ -77,3 +78,4 @@ class EvalConfig:
     metrics_to_plot: List[str]
     reference_model: str
     ylims: List[List[float]]
+    threads: Optional[int]

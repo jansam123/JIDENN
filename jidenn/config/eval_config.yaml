@@ -24,7 +24,7 @@ take: 600_000
 binning:
   variable: jets_pt
   bins: 20
-  max_bin: 6_000_000
+  max_bin: 3_900_000
   min_bin: 20_000
   log_bin_base:
 metrics_to_plot:
@@ -70,3 +70,4 @@ model_input_types: [
 threshold_path: # good_logs/cpre
 threshold_var_name: #
 threshold_file_name: binned_metrics.csv
+threads:
