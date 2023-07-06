@@ -108,6 +108,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                             validation_plotter=validation_plotter,
                                             threshold=threshold,
                                             threshold_name=args.threshold_var_name,
+                                            threads=args.threads,
                                             )
 
         os.makedirs(f'{args.logdir}/models/{model_name}', exist_ok=True)
