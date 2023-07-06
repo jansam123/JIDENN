@@ -302,7 +302,11 @@ def explode_nested_variables(df: pd.DataFrame, exploding_column: str, max_iterat
 
 def plot_data_distributions(df: pd.DataFrame,
                             folder: str,
-                            named_labels: Optional[List[str]] = None,
+                            hue_variable: str = 'label',
+                            variables: Optional[List[str]] = None,
+                            named_labels: Optional[Dict[int, str]] = None,
+                            weight_variable: Optional[str] = None,
+                            n_bins: Optional[int] = 100,
                             xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
     r"""Plot the data distributions of the variables in a DataFrame for different truth values.
 
@@ -310,26 +314,28 @@ def plot_data_distributions(df: pd.DataFrame,
         df (pd.DataFrame): DataFrame containing the input variables to plot and a column named 'label'
             containing the truth values.
         folder (str): Path to the directory where the plots will be saved.
-        named_labels (List[str], optional): List of named labels for the truth values in the 'label' column.
-            If not provided, the labels will be '0' and '1'. For example, if the 'label' column contains
-            0 and 1, and the `named_labels` are ['gluon', 'quark'].
+        hue_variable (str, optional): Name of the column containing a categorical or discrete variable
+            to use for the hue. Default is 'label'.
+        named_labels (Dict[int, str], optional): Dictionary mapping truth values to custom labels.
+            If not provided, the truth values will be used as labels. 
         xlabel_mapper (Dict[str, str], optional): Dictionary mapping variable names to custom x-axis labels.
             If not provided, the variable names will be used as labels. This is useful to convert stadarized
             variable names such as 'jets_pt' to a latex formatted label such as '$p_{\mathrm{T}}^\mathrm{jet}$'.
 
     """
-
-    named_labels = ['0', '1'] if named_labels is None else named_labels
-    hue_order = named_labels
-    df['Truth Label'] = df['label'].apply(lambda x: named_labels[x])
+    # hue_order = named_labels.values() if named_labels is not None else None
+    df['Truth Label'] = df[hue_variable].apply(
+        lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
+    hue_order = set(named_labels.values()) if named_labels is not None else None
     color_column = 'Truth Label'
-    var_names = list(df.columns)
-    var_names.remove(color_column)
+    var_names = list(df.columns) if variables is None else variables
+    var_names.remove(color_column) if color_column in var_names else None
     os.makedirs(os.path.join(folder, 'jpg'), exist_ok=True)
     os.makedirs(os.path.join(folder, 'pdf'), exist_ok=True)
     os.makedirs(os.path.join(folder, 'jpg_log'), exist_ok=True)
     os.makedirs(os.path.join(folder, 'pdf_log'), exist_ok=True)
-    for var_name in var_names + ['label', 'weight']:
+    iter_var_names = var_names + [hue_variable, 'weight'] if weight_variable is not None else var_names + [hue_variable]
+    for var_name in iter_var_names:
         small_df = df[[var_name, color_column]].copy()
         dtype = small_df[var_name].dtype
 
@@ -343,7 +349,7 @@ def plot_data_distributions(df: pd.DataFrame,
         except:
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
                               stat='density', element="step", fill=True,
-                              palette='Set1', common_norm=False, hue_order=hue_order, bins=100)
+                              palette='Set1', common_norm=False, hue_order=hue_order, bins=n_bins if n_bins is not None else 'auto')
 
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
@@ -355,7 +361,31 @@ def plot_data_distributions(df: pd.DataFrame,
         plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
 
-        plt.close('all')
+        plt.close()
+
+
+def plot_single_dist(df: pd.DataFrame,
+                     variable: str,
+                     hue_var: str = 'label',
+                     ylog: bool = False,
+                     hue_order: Optional[List[str]] = None,
+                     save_path: str = 'figs.png') -> None:
+
+    sns.histplot(data=df, x=variable, hue=hue_var,
+                 stat='count', element="step", fill=True,
+                 palette='Set1', common_norm=False, hue_order=hue_order)
+    plt.savefig(save_path)
+    plt.yscale('log') if ylog else None
+    plt.savefig(save_path)
+    plt.close()
+
+    # sns.histplot(data=df, x=variable, hue='All Truth Label',
+    #              stat='count', element="step", fill=True, multiple='stack',
+    #              palette='Set1', common_norm=False)
+    # plt.savefig(save_path.replace('.png', '_all.png'))
+    # plt.yscale('log')
+    # plt.savefig(save_path.replace('.png', '_all_log.png'))
+    # plt.close()
 
 
 def plot_var_dependence(dfs: List[pd.DataFrame],

@@ -44,21 +44,7 @@ def rebin_wrapper(n_bins, pt_range: List[float] = [60_000., 5_600_000.]) -> Call
         jet_pt = data['jets_pt']
         jet_pt = tf.reshape(jet_pt, ())
         index = tf.histogram_fixed_width_bins(jet_pt, pt_range, nbins=n_bins)
-        # index = tf.histogram_fixed_width_bins(jet_pt, pt_range, nbins=n_bins + 2)
-        # if index == n_bins + 1:
-        #     index = tf.constant(n_bins, dtype=tf.int32)
-        # index = index - 1
-        # if index < 0:
-        #     index = tf.constant(0, dtype=tf.int32)
-
         return index
-        # parton = data['jets_PartonTruthLabelID']
-        # if tf.equal(parton, tf.constant(21)):
-        #     return index
-        # elif tf.reduce_any(tf.equal(parton, tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32))):
-        #     return index + n_bins
-        # else:
-        #     return tf.constant(0, dtype=tf.int32)
     return rebin_pt
 
 
@@ -119,9 +105,9 @@ def main(args: argparse.Namespace) -> None:
                  'JZ07_r10724',
                  'JZ08_r10724',
                  'JZ09_r10724',
-                 'JZ10_r10724',
-                 'JZ11_r10724',
-                 'JZ12_r10724',
+                 #  'JZ10_r10724',
+                 #  'JZ11_r10724',
+                 #  'JZ12_r10724',
                  ]
 
     pt_cuts = [
@@ -164,13 +150,14 @@ def main(args: argparse.Namespace) -> None:
             element_spec = pickle.load(f)
         ds = tf.data.Dataset.load(file, compression='GZIP')
         sizes += [ds.cardinality().numpy()]
+        ds = ds.map(write_JZ_wrapper(i + 1))
 
         # ds = ds.filter(up_cut_pt_wrapper(pt_cuts[i]))
         # ds = ds.filter(down_cut_pt_wrapper(pt_cuts[i + 1])) if i < len(pt_cuts ) - 1 else ds
-        if i < len(pt_cuts) - 1:
-            ds = ds.filter(double_cut_pt_wrapper(pt_cuts[i + 1], pt_cuts[i]))
-        else:
-            ds = ds.filter(double_cut_pt_wrapper(5_800_000, pt_cuts[i]))
+        # if i < len(pt_cuts) - 1:
+        #     ds = ds.filter(double_cut_pt_wrapper(pt_cuts[i + 1], pt_cuts[i]))
+        # else:
+        #     ds = ds.filter(double_cut_pt_wrapper(5_800_000, pt_cuts[i]))
 
         # os.makedirs(f'{args.save_path}/spectrum_{jz_slice}', exist_ok=True)
         # plot_pt_dist(ds.take(50_000).prefetch(tf.data.AUTOTUNE),
@@ -179,24 +166,8 @@ def main(args: argparse.Namespace) -> None:
         # if i > 7:
         #     ds = ds.repeat(2)
 
-        pt_ranges = [pt_cuts[i], pt_cuts[i + 1]] if i < len(pt_cuts) - 1 else [pt_cuts[i], 5_800_000]
+        # pt_ranges = [pt_cuts[i], pt_cuts[i + 1]] if i < len(pt_cuts) - 1 else [pt_cuts[i], 5_800_000]
 
-        gluons = ds.filter(lambda x: tf.equal(x['jets_PartonTruthLabelID'], tf.constant(21)))
-        quarks = ds.filter(lambda x: tf.reduce_any(
-            tf.equal(x['jets_PartonTruthLabelID'], tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32))))
-
-        gluons = gluons.rejection_resample(rebin_wrapper(args.bins, pt_ranges), target_dist=[
-            1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
-        quarks = quarks.rejection_resample(rebin_wrapper(args.bins, pt_ranges), target_dist=[
-            1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
-
-        ds = tf.data.Dataset.sample_from_datasets([gluons, quarks], [0.5, 0.5], stop_on_empty_dataset=True)
-        ds = ds.map(write_JZ_wrapper(i + 1))
-
-        ds = ds.cache()
-        os.makedirs(f'{args.save_path}/spectrum_{jz_slice}', exist_ok=True)
-        plot_pt_dist(ds.take(50_000).prefetch(tf.data.AUTOTUNE),
-                     save_path=f'{args.save_path}/spectrum_{jz_slice}/pt_spectrum_rebinned.png')
         # if i > 5:
         #     ds = ds.repeat()
         # gluons.append(ds.filter(lambda x: tf.equal(x['jets_PartonTruthLabelID'], tf.constant(21))))
@@ -205,9 +176,26 @@ def main(args: argparse.Namespace) -> None:
 
         datasets.append(ds)
 
-    sizes = tf.constant(sizes, dtype=tf.float32)
-    sizes = sizes / tf.reduce_sum(sizes)
-    dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets, sizes)
+    dataset: tf.data.Dataset = tf.data.Dataset.sample_from_datasets(datasets)
+    plot_pt_dist(dataset.take(100_000).prefetch(tf.data.AUTOTUNE),
+                 save_path=f'{args.save_path}/spectrum/pt_spectrum.png')
+    
+    os.makedirs(f'{args.save_path}/spectrum', exist_ok=True)
+
+    gluons = dataset.filter(lambda x: tf.equal(x['jets_PartonTruthLabelID'], tf.constant(21)))
+    quarks = dataset.filter(lambda x: tf.reduce_any(
+        tf.equal(x['jets_PartonTruthLabelID'], tf.constant([1, 2, 3, 4, 5, 6], dtype=tf.int32))))
+
+    gluons = gluons.rejection_resample(rebin_wrapper(args.bins, [60_000, 3_900_000]), target_dist=[
+        1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
+    quarks = quarks.rejection_resample(rebin_wrapper(args.bins, [60_000, 3_900_000]), target_dist=[
+        1 / (args.bins)] * args.bins, seed=42).map(lambda w, z: z)
+
+    dataset = tf.data.Dataset.sample_from_datasets([gluons, quarks], [0.5, 0.5], stop_on_empty_dataset=True)
+
+    plot_pt_dist(dataset.take(100_000).prefetch(tf.data.AUTOTUNE),
+                 save_path=f'{args.save_path}/spectrum/pt_spectrum_rebinned.png')
+
     dataset = dataset.shuffle(100_000, seed=42)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
