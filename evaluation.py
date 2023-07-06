@@ -77,6 +77,10 @@ def main(args: eval_config.EvalConfig) -> None:
 
     dfs = []
 
+    if args.threads is not None and args.threads > 1 and args.validation_plots_in_bins:
+        log.warning('Validation plots in bins are not supported with multithreading. Disabling validation plots in bins.')
+        args.validation_plots_in_bins = False
+
     for model_name in args.model_names:
         if args.threshold_path is not None and args.threshold_file_name is not None and args.threshold_var_name is not None:
             threshold = pd.read_csv(f'{args.threshold_path}/{model_name}/{args.threshold_file_name}')
@@ -105,7 +109,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                             binned_variable=variable,
                                             score_variable=f'{model_name}_score',
                                             bins=bins,
-                                            validation_plotter=validation_plotter,
+                                            validation_plotter=validation_plotter if args.validation_plots_in_bins else None,
                                             threshold=threshold,
                                             threshold_name=args.threshold_var_name,
                                             threads=args.threads,

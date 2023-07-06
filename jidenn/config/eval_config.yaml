@@ -36,6 +36,7 @@ metrics_to_plot:
     "effective_tagging_efficiency",
   ]
 reference_model: transformer
+validation_plots_in_bins: False 
 ylims: # [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1], [0.10, 0.5]]
 model_names: [
     "idepart",
