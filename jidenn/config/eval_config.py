@@ -50,11 +50,10 @@ class EvalConfig:
         batch_size (int): Batch size for evaluation.
         take (int): Number of data samples to use for evaluation. 
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
-        threshold_path (Optional[str]): Path to a folder where for each model there is a subfolder with the name of the model.
+        working_point_path (Optional[str]): Path to a folder where for each model there is a subfolder with the name of the model.
             contains a csv file with the name `threshold_file_name` containing a column with the name `threshold_var_name`.
             Folder structure: `threshold_path`/`model_name`/`threshold_file_name`.
-        threshold_var_name (Optional[str]): Name of the column in the threshold file containing the threshold value.
-        threshold_file_name (Optional[str]): Name of the threshold file.
+        working_point_file_name (Optional[str]): Name of the threshold file.
         metrics_to_plot (List[str]): List of metrics to plot. See `jidenn.evaluation.evaluation_metrics.get_metrics` for options.
         ylims (List[List[float]]): List of y-axis limits for each metric plot.
         reference_model (str): Name of the model to use as reference for ratio plots.
@@ -72,9 +71,8 @@ class EvalConfig:
     batch_size: int
     take: int
     binning: Binning
-    threshold_path: Optional[str]
-    threshold_var_name: Optional[str]
-    threshold_file_name: Optional[str]
+    working_point_path: Optional[str]
+    working_point_file_name: Optional[str]
     metrics_to_plot: List[str]
     reference_model: str
     ylims: List[List[float]]
