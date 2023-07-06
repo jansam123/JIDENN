@@ -86,7 +86,7 @@ def calculate_binned_metrics(df: pd.DataFrame,
             for each bin (confusion matrix, ROC, score outputs histogram,...). Default is None.
         threshold (Union[pd.DataFrame, float], optional): Threshold value for the binary classification.
             If a DataFrame is provided, it should contain a 'bin' column with string representation of 
-            pd.Interval (e.g. '(0.5, 1.0]') and a column with the name specified in `threshold_name` containing
+            pd.Interval (e.g. 'm(0.5, 1.0]') and a column with the name specified in `threshold_name` containing
             the threshold values for each bin. Default is 0.5.
         threshold_name (str, optional): Name of the column containing the threshold values in the threshold
             DataFrame. Only used if a DataFrame is provided as the threshold argument. Default is None.
@@ -101,8 +101,12 @@ def calculate_binned_metrics(df: pd.DataFrame,
     def calculator(x):
         if x.empty:
             return
+        # check if both class labels are present
+        if len(x['label'].unique()) < 2:
+            return
         if isinstance(threshold, pd.DataFrame) and threshold_name is not None:
-            threshold_val = threshold.loc[threshold['bin'] == str(x['bin'].iloc[0]), threshold_name]
+            where_to_find = threshold['bin'] == str(x['bin'].iloc[0])
+            threshold_val = threshold.loc[where_to_find, threshold_name]
             threshold_val = float(threshold_val.iloc[0])
         else:
             threshold_val = threshold
