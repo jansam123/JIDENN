@@ -30,7 +30,7 @@ TTREE = 'NOMINAL'
 # in CHIMERA use:
 base_path = '/work/ucjf-atlas/plesv6am/for_sam/qg/jetProp4/jetProp4/user.pleskot.mc16_13TeV.364704.JETM13.e7142_s3126_r10724_p4277.jetProp4_ANALYSIS'
 if not os.path.exists(base_path):
-    base_path = '/home/jankovys/JIDENN/data/data2'
+    base_path = '/home/jankovys/JIDENN/data/pythia_exmaples'
 # in GPULAB use:
 FILENAMES = [f'{base_path}/user.pleskot.31142736.ANALYSIS._000002.root']
 # f'{base_path}/user.pleskot.31142736.ANALYSIS._000001.root',

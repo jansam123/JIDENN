@@ -434,8 +434,9 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             ymin=ylims[i][0] if ylims is not None else None,
             ymax=ylims[i][1] if ylims is not None else None,
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
-            figsize=(9, 7),
-            atlas_second_tag='13 TeV'
+            figsize=(10, 8),
+            atlas_second_tag='13 TeV',
+            leg_loc='lower right',
         )
 
         for df, label in zip(dfs, labels):

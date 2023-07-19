@@ -16,17 +16,17 @@ hydra:
 
 data:
   path: data/sherpa_stepwise
-logdir: logs/stepwise_flat/evaluation/sherpa
+logdir: logs/stepwise_flat/evaluation/sherpa_test
 models_path: logs/stepwise_flat
 seed: 42
-draw_distribution: 
+draw_distribution:
 test_subfolder: test
 batch_size: 384
 take: 6_000
 binning:
   variable: jets_pt
   bins: 20
-  max_bin: 6_000_000
+  max_bin: 3_900_000
   min_bin: 20_000
   log_bin_base:
 metrics_to_plot:
@@ -38,6 +38,7 @@ metrics_to_plot:
     "effective_tagging_efficiency",
   ]
 reference_model: transformer
+validation_plots_in_bins: False
 ylims: # [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1], [0.10, 0.5]]
 model_names: [
     # "idepart",
@@ -69,6 +70,6 @@ model_input_types: [
     # "highlevel",
     # "highlevel",
   ]
-threshold_path: /home/jankovys/JIDENN/logs/stepwise_flat/evaluation/pythia_th/models
-threshold_var_name: threshold_at_fixed_quark_50wp
-threshold_file_name: binned_metrics.csv
+working_point_path: /home/jankovys/JIDENN/logs/stepwise_flat/evaluation/py_test/models # good_logs/cpre
+working_point_file_name: threshold_at_fixed_quark_50wp.pkl
+threads:

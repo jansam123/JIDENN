@@ -70,9 +70,9 @@ def main(args: eval_config.EvalConfig) -> None:
 
     if args.binning.log_bin_base is not None:
         bins = np.logspace(np.log10(args.binning.min_bin), np.log10(args.binning.max_bin),
-                           args.binning.bins, base=args.binning.log_bin_base)
+                           args.binning.bins + 1, base=args.binning.log_bin_base)
     else:
-        bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins)
+        bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins + 1)
 
     overall_metrics = pd.DataFrame()
     dfs = []
