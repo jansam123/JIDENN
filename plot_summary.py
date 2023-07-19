@@ -40,7 +40,7 @@ def plot_metric(df: pd.DataFrame,
                 ylim: Optional[Tuple[float, float]] = None,):
 
     palette = 'coolwarm'
-    fig_big = plt.figure(figsize=(12, 8))
+    fig_big = plt.figure(figsize=(16, 10))
     gs = fig_big.add_gridspec(2, hspace=0.07, height_ratios=[2.5, 1])
     ax1, ax2 = gs.subplots(sharex=True, sharey=False)
     sns.pointplot(x='cut', y=metric, data=df, hue='Model', errorbar=None,
@@ -49,7 +49,7 @@ def plot_metric(df: pd.DataFrame,
     ax1.set(ylabel=METRIC_NAMING_SCHEMA[metric]
             if metric in METRIC_NAMING_SCHEMA else metric, xlabel=None)
     handles, labels = ax1.get_legend_handles_labels()
-    ax1.legend(handles=handles, labels=labels, loc='upper right')
+    ax1.legend(handles=handles, labels=labels, loc='lower right')
 
     sns.pointplot(x='cut', y=metric, data=relative_df, hue='Model', errorbar=None,
                     palette=palette, hue_order=order, ax=ax2, estimator=np.mean)
@@ -57,7 +57,6 @@ def plot_metric(df: pd.DataFrame,
     ax2.get_legend().set_visible(False)
     if ylim is not None:
         ax1.set_ylim(ylim)
-
     # make a gap between the two plots
     atlasify.atlasify("Simulation Internal", axes=ax1, subtext='13 TeV')
     atlasify.atlasify(atlas=False, axes=ax2)
@@ -85,8 +84,9 @@ def compare_ml_models(overall_metrics_path: str,
                     'gluon_rejection_at_quark_80wp', 'gluon_rejection_at_quark_50wp',
                     'gluon_efficiency_at_quark_80wp', 'gluon_efficiency_at_quark_50wp']
 
-    ylims = [[0.68, 1.0], [0.68, 1.0], [0.7, 0.95], [0.8, 1.05], [0.25, 0.70],
-             [2, 10], [5, 45], [0.7, 1.0], [0.9, 1.1]]
+    ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
+             [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
+    # ylims = None
     reference = 'transformer'
 
     plot_var_dependence(dfs=sorted_dfs,
@@ -106,7 +106,8 @@ def compare_ml_models(overall_metrics_path: str,
         left, right = string_interval.split(',')
         left = float(left[1:]) * 1e-6
         right = float(right[:-1]) * 1e-6
-        return f'{left:.1f}-{right:.1f}'
+        mid = (left + right) / 2
+        return f'{mid:.1f}'
 
     dfs_new = []
     rel_dfs = []
@@ -123,6 +124,7 @@ def compare_ml_models(overall_metrics_path: str,
     df = pd.concat(dfs_new)
     rel_df = pd.concat(rel_dfs)
 
+    ylims = [None] * len(metric_names) # if ylims is None else ylims
     for metric, ylim in zip(metric_names, ylims):
         plot_metric(df=df,
                     relative_df=rel_df,

@@ -70,12 +70,16 @@ def main(args: eval_config.EvalConfig) -> None:
 
     if args.binning.log_bin_base is not None:
         bins = np.logspace(np.log10(args.binning.min_bin), np.log10(args.binning.max_bin),
-                           args.binning.bins, base=args.binning.log_bin_base)
+                           args.binning.bins + 1, base=args.binning.log_bin_base)
     else:
-        bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins)
+        bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins + 1)
 
     overall_metrics = pd.DataFrame()
     dfs = []
+
+    if args.threads is not None and args.threads > 1 and args.validation_plots_in_bins:
+        log.warning('Validation plots in bins are not supported with multithreading. Disabling validation plots in bins.')
+        args.validation_plots_in_bins = False
 
     for model_name in args.model_names:
 
@@ -113,7 +117,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                             binned_variable=variable,
                                             score_variable=f'{model_name}_score',
                                             bins=bins,
-                                            validation_plotter=validation_plotter,
+                                            validation_plotter=validation_plotter if args.validation_plots_in_bins else None,
                                             threshold=threshold,
                                             threads=args.threads,
                                             )
