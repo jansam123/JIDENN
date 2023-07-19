@@ -168,7 +168,7 @@ class JIDENNDataset:
         Returns:
             JIDENNDataset: The JIDENNDataset object with set dataset and `element_spec`.
         """
-        
+
         if element_spec_path is None:
             element_spec_path = os.path.join(path, 'element_spec')
         with open(element_spec_path, 'rb') as f:
@@ -477,7 +477,7 @@ class JIDENNDataset:
                 if isinstance(data, tuple):
                     data = {**data[0], **data[1]}
                 data = {**data, 'label': label, 'weight': weight}
-                return {k: data[k] for k in variables}
+                return {k: data[k] for k in variables + ['label', 'weight']}
 
         elif isinstance(self.element_spec, dict) and variables is not None:
             @tf.function
@@ -583,4 +583,5 @@ class JIDENNDataset:
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
         df = self.to_pandas(variables)
-        plot_data_distributions(df, folder=folder, named_labels=named_labels, xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)
+        plot_data_distributions(df, folder=folder, named_labels=named_labels,
+                                xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)

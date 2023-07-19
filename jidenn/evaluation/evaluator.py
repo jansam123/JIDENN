@@ -9,6 +9,8 @@ import time
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.data.TrainInput import input_classes_lookup
 from .evaluation_metrics import calculate_metrics
+from .WorkingPoint import BinnedVariable
+from multiprocessing import Pool
 
 
 def add_score_to_dataset(dataset: JIDENNDataset,
@@ -48,13 +50,32 @@ def add_score_to_dataset(dataset: JIDENNDataset,
     return JIDENNDataset(variables).set_dataset(dataset, element_spec=dataset.element_spec)
 
 
+def _calculate_metrics_in_bin(x):
+    y, score_variable, threshold, validation_plotter = x
+    inter, x = y
+    if x.empty:
+        return
+    if len(x['label'].unique()) < 2:
+        return
+    if isinstance(threshold, BinnedVariable):
+        threshold_val = threshold[x['bin'].iloc[0]]
+    else:
+        threshold_val = threshold
+    if validation_plotter is not None:
+        validation_plotter(x)
+    ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold_val)
+    ret['num_events'] = len(x)
+    ret['bin'] = inter
+    return ret
+
+
 def calculate_binned_metrics(df: pd.DataFrame,
                              binned_variable: str,
                              score_variable: str,
                              bins: Union[List[Union[float, int]], np.ndarray],
                              validation_plotter: Optional[Callable[[pd.DataFrame], None]] = None,
-                             threshold: Union[pd.DataFrame, float] = 0.5,
-                             threshold_name: Optional[str] = None) -> pd.DataFrame:
+                             threshold: Union[BinnedVariable, float] = 0.5,
+                             threads: Optional[int] = None) -> pd.DataFrame:
     """Calculate metrics for a binary classification problem binned by a continuous variable.
 
     Example pd.DataFrame structure:
@@ -86,7 +107,7 @@ def calculate_binned_metrics(df: pd.DataFrame,
             for each bin (confusion matrix, ROC, score outputs histogram,...). Default is None.
         threshold (Union[pd.DataFrame, float], optional): Threshold value for the binary classification.
             If a DataFrame is provided, it should contain a 'bin' column with string representation of 
-            pd.Interval (e.g. '(0.5, 1.0]') and a column with the name specified in `threshold_name` containing
+            pd.Interval (e.g. 'm(0.5, 1.0]') and a column with the name specified in `threshold_name` containing
             the threshold values for each bin. Default is 0.5.
         threshold_name (str, optional): Name of the column containing the threshold values in the threshold
             DataFrame. Only used if a DataFrame is provided as the threshold argument. Default is None.
@@ -98,26 +119,17 @@ def calculate_binned_metrics(df: pd.DataFrame,
 
     df['bin'] = pd.cut(df[binned_variable], bins=bins)
 
-    def calculator(x):
-        if x.empty:
-            return
-        if isinstance(threshold, pd.DataFrame) and threshold_name is not None:
-            threshold_val = threshold.loc[threshold['bin'] == str(x['bin'].iloc[0]), threshold_name]
-            threshold_val = float(threshold_val.iloc[0])
-        else:
-            threshold_val = threshold
-        if validation_plotter is not None:
-            validation_plotter(x)
-        ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold_val)
-        ret['num_events'] = len(x)
-        return ret
+    grouped_metrics = df.groupby('bin')
+    args = [(x, score_variable, threshold, validation_plotter) for x in grouped_metrics]
 
-    metrics = df.groupby('bin').apply(calculator)
-    bin_intervals = metrics.index
-    metrics = metrics.reset_index(drop=True).apply(pd.Series)
-    metrics['bin'] = bin_intervals
-    metrics = metrics.dropna()
+    if threads is not None and threads > 1:
+        with Pool(threads) as pool:
+            metrics = pool.map(_calculate_metrics_in_bin, args)
+    else:
+        metrics = map(_calculate_metrics_in_bin, args)
 
+    metrics = [x for x in metrics if x is not None]
+    metrics = pd.DataFrame(metrics)
     return metrics
 
 

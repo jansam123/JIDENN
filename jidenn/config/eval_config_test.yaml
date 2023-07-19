@@ -14,13 +14,15 @@ hydra:
         format: "[%(asctime)s][%(levelname)s] - %(message)s"
   output_subdir: config
 
-logdir: logs/stepwise_flat/eval
+data:
+  path: data/sherpa_stepwise
+logdir: logs/stepwise_flat/evaluation/sherpa_test
 models_path: logs/stepwise_flat
 seed: 42
-draw_distribution: 20_000
+draw_distribution:
 test_subfolder: test
 batch_size: 384
-take: 600_000
+take: 6_000
 binning:
   variable: jets_pt
   bins: 20
@@ -36,38 +38,38 @@ metrics_to_plot:
     "effective_tagging_efficiency",
   ]
 reference_model: transformer
-validation_plots_in_bins: False 
+validation_plots_in_bins: False
 ylims: # [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1], [0.10, 0.5]]
 model_names: [
-    "idepart",
-    "ipart",
+    # "idepart",
+    # "ipart",
     #
-    "idepart_rel",
+    # "idepart_rel",
     #
     "depart",
-    "part",
+    # "part",
     "transformer",
-    "efn",
-    "pfn",
+    # "efn",
+    # "pfn",
     #
-    "fc",
-    "highway",
+    # "fc",
+    # "highway",
   ]
 model_input_types: [
-    "interaction_constituents",
-    "interaction_constituents",
+    # "interaction_constituents",
+    # "interaction_constituents",
     #
-    "irelative_constituents",
+    # "irelative_constituents",
     #
     "constituents",
     "constituents",
-    "constituents",
-    "constituents",
-    "constituents",
-    #
-    "highlevel",
-    "highlevel",
+    # "constituents",
+    # "constituents",
+    # "constituents",
+    # #
+    # "highlevel",
+    # "highlevel",
   ]
-working_point_path: # good_logs/cpre
-working_point_file_name: 
+working_point_path: /home/jankovys/JIDENN/logs/stepwise_flat/evaluation/py_test/models # good_logs/cpre
+working_point_file_name: threshold_at_fixed_quark_50wp.pkl
 threads:
