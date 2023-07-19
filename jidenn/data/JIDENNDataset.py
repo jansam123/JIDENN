@@ -1,5 +1,5 @@
 """
-Module containing the `JIDENNDataset` dataclass that is a wrapper for a TensorFlow dataset that allows for easy loading and processing of dataset files.
+Module containing the `JIDENNDataset` dataclass that is a wrapper for a TensorFlow dataset that allows for easy adding and processing of dataset files.
 It contains all the necessary tools to perform a preprocessing of the jet dataset for training. 
 """
 from __future__ import annotations

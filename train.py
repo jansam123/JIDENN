@@ -19,8 +19,6 @@ from jidenn.model_builders.multi_gpu_strategies import choose_strategy
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
-
-
 @hydra.main(version_base="1.2", config_path="jidenn/config", config_name="config")
 def main(args: config.JIDENNConfig) -> None:
     log = logging.getLogger(__name__)
@@ -202,6 +200,7 @@ def main(args: config.JIDENNConfig) -> None:
     model_dir = os.path.join(args.general.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir, save_format='tf')
+    
 
     # save the training history and plot it
     if args.general.model != 'bdt':
