@@ -33,8 +33,9 @@
 <pre><code class="python">&#34;&#34;&#34;
 Module containing custom metrics for evaluating models mainly used in HEP applications. 
 &#34;&#34;&#34;
-from typing import List, Dict, Literal, Optional, Union
+from typing import List, Dict, Literal, Optional, Union, Tuple
 import tensorflow as tf
+# import tensorflow_probability as tfp
 import numpy as np
 
 
@@ -55,7 +56,8 @@ class BinaryEfficiency(tf.keras.metrics.Metric):
 
     def __init__(self, label_id: Literal[0, 1] = 1, threshold=0.5, name=&#39;efficiency&#39;):
         super(BinaryEfficiency, self).__init__(name=name)
-        self.tpr = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.tp = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.total = self.add_weight(name=&#39;total&#39;, initializer=&#39;zeros&#39;)
         self.label_id = label_id
         self.threshold = threshold
 
@@ -79,16 +81,20 @@ class BinaryEfficiency(tf.keras.metrics.Metric):
             sample_weight = tf.cast(sample_weight, self.dtype)
             sample_weight = tf.broadcast_weights(sample_weight, values)
             values = tf.multiply(values, sample_weight)
-        self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))
+
+        self.tp.assign_add(tf.reduce_sum(values))
+        self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
-        return self.tpr
+        return self.tp / self.total
 
-    def reset_states(self):
-        self.tpr.assign(0.)
+    def reset_state(self):
+        self.tp.assign(0.)
+        self.total.assign(0.)
 
     def get_config(self):
         config = super(BinaryEfficiency, self).get_config()
+        config.update({&#39;threshold&#39;: self.threshold, &#39;label_id&#39;: self.label_id})
         return config
 
 
@@ -107,7 +113,8 @@ class BinaryRejection(tf.keras.metrics.Metric):
 
     def __init__(self, label_id: Literal[0, 1] = 1, threshold=0.5, name=&#39;rejection&#39;):
         super(BinaryRejection, self).__init__(name=name)
-        self.tpr = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.tp = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.total = self.add_weight(name=&#39;total&#39;, initializer=&#39;zeros&#39;)
         self.label_id = label_id
         self.threshold = threshold
 
@@ -131,16 +138,20 @@ class BinaryRejection(tf.keras.metrics.Metric):
             sample_weight = tf.cast(sample_weight, self.dtype)
             sample_weight = tf.broadcast_weights(sample_weight, values)
             values = tf.multiply(values, sample_weight)
-        self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))
+        self.tp.assign_add(tf.reduce_sum(values))
+        self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
-        return 1 / self.tpr
+        tpr = self.tp / self.total
+        return 1.0 / (1 - tpr)
 
-    def reset_states(self):
-        self.tpr.assign(0.)
+    def reset_state(self):
+        self.tp.assign(0.)
+        self.total.assign(0.)
 
     def get_config(self):
         config = super(BinaryRejection, self).get_config()
+        config.update({&#39;threshold&#39;: self.threshold, &#39;label_id&#39;: self.label_id})
         return config
 
 
@@ -155,8 +166,10 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
     &#34;&#34;&#34;
 
     def __init__(self, efficiency: float = 0.5, label_id: Literal[0, 1] = 1, name=&#39;rejection_at_efficiency&#39;):
-        super(RejectionAtEfficiency, self).__init__(name=name, sensitivity=efficiency)
+        super(RejectionAtEfficiency, self).__init__(
+            name=name, sensitivity=efficiency)
         self.label_id = label_id
+        self.efficiency = efficiency
 
     def update_state(self, y_true: Union[tf.Tensor, np.ndarray], y_pred: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
         &#34;&#34;&#34;Accumulates the efficiency.
@@ -170,14 +183,279 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
         if self.label_id is not None and self.label_id != 1:
             y_true = tf.logical_not(y_true)
             y_pred = 1 - y_pred
-        super(RejectionAtEfficiency, self).update_state(y_true, y_pred, sample_weight=sample_weight)
+        super(RejectionAtEfficiency, self).update_state(
+            y_true, y_pred, sample_weight=sample_weight)
 
     def get_config(self):
         config = super(RejectionAtEfficiency, self).get_config()
+        config.update({&#39;efficiency&#39;: self.efficiency,
+                      &#39;label_id&#39;: self.label_id})
         return config
 
     def result(self):
         return 1 / super(RejectionAtEfficiency, self).result()
+
+
+class EffectiveTaggingEfficiency(tf.keras.metrics.Metric):
+
+    def __init__(self, bins: List[float] = [0, 0.1, 0.25, 0.5, 0.625, 0.75, 0.875, 1], threshold: float = 0.5, name=&#39;eff_tag_efficiency&#39;, **kwargs):
+        super(EffectiveTaggingEfficiency, self).__init__(name=name, **kwargs)
+        for value in bins:
+            if value &lt; 0 or value &gt; 1:
+                raise ValueError(&#39;The bins must be between 0 and 1.&#39;)
+        self.bins = bins
+        self.threshold = threshold
+        self.bin_sums = self.add_weight(
+            name=&#39;bin_sums&#39;, initializer=&#39;zeros&#39;, shape=(len(bins) - 1,))
+        self.bin_counts = self.add_weight(
+            name=&#39;bin_counts&#39;, initializer=&#39;zeros&#39;, shape=(len(bins) - 1,))
+
+    def update_state(self, y_true: Union[tf.Tensor, np.ndarray], score: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
+        &#34;&#34;&#34;Accumulates the metric.
+
+        Args:
+            y_true (Union[tf.Tensor, np.ndarray]): The true labels.
+            score (Union[tf.Tensor, np.ndarray]): The output of the model, i.e. number **between 0 and 1**.
+        &#34;&#34;&#34;
+        score = tf.squeeze(score)
+        y_true = tf.squeeze(y_true)
+        dilusion_factor = tf.abs(2 * score - 1)
+        indicies = tf.searchsorted(self.bins, dilusion_factor)
+        pred = tf.cast(score &gt; 0.5, tf.bool)
+        wrong_tag = tf.cast(tf.not_equal(
+            pred, tf.cast(y_true, tf.bool)), tf.float32)
+
+        bin_counts = tf.cast(tf.math.bincount(
+            indicies, minlength=len(self.bins)), tf.float32)
+        bin_counts = bin_counts[1:]
+        bin_sums = tf.math.bincount(
+            indicies, weights=wrong_tag, minlength=len(self.bins))
+        bin_sums = bin_sums[1:]
+        self.bin_counts.assign_add(bin_counts)
+        self.bin_sums.assign_add(bin_sums)
+
+    def get_config(self):
+        config = super(EffectiveTaggingEfficiency, self).get_config()
+        config.update({&#39;bins&#39;: self.bins, &#39;threshold&#39;: self.threshold})
+        return config
+
+    def result(self):
+        mask = tf.where(self.bin_counts &gt; 0, True, False)
+        bin_counts = tf.boolean_mask(self.bin_counts, mask)
+        bin_sums = tf.boolean_mask(self.bin_sums, mask)
+        binned_wrong_tag_fraction = bin_sums / bin_counts
+        eff = bin_counts / tf.reduce_sum(bin_counts)
+        eff_tag_eff = tf.reduce_sum(
+            eff * (1 - 2 * binned_wrong_tag_fraction)**2)
+        return eff_tag_eff
+
+    def reset_state(self):
+        self.bin_sums.assign(tf.zeros_like(self.bin_sums))
+        self.bin_counts.assign(tf.zeros_like(self.bin_counts))
+
+
+class FixedWorkingPointBase(tf.keras.metrics.Metric):
+    r&#34;&#34;&#34;
+    Base class for metrics that calculate the efficiencies and threshold at a fixed working point, 
+    i.e. one fixed efficiency with variables threshold.
+
+    Args:
+        working_point (float): The working point, i.e. the efficiency at which the threshold is calculated.
+        num_thresholds (int): The number of thresholds to calculate for finding the threshold at the working point.
+        name (str): The name of the metric. 
+        dtype (tf.dtypes.DType): The data type of the metric.       
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5,
+                 num_thresholds: int = 200, name: Optional[str] = None,
+                 dtype: Optional[tf.dtypes.DType] = None):
+        super().__init__(name=name, dtype=dtype)
+        self.working_point = working_point
+        self.num_thresholds = num_thresholds
+
+        self.true_positives = self.add_weight(name=&#39;true_positives&#39;, initializer=&#39;zeros&#39;, shape=(num_thresholds,))
+        self.total_positives = self.add_weight(name=&#39;total_positives&#39;, initializer=&#39;zeros&#39;, shape=(1,))
+        self.false_negatives = self.add_weight(name=&#39;false_negatives&#39;, initializer=&#39;zeros&#39;, shape=(num_thresholds,))
+        self.total_negatives = self.add_weight(name=&#39;total_negatives&#39;, initializer=&#39;zeros&#39;, shape=(1,))
+
+        thresholds = [
+            (i + 1) * 1.0 / (num_thresholds - 1)
+            for i in range(num_thresholds - 2)
+        ]
+        self.thresholds = [0.0] + thresholds + [1.0]
+
+    def update_state(self, y_true: Union[tf.Tensor, np.ndarray], y_pred: Union[tf.Tensor, np.ndarray], sample_weight: Optional[Union[tf.Tensor, np.ndarray]] = None):
+        &#34;&#34;&#34;Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+        The total positives and total negatives are calculated once.
+
+        Args:
+            y_true (Union[tf.Tensor, np.ndarray]): True labels.
+            y_pred (Union[tf.Tensor, np.ndarray]): Predicted scores, i.e. the output of the model.
+            sample_weight (Optional[Union[tf.Tensor, np.ndarray]], optional): Sample weights. Defaults to None.
+        &#34;&#34;&#34;
+        y_pred = tf.cast(tf.expand_dims(y_pred, axis=1) &gt; self.thresholds, tf.bool)
+        y_true = tf.expand_dims(y_true, axis=1)
+        positive_equals = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
+        negative_equals = tf.logical_and(tf.equal(y_true, False), tf.equal(y_pred, False))
+        if sample_weight is not None:
+            sample_weight = tf.cast(sample_weight, tf.float32)
+            sample_weight = tf.expand_dims(sample_weight, axis=1)
+            positive_equals = tf.multiply(tf.cast(positive_equals, tf.float32), sample_weight)
+            negative_equals = tf.multiply(tf.cast(negative_equals, tf.float32), sample_weight)
+
+        self.true_positives.assign_add(tf.reduce_sum(tf.cast(positive_equals, tf.float32), axis=0))
+        self.false_negatives.assign_add(tf.reduce_sum(tf.cast(negative_equals, tf.float32), axis=0))
+
+        positives = tf.cast(tf.equal(y_true, True), tf.float32)
+        positives = tf.multiply(positives, sample_weight) if sample_weight is not None else positives
+        negatives = tf.cast(tf.equal(y_true, False), tf.float32)
+        negatives = tf.multiply(negatives, sample_weight) if sample_weight is not None else negatives
+        self.total_positives.assign_add(tf.reduce_sum(positives, axis=0))
+        self.total_negatives.assign_add(tf.reduce_sum(negatives, axis=0))
+
+    def result(self) -&gt; Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
+        &#34;&#34;&#34;Calculates the efficiencies and threshold at the working point.
+        Both the fixed and variable efficiencies are calculated and returned
+        to allow a check of the working point.
+
+        Returns:
+            Tuple[tf.Tensor, tf.Tensor, tf.Tensor]: The fixed efficiency, the variable efficiency and the threshold at the working point.
+
+        &#34;&#34;&#34;
+        efficiency_positivess = self.true_positives / self.total_positives
+        efficiency_negatives = self.false_negatives / self.total_negatives
+
+        result_index = self._find_index_of_threshold(efficiency_positivess, self.working_point)
+        positive_at_wp = tf.gather(efficiency_positivess, result_index)
+        negative_at_wp = tf.gather(efficiency_negatives, result_index)
+        threshold_at_wp = tf.gather(self.thresholds, result_index)
+
+        return positive_at_wp, negative_at_wp, threshold_at_wp
+
+    def _find_index_of_threshold(self, efficiencies: tf.Tensor, working_point: float) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Finds the index of the threshold at the working point. &#34;&#34;&#34;
+        result_index = tf.math.squared_difference(efficiencies, working_point)
+        result_index = tf.argmin(result_index, axis=0)
+        return result_index
+
+    def reset_state(self):
+        &#34;&#34;&#34;Resets the confusion matrix statistics.&#34;&#34;&#34;
+        self.true_positives.assign(tf.zeros_like(self.true_positives))
+        self.total_positives.assign(tf.zeros_like(self.total_positives))
+        self.false_negatives.assign(tf.zeros_like(self.false_negatives))
+        self.total_negatives.assign(tf.zeros_like(self.total_negatives))
+
+
+class EfficiencyAtFixedWorkingPoint(FixedWorkingPointBase):
+    &#34;&#34;&#34;Calculates the efficiency at a fixed working point. The working point is defined by the user.
+
+    Args:
+        working_point (float): The working point. Defaults to 0.5.
+        fixed_label_id (Literal[0, 1], optional): The label id whose efficiency is fixed. Defaults to 1.
+        returned_label_id (Literal[0, 1], optional): The label id whose efficiency is returned. Defaults to 0.
+        num_thresholds (int, optional): The number of thresholds to use for the estimation. Defaults to 200.
+        name (Optional[str], optional): The name of the metric. Defaults to &#39;efficiency_at_fixed_wp&#39;.
+        dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0,
+                 num_thresholds: int = 200, name: Optional[str] = &#39;efficiency_at_fixed_wp&#39;, dtype: Optional[tf.dtypes.DType] = None):
+
+        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype)
+        self.fixed_label_id = fixed_label_id
+        self.returned_label_id = returned_label_id
+
+    def result(self) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Calculates the efficiency at the working point.
+
+        Raises:
+            ValueError: If the fixed_label_id is not 0 or 1.
+
+        Returns:
+            tf.Tensor: The efficiency at the working point.
+        &#34;&#34;&#34;
+        efficiency_positivess = self.true_positives / self.total_positives
+        efficiency_negatives = self.false_negatives / self.total_negatives
+
+        if self.fixed_label_id == 1:
+            fixed_efficiency = efficiency_positivess
+        elif self.fixed_label_id == 0:
+            fixed_efficiency = efficiency_negatives
+        else:
+            raise ValueError(f&#39;fixed_label_id must be 0 or 1, but is {self.fixed_label_id}&#39;)
+
+        closest_index = self._find_index_of_threshold(fixed_efficiency, self.working_point)
+
+        if self.returned_label_id == 1:
+            efficiency_at_wp = tf.gather(efficiency_positivess, closest_index)
+        elif self.returned_label_id == 0:
+            efficiency_at_wp = tf.gather(efficiency_negatives, closest_index)
+
+        return efficiency_at_wp
+
+
+class RejectionAtFixedWorkingPoint(EfficiencyAtFixedWorkingPoint):
+    &#34;&#34;&#34;Calculates the rejection at a fixed working point. The working point is defined by the user.
+
+    Args:
+        working_point (float): The working point. Defaults to 0.5.
+        fixed_label_id (Literal[0, 1], optional): The label id whose efficiency is fixed. Defaults to 1.
+        returned_label_id (Literal[0, 1], optional): The label id whose efficiency is returned. Defaults to 0.
+        num_thresholds (int, optional): The number of thresholds to use for the estimation. Defaults to 200.
+        name (Optional[str], optional): The name of the metric. Defaults to &#39;efficiency_at_fixed_wp&#39;.
+        dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0,
+                 num_thresholds: int = 200, name: Optional[str] = &#39;rejection_at_fixed_wp&#39;, dtype: Optional[tf.dtypes.DType] = None):
+        super().__init__(working_point=working_point, fixed_label_id=fixed_label_id, returned_label_id=returned_label_id,
+                         num_thresholds=num_thresholds, name=name, dtype=dtype)
+
+    def result(self) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Calculates the rejection at the working point.
+
+        Returns:
+            tf.Tensor: The rejection at the working point.
+        &#34;&#34;&#34;
+
+        return 1.0 / (1 - super().result())
+
+
+class ThresholdAtFixedWorkingPoint(FixedWorkingPointBase):
+    &#34;&#34;&#34;Calculates the threshold at a fixed working point. The working point is defined by the user.
+
+    Args:
+        working_point (float): The working point. Defaults to 0.5.
+        fixed_label_id (Literal[0, 1], optional): The label id whose efficiency is fixed. Defaults to 1.
+        num_thresholds (int, optional): The number of thresholds to use for the estimation. Defaults to 200.
+        name (Optional[str], optional): The name of the metric. Defaults to &#39;threshold_at_fixed_wp&#39;.
+        dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5, num_thresholds: int = 200, fixed_label_id: Literal[0, 1] = 1, name: Optional[str] = &#39;threshold_at_fixed_efficiency&#39;, dtype: Optional[tf.dtypes.DType] = None):
+        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype)
+        self.fixed_label_id = fixed_label_id
+
+    def result(self) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Calculates the threshold at the working point.
+
+        Raises:
+            ValueError: If the fixed_label_id is not 0 or 1.
+
+        Returns:
+            tf.Tensor: The threshold at the working point.
+        &#34;&#34;&#34;
+
+        if self.fixed_label_id == 1:
+            efficiencies = self.true_positives / self.total_positives
+        elif self.fixed_label_id == 0:
+            efficiencies = self.false_negatives / self.total_negatives
+        else:
+            raise ValueError(f&#39;fixed_label_id must be 0 or 1, but is {self.fixed_label_id}&#39;)
+
+        closest_index = self._find_index_of_threshold(efficiencies, self.working_point)
+
+        return tf.gather(self.thresholds, closest_index)
 
 
 def get_metrics(threshold: float = 0.5) -&gt; List[tf.keras.metrics.Metric]:
@@ -191,13 +469,34 @@ def get_metrics(threshold: float = 0.5) -&gt; List[tf.keras.metrics.Metric]:
     &#34;&#34;&#34;
     metrics = [
         tf.keras.metrics.BinaryCrossentropy(name=&#39;loss&#39;),
-        tf.keras.metrics.BinaryAccuracy(name=&#39;binary_accuracy&#39;, threshold=threshold),
-        BinaryEfficiency(name=&#39;gluon_efficiency&#39;, label_id=0, threshold=threshold),
-        BinaryEfficiency(name=&#39;quark_efficiency&#39;, label_id=1, threshold=threshold),
-        BinaryRejection(name=&#39;gluon_rejection&#39;, label_id=0, threshold=threshold),
-        BinaryRejection(name=&#39;quark_rejection&#39;, label_id=1, threshold=threshold),
-        RejectionAtEfficiency(name=&#39;gluon_rej_at_quark_eff_0.9&#39;, label_id=0, efficiency=0.9),
-        RejectionAtEfficiency(name=&#39;quark_rej_at_gluon_eff_0.9&#39;, label_id=1, efficiency=0.9),
+        tf.keras.metrics.BinaryAccuracy(
+            name=&#39;binary_accuracy&#39;, threshold=threshold),
+        BinaryEfficiency(name=&#39;gluon_efficiency&#39;,
+                         label_id=0, threshold=threshold),
+        BinaryEfficiency(name=&#39;quark_efficiency&#39;,
+                         label_id=1, threshold=threshold),
+        BinaryRejection(name=&#39;gluon_rejection&#39;,
+                        label_id=0, threshold=threshold),
+        BinaryRejection(name=&#39;quark_rejection&#39;,
+                        label_id=1, threshold=threshold),
+        EfficiencyAtFixedWorkingPoint(name=&#39;gluon_efficiency_at_quark_50wp&#39;,
+                                      fixed_label_id=1, working_point=0.5, returned_label_id=0),
+        EfficiencyAtFixedWorkingPoint(name=&#39;quark_efficiency_at_quark_50wp&#39;,
+                                      fixed_label_id=1, working_point=0.5, returned_label_id=1),
+        RejectionAtFixedWorkingPoint(name=&#39;gluon_rejection_at_quark_50wp&#39;,
+                                     fixed_label_id=1, working_point=0.5, returned_label_id=0),
+        ThresholdAtFixedWorkingPoint(name=&#39;threshold_at_fixed_quark_50wp&#39;,
+                                     fixed_label_id=1, working_point=0.5),
+        EfficiencyAtFixedWorkingPoint(name=&#39;gluon_efficiency_at_quark_80wp&#39;,
+                                      fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        EfficiencyAtFixedWorkingPoint(name=&#39;quark_efficiency_at_quark_80wp&#39;,
+                                      fixed_label_id=1, working_point=0.8, returned_label_id=1),
+        RejectionAtFixedWorkingPoint(name=&#39;gluon_rejection_at_quark_80wp&#39;,
+                                     fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        ThresholdAtFixedWorkingPoint(name=&#39;threshold_at_fixed_quark_80wp&#39;,
+                                     fixed_label_id=1, working_point=0.8),
+        EffectiveTaggingEfficiency(
+            name=&#39;effective_tagging_efficiency&#39;, threshold=threshold),
         tf.keras.metrics.AUC(name=&#39;auc&#39;)]
     return metrics
 
@@ -215,7 +514,7 @@ def calculate_metrics(y_true: np.ndarray, score: np.ndarray, threshold: float = 
     metrics = get_metrics(threshold)
     results = {}
     for metric in metrics:
-        metric.reset_states()
+        metric.reset_state()
         metric.update_state(y_true, score, sample_weight=weights)
         result = metric.result().numpy()
         results[metric.name] = result
@@ -267,7 +566,7 @@ def calculate_metrics(y_true: np.ndarray, score: np.ndarray, threshold: float = 
     metrics = get_metrics(threshold)
     results = {}
     for metric in metrics:
-        metric.reset_states()
+        metric.reset_state()
         metric.update_state(y_true, score, sample_weight=weights)
         result = metric.result().numpy()
         results[metric.name] = result
@@ -304,13 +603,34 @@ def calculate_metrics(y_true: np.ndarray, score: np.ndarray, threshold: float = 
     &#34;&#34;&#34;
     metrics = [
         tf.keras.metrics.BinaryCrossentropy(name=&#39;loss&#39;),
-        tf.keras.metrics.BinaryAccuracy(name=&#39;binary_accuracy&#39;, threshold=threshold),
-        BinaryEfficiency(name=&#39;gluon_efficiency&#39;, label_id=0, threshold=threshold),
-        BinaryEfficiency(name=&#39;quark_efficiency&#39;, label_id=1, threshold=threshold),
-        BinaryRejection(name=&#39;gluon_rejection&#39;, label_id=0, threshold=threshold),
-        BinaryRejection(name=&#39;quark_rejection&#39;, label_id=1, threshold=threshold),
-        RejectionAtEfficiency(name=&#39;gluon_rej_at_quark_eff_0.9&#39;, label_id=0, efficiency=0.9),
-        RejectionAtEfficiency(name=&#39;quark_rej_at_gluon_eff_0.9&#39;, label_id=1, efficiency=0.9),
+        tf.keras.metrics.BinaryAccuracy(
+            name=&#39;binary_accuracy&#39;, threshold=threshold),
+        BinaryEfficiency(name=&#39;gluon_efficiency&#39;,
+                         label_id=0, threshold=threshold),
+        BinaryEfficiency(name=&#39;quark_efficiency&#39;,
+                         label_id=1, threshold=threshold),
+        BinaryRejection(name=&#39;gluon_rejection&#39;,
+                        label_id=0, threshold=threshold),
+        BinaryRejection(name=&#39;quark_rejection&#39;,
+                        label_id=1, threshold=threshold),
+        EfficiencyAtFixedWorkingPoint(name=&#39;gluon_efficiency_at_quark_50wp&#39;,
+                                      fixed_label_id=1, working_point=0.5, returned_label_id=0),
+        EfficiencyAtFixedWorkingPoint(name=&#39;quark_efficiency_at_quark_50wp&#39;,
+                                      fixed_label_id=1, working_point=0.5, returned_label_id=1),
+        RejectionAtFixedWorkingPoint(name=&#39;gluon_rejection_at_quark_50wp&#39;,
+                                     fixed_label_id=1, working_point=0.5, returned_label_id=0),
+        ThresholdAtFixedWorkingPoint(name=&#39;threshold_at_fixed_quark_50wp&#39;,
+                                     fixed_label_id=1, working_point=0.5),
+        EfficiencyAtFixedWorkingPoint(name=&#39;gluon_efficiency_at_quark_80wp&#39;,
+                                      fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        EfficiencyAtFixedWorkingPoint(name=&#39;quark_efficiency_at_quark_80wp&#39;,
+                                      fixed_label_id=1, working_point=0.8, returned_label_id=1),
+        RejectionAtFixedWorkingPoint(name=&#39;gluon_rejection_at_quark_80wp&#39;,
+                                     fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        ThresholdAtFixedWorkingPoint(name=&#39;threshold_at_fixed_quark_80wp&#39;,
+                                     fixed_label_id=1, working_point=0.8),
+        EffectiveTaggingEfficiency(
+            name=&#39;effective_tagging_efficiency&#39;, threshold=threshold),
         tf.keras.metrics.AUC(name=&#39;auc&#39;)]
     return metrics</code></pre>
 </details>
@@ -361,7 +681,8 @@ and $F_i$ is the number of incorrectly classified data of class $i$.</p>
 
     def __init__(self, label_id: Literal[0, 1] = 1, threshold=0.5, name=&#39;efficiency&#39;):
         super(BinaryEfficiency, self).__init__(name=name)
-        self.tpr = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.tp = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.total = self.add_weight(name=&#39;total&#39;, initializer=&#39;zeros&#39;)
         self.label_id = label_id
         self.threshold = threshold
 
@@ -385,16 +706,20 @@ and $F_i$ is the number of incorrectly classified data of class $i$.</p>
             sample_weight = tf.cast(sample_weight, self.dtype)
             sample_weight = tf.broadcast_weights(sample_weight, values)
             values = tf.multiply(values, sample_weight)
-        self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))
+
+        self.tp.assign_add(tf.reduce_sum(values))
+        self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
-        return self.tpr
+        return self.tp / self.total
 
-    def reset_states(self):
-        self.tpr.assign(0.)
+    def reset_state(self):
+        self.tp.assign(0.)
+        self.total.assign(0.)
 
     def get_config(self):
         config = super(BinaryEfficiency, self).get_config()
+        config.update({&#39;threshold&#39;: self.threshold, &#39;label_id&#39;: self.label_id})
         return config</code></pre>
 </details>
 <h3>Ancestors</h3>
@@ -419,20 +744,24 @@ and $F_i$ is the number of incorrectly classified data of class $i$.</p>
 </summary>
 <pre><code class="python">def get_config(self):
     config = super(BinaryEfficiency, self).get_config()
+    config.update({&#39;threshold&#39;: self.threshold, &#39;label_id&#39;: self.label_id})
     return config</code></pre>
 </details>
 </dd>
-<dt id="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.reset_states"><code class="name flex">
-<span>def <span class="ident">reset_states</span></span>(<span>self)</span>
+<dt id="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Resets all of the metric state variables.</p>
+<p>This function is called between epochs/steps,
+when a metric is evaluated during training.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def reset_states(self):
-    self.tpr.assign(0.)</code></pre>
+<pre><code class="python">def reset_state(self):
+    self.tp.assign(0.)
+    self.total.assign(0.)</code></pre>
 </details>
 </dd>
 <dt id="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.result"><code class="name flex">
@@ -450,7 +779,7 @@ metric value using the state variables.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def result(self):
-    return self.tpr</code></pre>
+    return self.tp / self.total</code></pre>
 </details>
 </dd>
 <dt id="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.update_state"><code class="name flex">
@@ -491,7 +820,9 @@ metric value using the state variables.</p>
         sample_weight = tf.cast(sample_weight, self.dtype)
         sample_weight = tf.broadcast_weights(sample_weight, values)
         values = tf.multiply(values, sample_weight)
-    self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))</code></pre>
+
+    self.tp.assign_add(tf.reduce_sum(values))
+    self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))</code></pre>
 </details>
 </dd>
 </dl>
@@ -534,7 +865,8 @@ and $F_i$ is the number of incorrectly classified data of class $i$.</p>
 
     def __init__(self, label_id: Literal[0, 1] = 1, threshold=0.5, name=&#39;rejection&#39;):
         super(BinaryRejection, self).__init__(name=name)
-        self.tpr = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.tp = self.add_weight(name=&#39;tp&#39;, initializer=&#39;zeros&#39;)
+        self.total = self.add_weight(name=&#39;total&#39;, initializer=&#39;zeros&#39;)
         self.label_id = label_id
         self.threshold = threshold
 
@@ -558,16 +890,20 @@ and $F_i$ is the number of incorrectly classified data of class $i$.</p>
             sample_weight = tf.cast(sample_weight, self.dtype)
             sample_weight = tf.broadcast_weights(sample_weight, values)
             values = tf.multiply(values, sample_weight)
-        self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))
+        self.tp.assign_add(tf.reduce_sum(values))
+        self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
-        return 1 / self.tpr
+        tpr = self.tp / self.total
+        return 1.0 / (1 - tpr)
 
-    def reset_states(self):
-        self.tpr.assign(0.)
+    def reset_state(self):
+        self.tp.assign(0.)
+        self.total.assign(0.)
 
     def get_config(self):
         config = super(BinaryRejection, self).get_config()
+        config.update({&#39;threshold&#39;: self.threshold, &#39;label_id&#39;: self.label_id})
         return config</code></pre>
 </details>
 <h3>Ancestors</h3>
@@ -592,20 +928,24 @@ and $F_i$ is the number of incorrectly classified data of class $i$.</p>
 </summary>
 <pre><code class="python">def get_config(self):
     config = super(BinaryRejection, self).get_config()
+    config.update({&#39;threshold&#39;: self.threshold, &#39;label_id&#39;: self.label_id})
     return config</code></pre>
 </details>
 </dd>
-<dt id="jidenn.evaluation.evaluation_metrics.BinaryRejection.reset_states"><code class="name flex">
-<span>def <span class="ident">reset_states</span></span>(<span>self)</span>
+<dt id="jidenn.evaluation.evaluation_metrics.BinaryRejection.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Resets all of the metric state variables.</p>
+<p>This function is called between epochs/steps,
+when a metric is evaluated during training.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def reset_states(self):
-    self.tpr.assign(0.)</code></pre>
+<pre><code class="python">def reset_state(self):
+    self.tp.assign(0.)
+    self.total.assign(0.)</code></pre>
 </details>
 </dd>
 <dt id="jidenn.evaluation.evaluation_metrics.BinaryRejection.result"><code class="name flex">
@@ -623,7 +963,8 @@ metric value using the state variables.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def result(self):
-    return 1 / self.tpr</code></pre>
+    tpr = self.tp / self.total
+    return 1.0 / (1 - tpr)</code></pre>
 </details>
 </dd>
 <dt id="jidenn.evaluation.evaluation_metrics.BinaryRejection.update_state"><code class="name flex">
@@ -664,7 +1005,639 @@ metric value using the state variables.</p>
         sample_weight = tf.cast(sample_weight, self.dtype)
         sample_weight = tf.broadcast_weights(sample_weight, values)
         values = tf.multiply(values, sample_weight)
-    self.tpr.assign_add(tf.reduce_sum(values) / tf.reduce_sum(tf.cast(y_true, self.dtype)))</code></pre>
+    self.tp.assign_add(tf.reduce_sum(values))
+    self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency"><code class="flex name class">
+<span>class <span class="ident">EffectiveTaggingEfficiency</span></span>
+<span>(</span><span>bins: List[float] = [0, 0.1, 0.25, 0.5, 0.625, 0.75, 0.875, 1], threshold: float = 0.5, name='eff_tag_efficiency', **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Encapsulates metric logic and state.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>name</code></strong></dt>
+<dd>(Optional) string name of the metric instance.</dd>
+<dt><strong><code>dtype</code></strong></dt>
+<dd>(Optional) data type of the metric result.</dd>
+<dt><strong><code>**kwargs</code></strong></dt>
+<dd>Additional layer keywords arguments.</dd>
+</dl>
+<p>Standalone usage:</p>
+<pre><code class="language-python">m = SomeMetric(...)
+for input in ...:
+  m.update_state(input)
+print('Final result: ', m.result().numpy())
+</code></pre>
+<p>Usage with <code>compile()</code> API:</p>
+<pre><code class="language-python">model = tf.keras.Sequential()
+model.add(tf.keras.layers.Dense(64, activation='relu'))
+model.add(tf.keras.layers.Dense(64, activation='relu'))
+model.add(tf.keras.layers.Dense(10, activation='softmax'))
+
+model.compile(optimizer=tf.keras.optimizers.RMSprop(0.01),
+              loss=tf.keras.losses.CategoricalCrossentropy(),
+              metrics=[tf.keras.metrics.CategoricalAccuracy()])
+
+data = np.random.random((1000, 32))
+labels = np.random.random((1000, 10))
+
+dataset = tf.data.Dataset.from_tensor_slices((data, labels))
+dataset = dataset.batch(32)
+
+model.fit(dataset, epochs=10)
+</code></pre>
+<p>To be implemented by subclasses:
+* <code>__init__()</code>: All state variables should be created in this method by
+calling <code>self.add_weight()</code> like: <code>self.var = self.add_weight(...)</code>
+* <code>update_state()</code>: Has all updates to the state variables like:
+self.var.assign_add(&hellip;).
+* <code>result()</code>: Computes and returns a scalar value or a dict of scalar values
+for the metric from the state variables.</p>
+<p>Example subclass implementation:</p>
+<pre><code class="language-python">class BinaryTruePositives(tf.keras.metrics.Metric):
+
+  def __init__(self, name='binary_true_positives', **kwargs):
+    super(BinaryTruePositives, self).__init__(name=name, **kwargs)
+    self.true_positives = self.add_weight(name='tp', initializer='zeros')
+
+  def update_state(self, y_true, y_pred, sample_weight=None):
+    y_true = tf.cast(y_true, tf.bool)
+    y_pred = tf.cast(y_pred, tf.bool)
+
+    values = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
+    values = tf.cast(values, self.dtype)
+    if sample_weight is not None:
+      sample_weight = tf.cast(sample_weight, self.dtype)
+      sample_weight = tf.broadcast_to(sample_weight, values.shape)
+      values = tf.multiply(values, sample_weight)
+    self.true_positives.assign_add(tf.reduce_sum(values))
+
+  def result(self):
+    return self.true_positives
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class EffectiveTaggingEfficiency(tf.keras.metrics.Metric):
+
+    def __init__(self, bins: List[float] = [0, 0.1, 0.25, 0.5, 0.625, 0.75, 0.875, 1], threshold: float = 0.5, name=&#39;eff_tag_efficiency&#39;, **kwargs):
+        super(EffectiveTaggingEfficiency, self).__init__(name=name, **kwargs)
+        for value in bins:
+            if value &lt; 0 or value &gt; 1:
+                raise ValueError(&#39;The bins must be between 0 and 1.&#39;)
+        self.bins = bins
+        self.threshold = threshold
+        self.bin_sums = self.add_weight(
+            name=&#39;bin_sums&#39;, initializer=&#39;zeros&#39;, shape=(len(bins) - 1,))
+        self.bin_counts = self.add_weight(
+            name=&#39;bin_counts&#39;, initializer=&#39;zeros&#39;, shape=(len(bins) - 1,))
+
+    def update_state(self, y_true: Union[tf.Tensor, np.ndarray], score: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
+        &#34;&#34;&#34;Accumulates the metric.
+
+        Args:
+            y_true (Union[tf.Tensor, np.ndarray]): The true labels.
+            score (Union[tf.Tensor, np.ndarray]): The output of the model, i.e. number **between 0 and 1**.
+        &#34;&#34;&#34;
+        score = tf.squeeze(score)
+        y_true = tf.squeeze(y_true)
+        dilusion_factor = tf.abs(2 * score - 1)
+        indicies = tf.searchsorted(self.bins, dilusion_factor)
+        pred = tf.cast(score &gt; 0.5, tf.bool)
+        wrong_tag = tf.cast(tf.not_equal(
+            pred, tf.cast(y_true, tf.bool)), tf.float32)
+
+        bin_counts = tf.cast(tf.math.bincount(
+            indicies, minlength=len(self.bins)), tf.float32)
+        bin_counts = bin_counts[1:]
+        bin_sums = tf.math.bincount(
+            indicies, weights=wrong_tag, minlength=len(self.bins))
+        bin_sums = bin_sums[1:]
+        self.bin_counts.assign_add(bin_counts)
+        self.bin_sums.assign_add(bin_sums)
+
+    def get_config(self):
+        config = super(EffectiveTaggingEfficiency, self).get_config()
+        config.update({&#39;bins&#39;: self.bins, &#39;threshold&#39;: self.threshold})
+        return config
+
+    def result(self):
+        mask = tf.where(self.bin_counts &gt; 0, True, False)
+        bin_counts = tf.boolean_mask(self.bin_counts, mask)
+        bin_sums = tf.boolean_mask(self.bin_sums, mask)
+        binned_wrong_tag_fraction = bin_sums / bin_counts
+        eff = bin_counts / tf.reduce_sum(bin_counts)
+        eff_tag_eff = tf.reduce_sum(
+            eff * (1 - 2 * binned_wrong_tag_fraction)**2)
+        return eff_tag_eff
+
+    def reset_state(self):
+        self.bin_sums.assign(tf.zeros_like(self.bin_sums))
+        self.bin_counts.assign(tf.zeros_like(self.bin_counts))</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.metrics.base_metric.Metric</li>
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the serializable config of the metric.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super(EffectiveTaggingEfficiency, self).get_config()
+    config.update({&#39;bins&#39;: self.bins, &#39;threshold&#39;: self.threshold})
+    return config</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Resets all of the metric state variables.</p>
+<p>This function is called between epochs/steps,
+when a metric is evaluated during training.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset_state(self):
+    self.bin_sums.assign(tf.zeros_like(self.bin_sums))
+    self.bin_counts.assign(tf.zeros_like(self.bin_counts))</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.result"><code class="name flex">
+<span>def <span class="ident">result</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes and returns the scalar metric value tensor or a dict of
+scalars.</p>
+<p>Result computation is an idempotent operation that simply calculates the
+metric value using the state variables.</p>
+<h2 id="returns">Returns</h2>
+<p>A scalar tensor, or a dictionary of scalar tensors.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def result(self):
+    mask = tf.where(self.bin_counts &gt; 0, True, False)
+    bin_counts = tf.boolean_mask(self.bin_counts, mask)
+    bin_sums = tf.boolean_mask(self.bin_sums, mask)
+    binned_wrong_tag_fraction = bin_sums / bin_counts
+    eff = bin_counts / tf.reduce_sum(bin_counts)
+    eff_tag_eff = tf.reduce_sum(
+        eff * (1 - 2 * binned_wrong_tag_fraction)**2)
+    return eff_tag_eff</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.update_state"><code class="name flex">
+<span>def <span class="ident">update_state</span></span>(<span>self, y_true: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], score: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], sample_weight: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Accumulates the metric.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>y_true</code></strong> :&ensp;<code>Union[tf.Tensor, np.ndarray]</code></dt>
+<dd>The true labels.</dd>
+<dt><strong><code>score</code></strong> :&ensp;<code>Union[tf.Tensor, np.ndarray]</code></dt>
+<dd>The output of the model, i.e. number <strong>between 0 and 1</strong>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_state(self, y_true: Union[tf.Tensor, np.ndarray], score: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
+    &#34;&#34;&#34;Accumulates the metric.
+
+    Args:
+        y_true (Union[tf.Tensor, np.ndarray]): The true labels.
+        score (Union[tf.Tensor, np.ndarray]): The output of the model, i.e. number **between 0 and 1**.
+    &#34;&#34;&#34;
+    score = tf.squeeze(score)
+    y_true = tf.squeeze(y_true)
+    dilusion_factor = tf.abs(2 * score - 1)
+    indicies = tf.searchsorted(self.bins, dilusion_factor)
+    pred = tf.cast(score &gt; 0.5, tf.bool)
+    wrong_tag = tf.cast(tf.not_equal(
+        pred, tf.cast(y_true, tf.bool)), tf.float32)
+
+    bin_counts = tf.cast(tf.math.bincount(
+        indicies, minlength=len(self.bins)), tf.float32)
+    bin_counts = bin_counts[1:]
+    bin_sums = tf.math.bincount(
+        indicies, weights=wrong_tag, minlength=len(self.bins))
+    bin_sums = bin_sums[1:]
+    self.bin_counts.assign_add(bin_counts)
+    self.bin_sums.assign_add(bin_sums)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint"><code class="flex name class">
+<span>class <span class="ident">EfficiencyAtFixedWorkingPoint</span></span>
+<span>(</span><span>working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0, num_thresholds: int = 200, name: Optional[str] = 'efficiency_at_fixed_wp', dtype: Optional[tensorflow.python.framework.dtypes.DType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the efficiency at a fixed working point. The working point is defined by the user.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>working_point</code></strong> :&ensp;<code>float</code></dt>
+<dd>The working point. Defaults to 0.5.</dd>
+<dt><strong><code>fixed_label_id</code></strong> :&ensp;<code>Literal[0, 1]</code>, optional</dt>
+<dd>The label id whose efficiency is fixed. Defaults to 1.</dd>
+<dt><strong><code>returned_label_id</code></strong> :&ensp;<code>Literal[0, 1]</code>, optional</dt>
+<dd>The label id whose efficiency is returned. Defaults to 0.</dd>
+<dt><strong><code>num_thresholds</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The number of thresholds to use for the estimation. Defaults to 200.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>The name of the metric. Defaults to 'efficiency_at_fixed_wp'.</dd>
+<dt><strong><code>dtype</code></strong> :&ensp;<code>Optional[tf.dtypes.DType]</code>, optional</dt>
+<dd>The data type of the metric. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class EfficiencyAtFixedWorkingPoint(FixedWorkingPointBase):
+    &#34;&#34;&#34;Calculates the efficiency at a fixed working point. The working point is defined by the user.
+
+    Args:
+        working_point (float): The working point. Defaults to 0.5.
+        fixed_label_id (Literal[0, 1], optional): The label id whose efficiency is fixed. Defaults to 1.
+        returned_label_id (Literal[0, 1], optional): The label id whose efficiency is returned. Defaults to 0.
+        num_thresholds (int, optional): The number of thresholds to use for the estimation. Defaults to 200.
+        name (Optional[str], optional): The name of the metric. Defaults to &#39;efficiency_at_fixed_wp&#39;.
+        dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0,
+                 num_thresholds: int = 200, name: Optional[str] = &#39;efficiency_at_fixed_wp&#39;, dtype: Optional[tf.dtypes.DType] = None):
+
+        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype)
+        self.fixed_label_id = fixed_label_id
+        self.returned_label_id = returned_label_id
+
+    def result(self) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Calculates the efficiency at the working point.
+
+        Raises:
+            ValueError: If the fixed_label_id is not 0 or 1.
+
+        Returns:
+            tf.Tensor: The efficiency at the working point.
+        &#34;&#34;&#34;
+        efficiency_positivess = self.true_positives / self.total_positives
+        efficiency_negatives = self.false_negatives / self.total_negatives
+
+        if self.fixed_label_id == 1:
+            fixed_efficiency = efficiency_positivess
+        elif self.fixed_label_id == 0:
+            fixed_efficiency = efficiency_negatives
+        else:
+            raise ValueError(f&#39;fixed_label_id must be 0 or 1, but is {self.fixed_label_id}&#39;)
+
+        closest_index = self._find_index_of_threshold(fixed_efficiency, self.working_point)
+
+        if self.returned_label_id == 1:
+            efficiency_at_wp = tf.gather(efficiency_positivess, closest_index)
+        elif self.returned_label_id == 0:
+            efficiency_at_wp = tf.gather(efficiency_negatives, closest_index)
+
+        return efficiency_at_wp</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></li>
+<li>keras.metrics.base_metric.Metric</li>
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint">RejectionAtFixedWorkingPoint</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></code>.<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state">reset_state</a></code>
+</p>
+<div class="desc inherited"><p>Resets the confusion matrix statistics.</p></div>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.result"><code class="name flex">
+<span>def <span class="ident">result</span></span>(<span>self) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the efficiency at the working point.</p>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the fixed_label_id is not 0 or 1.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>The efficiency at the working point.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def result(self) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Calculates the efficiency at the working point.
+
+    Raises:
+        ValueError: If the fixed_label_id is not 0 or 1.
+
+    Returns:
+        tf.Tensor: The efficiency at the working point.
+    &#34;&#34;&#34;
+    efficiency_positivess = self.true_positives / self.total_positives
+    efficiency_negatives = self.false_negatives / self.total_negatives
+
+    if self.fixed_label_id == 1:
+        fixed_efficiency = efficiency_positivess
+    elif self.fixed_label_id == 0:
+        fixed_efficiency = efficiency_negatives
+    else:
+        raise ValueError(f&#39;fixed_label_id must be 0 or 1, but is {self.fixed_label_id}&#39;)
+
+    closest_index = self._find_index_of_threshold(fixed_efficiency, self.working_point)
+
+    if self.returned_label_id == 1:
+        efficiency_at_wp = tf.gather(efficiency_positivess, closest_index)
+    elif self.returned_label_id == 0:
+        efficiency_at_wp = tf.gather(efficiency_negatives, closest_index)
+
+    return efficiency_at_wp</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.update_state"><code class="name flex">
+<span>def <span class="ident">update_state</span></span>(<span>self, y_true: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], y_pred: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], sample_weight: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray, ForwardRef(None)] = None)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></code>.<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state">update_state</a></code>
+</p>
+<div class="desc inherited"><p>Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+The total positives and total …</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase"><code class="flex name class">
+<span>class <span class="ident">FixedWorkingPointBase</span></span>
+<span>(</span><span>working_point: float = 0.5, num_thresholds: int = 200, name: Optional[str] = None, dtype: Optional[tensorflow.python.framework.dtypes.DType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Base class for metrics that calculate the efficiencies and threshold at a fixed working point,
+i.e. one fixed efficiency with variables threshold.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>working_point</code></strong> :&ensp;<code>float</code></dt>
+<dd>The working point, i.e. the efficiency at which the threshold is calculated.</dd>
+<dt><strong><code>num_thresholds</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of thresholds to calculate for finding the threshold at the working point.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the metric. </dd>
+<dt><strong><code>dtype</code></strong> :&ensp;<code>tf.dtypes.DType</code></dt>
+<dd>The data type of the metric.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class FixedWorkingPointBase(tf.keras.metrics.Metric):
+    r&#34;&#34;&#34;
+    Base class for metrics that calculate the efficiencies and threshold at a fixed working point, 
+    i.e. one fixed efficiency with variables threshold.
+
+    Args:
+        working_point (float): The working point, i.e. the efficiency at which the threshold is calculated.
+        num_thresholds (int): The number of thresholds to calculate for finding the threshold at the working point.
+        name (str): The name of the metric. 
+        dtype (tf.dtypes.DType): The data type of the metric.       
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5,
+                 num_thresholds: int = 200, name: Optional[str] = None,
+                 dtype: Optional[tf.dtypes.DType] = None):
+        super().__init__(name=name, dtype=dtype)
+        self.working_point = working_point
+        self.num_thresholds = num_thresholds
+
+        self.true_positives = self.add_weight(name=&#39;true_positives&#39;, initializer=&#39;zeros&#39;, shape=(num_thresholds,))
+        self.total_positives = self.add_weight(name=&#39;total_positives&#39;, initializer=&#39;zeros&#39;, shape=(1,))
+        self.false_negatives = self.add_weight(name=&#39;false_negatives&#39;, initializer=&#39;zeros&#39;, shape=(num_thresholds,))
+        self.total_negatives = self.add_weight(name=&#39;total_negatives&#39;, initializer=&#39;zeros&#39;, shape=(1,))
+
+        thresholds = [
+            (i + 1) * 1.0 / (num_thresholds - 1)
+            for i in range(num_thresholds - 2)
+        ]
+        self.thresholds = [0.0] + thresholds + [1.0]
+
+    def update_state(self, y_true: Union[tf.Tensor, np.ndarray], y_pred: Union[tf.Tensor, np.ndarray], sample_weight: Optional[Union[tf.Tensor, np.ndarray]] = None):
+        &#34;&#34;&#34;Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+        The total positives and total negatives are calculated once.
+
+        Args:
+            y_true (Union[tf.Tensor, np.ndarray]): True labels.
+            y_pred (Union[tf.Tensor, np.ndarray]): Predicted scores, i.e. the output of the model.
+            sample_weight (Optional[Union[tf.Tensor, np.ndarray]], optional): Sample weights. Defaults to None.
+        &#34;&#34;&#34;
+        y_pred = tf.cast(tf.expand_dims(y_pred, axis=1) &gt; self.thresholds, tf.bool)
+        y_true = tf.expand_dims(y_true, axis=1)
+        positive_equals = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
+        negative_equals = tf.logical_and(tf.equal(y_true, False), tf.equal(y_pred, False))
+        if sample_weight is not None:
+            sample_weight = tf.cast(sample_weight, tf.float32)
+            sample_weight = tf.expand_dims(sample_weight, axis=1)
+            positive_equals = tf.multiply(tf.cast(positive_equals, tf.float32), sample_weight)
+            negative_equals = tf.multiply(tf.cast(negative_equals, tf.float32), sample_weight)
+
+        self.true_positives.assign_add(tf.reduce_sum(tf.cast(positive_equals, tf.float32), axis=0))
+        self.false_negatives.assign_add(tf.reduce_sum(tf.cast(negative_equals, tf.float32), axis=0))
+
+        positives = tf.cast(tf.equal(y_true, True), tf.float32)
+        positives = tf.multiply(positives, sample_weight) if sample_weight is not None else positives
+        negatives = tf.cast(tf.equal(y_true, False), tf.float32)
+        negatives = tf.multiply(negatives, sample_weight) if sample_weight is not None else negatives
+        self.total_positives.assign_add(tf.reduce_sum(positives, axis=0))
+        self.total_negatives.assign_add(tf.reduce_sum(negatives, axis=0))
+
+    def result(self) -&gt; Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
+        &#34;&#34;&#34;Calculates the efficiencies and threshold at the working point.
+        Both the fixed and variable efficiencies are calculated and returned
+        to allow a check of the working point.
+
+        Returns:
+            Tuple[tf.Tensor, tf.Tensor, tf.Tensor]: The fixed efficiency, the variable efficiency and the threshold at the working point.
+
+        &#34;&#34;&#34;
+        efficiency_positivess = self.true_positives / self.total_positives
+        efficiency_negatives = self.false_negatives / self.total_negatives
+
+        result_index = self._find_index_of_threshold(efficiency_positivess, self.working_point)
+        positive_at_wp = tf.gather(efficiency_positivess, result_index)
+        negative_at_wp = tf.gather(efficiency_negatives, result_index)
+        threshold_at_wp = tf.gather(self.thresholds, result_index)
+
+        return positive_at_wp, negative_at_wp, threshold_at_wp
+
+    def _find_index_of_threshold(self, efficiencies: tf.Tensor, working_point: float) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Finds the index of the threshold at the working point. &#34;&#34;&#34;
+        result_index = tf.math.squared_difference(efficiencies, working_point)
+        result_index = tf.argmin(result_index, axis=0)
+        return result_index
+
+    def reset_state(self):
+        &#34;&#34;&#34;Resets the confusion matrix statistics.&#34;&#34;&#34;
+        self.true_positives.assign(tf.zeros_like(self.true_positives))
+        self.total_positives.assign(tf.zeros_like(self.total_positives))
+        self.false_negatives.assign(tf.zeros_like(self.false_negatives))
+        self.total_negatives.assign(tf.zeros_like(self.total_negatives))</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.metrics.base_metric.Metric</li>
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint">EfficiencyAtFixedWorkingPoint</a></li>
+<li><a title="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint">ThresholdAtFixedWorkingPoint</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Resets the confusion matrix statistics.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset_state(self):
+    &#34;&#34;&#34;Resets the confusion matrix statistics.&#34;&#34;&#34;
+    self.true_positives.assign(tf.zeros_like(self.true_positives))
+    self.total_positives.assign(tf.zeros_like(self.total_positives))
+    self.false_negatives.assign(tf.zeros_like(self.false_negatives))
+    self.total_negatives.assign(tf.zeros_like(self.total_negatives))</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.result"><code class="name flex">
+<span>def <span class="ident">result</span></span>(<span>self) ‑> Tuple[tensorflow.python.framework.ops.Tensor, tensorflow.python.framework.ops.Tensor, tensorflow.python.framework.ops.Tensor]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the efficiencies and threshold at the working point.
+Both the fixed and variable efficiencies are calculated and returned
+to allow a check of the working point.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[tf.Tensor, tf.Tensor, tf.Tensor]</code></dt>
+<dd>The fixed efficiency, the variable efficiency and the threshold at the working point.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def result(self) -&gt; Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
+    &#34;&#34;&#34;Calculates the efficiencies and threshold at the working point.
+    Both the fixed and variable efficiencies are calculated and returned
+    to allow a check of the working point.
+
+    Returns:
+        Tuple[tf.Tensor, tf.Tensor, tf.Tensor]: The fixed efficiency, the variable efficiency and the threshold at the working point.
+
+    &#34;&#34;&#34;
+    efficiency_positivess = self.true_positives / self.total_positives
+    efficiency_negatives = self.false_negatives / self.total_negatives
+
+    result_index = self._find_index_of_threshold(efficiency_positivess, self.working_point)
+    positive_at_wp = tf.gather(efficiency_positivess, result_index)
+    negative_at_wp = tf.gather(efficiency_negatives, result_index)
+    threshold_at_wp = tf.gather(self.thresholds, result_index)
+
+    return positive_at_wp, negative_at_wp, threshold_at_wp</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state"><code class="name flex">
+<span>def <span class="ident">update_state</span></span>(<span>self, y_true: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], y_pred: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], sample_weight: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray, ForwardRef(None)] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+The total positives and total negatives are calculated once.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>y_true</code></strong> :&ensp;<code>Union[tf.Tensor, np.ndarray]</code></dt>
+<dd>True labels.</dd>
+<dt><strong><code>y_pred</code></strong> :&ensp;<code>Union[tf.Tensor, np.ndarray]</code></dt>
+<dd>Predicted scores, i.e. the output of the model.</dd>
+<dt><strong><code>sample_weight</code></strong> :&ensp;<code>Optional[Union[tf.Tensor, np.ndarray]]</code>, optional</dt>
+<dd>Sample weights. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_state(self, y_true: Union[tf.Tensor, np.ndarray], y_pred: Union[tf.Tensor, np.ndarray], sample_weight: Optional[Union[tf.Tensor, np.ndarray]] = None):
+    &#34;&#34;&#34;Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+    The total positives and total negatives are calculated once.
+
+    Args:
+        y_true (Union[tf.Tensor, np.ndarray]): True labels.
+        y_pred (Union[tf.Tensor, np.ndarray]): Predicted scores, i.e. the output of the model.
+        sample_weight (Optional[Union[tf.Tensor, np.ndarray]], optional): Sample weights. Defaults to None.
+    &#34;&#34;&#34;
+    y_pred = tf.cast(tf.expand_dims(y_pred, axis=1) &gt; self.thresholds, tf.bool)
+    y_true = tf.expand_dims(y_true, axis=1)
+    positive_equals = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
+    negative_equals = tf.logical_and(tf.equal(y_true, False), tf.equal(y_pred, False))
+    if sample_weight is not None:
+        sample_weight = tf.cast(sample_weight, tf.float32)
+        sample_weight = tf.expand_dims(sample_weight, axis=1)
+        positive_equals = tf.multiply(tf.cast(positive_equals, tf.float32), sample_weight)
+        negative_equals = tf.multiply(tf.cast(negative_equals, tf.float32), sample_weight)
+
+    self.true_positives.assign_add(tf.reduce_sum(tf.cast(positive_equals, tf.float32), axis=0))
+    self.false_negatives.assign_add(tf.reduce_sum(tf.cast(negative_equals, tf.float32), axis=0))
+
+    positives = tf.cast(tf.equal(y_true, True), tf.float32)
+    positives = tf.multiply(positives, sample_weight) if sample_weight is not None else positives
+    negatives = tf.cast(tf.equal(y_true, False), tf.float32)
+    negatives = tf.multiply(negatives, sample_weight) if sample_weight is not None else negatives
+    self.total_positives.assign_add(tf.reduce_sum(positives, axis=0))
+    self.total_negatives.assign_add(tf.reduce_sum(negatives, axis=0))</code></pre>
 </details>
 </dd>
 </dl>
@@ -700,8 +1673,10 @@ in this case the threshold is chosen such that the efficiency of one class is eq
     &#34;&#34;&#34;
 
     def __init__(self, efficiency: float = 0.5, label_id: Literal[0, 1] = 1, name=&#39;rejection_at_efficiency&#39;):
-        super(RejectionAtEfficiency, self).__init__(name=name, sensitivity=efficiency)
+        super(RejectionAtEfficiency, self).__init__(
+            name=name, sensitivity=efficiency)
         self.label_id = label_id
+        self.efficiency = efficiency
 
     def update_state(self, y_true: Union[tf.Tensor, np.ndarray], y_pred: Union[tf.Tensor, np.ndarray], sample_weight: Union[tf.Tensor, np.ndarray] = None):
         &#34;&#34;&#34;Accumulates the efficiency.
@@ -715,10 +1690,13 @@ in this case the threshold is chosen such that the efficiency of one class is eq
         if self.label_id is not None and self.label_id != 1:
             y_true = tf.logical_not(y_true)
             y_pred = 1 - y_pred
-        super(RejectionAtEfficiency, self).update_state(y_true, y_pred, sample_weight=sample_weight)
+        super(RejectionAtEfficiency, self).update_state(
+            y_true, y_pred, sample_weight=sample_weight)
 
     def get_config(self):
         config = super(RejectionAtEfficiency, self).get_config()
+        config.update({&#39;efficiency&#39;: self.efficiency,
+                      &#39;label_id&#39;: self.label_id})
         return config
 
     def result(self):
@@ -748,6 +1726,8 @@ in this case the threshold is chosen such that the efficiency of one class is eq
 </summary>
 <pre><code class="python">def get_config(self):
     config = super(RejectionAtEfficiency, self).get_config()
+    config.update({&#39;efficiency&#39;: self.efficiency,
+                  &#39;label_id&#39;: self.label_id})
     return config</code></pre>
 </details>
 </dd>
@@ -799,8 +1779,255 @@ metric value using the state variables.</p>
     if self.label_id is not None and self.label_id != 1:
         y_true = tf.logical_not(y_true)
         y_pred = 1 - y_pred
-    super(RejectionAtEfficiency, self).update_state(y_true, y_pred, sample_weight=sample_weight)</code></pre>
+    super(RejectionAtEfficiency, self).update_state(
+        y_true, y_pred, sample_weight=sample_weight)</code></pre>
 </details>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint"><code class="flex name class">
+<span>class <span class="ident">RejectionAtFixedWorkingPoint</span></span>
+<span>(</span><span>working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0, num_thresholds: int = 200, name: Optional[str] = 'rejection_at_fixed_wp', dtype: Optional[tensorflow.python.framework.dtypes.DType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the rejection at a fixed working point. The working point is defined by the user.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>working_point</code></strong> :&ensp;<code>float</code></dt>
+<dd>The working point. Defaults to 0.5.</dd>
+<dt><strong><code>fixed_label_id</code></strong> :&ensp;<code>Literal[0, 1]</code>, optional</dt>
+<dd>The label id whose efficiency is fixed. Defaults to 1.</dd>
+<dt><strong><code>returned_label_id</code></strong> :&ensp;<code>Literal[0, 1]</code>, optional</dt>
+<dd>The label id whose efficiency is returned. Defaults to 0.</dd>
+<dt><strong><code>num_thresholds</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The number of thresholds to use for the estimation. Defaults to 200.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>The name of the metric. Defaults to 'efficiency_at_fixed_wp'.</dd>
+<dt><strong><code>dtype</code></strong> :&ensp;<code>Optional[tf.dtypes.DType]</code>, optional</dt>
+<dd>The data type of the metric. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class RejectionAtFixedWorkingPoint(EfficiencyAtFixedWorkingPoint):
+    &#34;&#34;&#34;Calculates the rejection at a fixed working point. The working point is defined by the user.
+
+    Args:
+        working_point (float): The working point. Defaults to 0.5.
+        fixed_label_id (Literal[0, 1], optional): The label id whose efficiency is fixed. Defaults to 1.
+        returned_label_id (Literal[0, 1], optional): The label id whose efficiency is returned. Defaults to 0.
+        num_thresholds (int, optional): The number of thresholds to use for the estimation. Defaults to 200.
+        name (Optional[str], optional): The name of the metric. Defaults to &#39;efficiency_at_fixed_wp&#39;.
+        dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0,
+                 num_thresholds: int = 200, name: Optional[str] = &#39;rejection_at_fixed_wp&#39;, dtype: Optional[tf.dtypes.DType] = None):
+        super().__init__(working_point=working_point, fixed_label_id=fixed_label_id, returned_label_id=returned_label_id,
+                         num_thresholds=num_thresholds, name=name, dtype=dtype)
+
+    def result(self) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Calculates the rejection at the working point.
+
+        Returns:
+            tf.Tensor: The rejection at the working point.
+        &#34;&#34;&#34;
+
+        return 1.0 / (1 - super().result())</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint">EfficiencyAtFixedWorkingPoint</a></li>
+<li><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></li>
+<li>keras.metrics.base_metric.Metric</li>
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint">EfficiencyAtFixedWorkingPoint</a></code>.<code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.reset_state" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.reset_state">reset_state</a></code>
+</p>
+<div class="desc inherited"><p>Resets the confusion matrix statistics.</p></div>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.result"><code class="name flex">
+<span>def <span class="ident">result</span></span>(<span>self) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the rejection at the working point.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>The rejection at the working point.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def result(self) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Calculates the rejection at the working point.
+
+    Returns:
+        tf.Tensor: The rejection at the working point.
+    &#34;&#34;&#34;
+
+    return 1.0 / (1 - super().result())</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.update_state"><code class="name flex">
+<span>def <span class="ident">update_state</span></span>(<span>self, y_true: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], y_pred: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], sample_weight: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray, ForwardRef(None)] = None)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint">EfficiencyAtFixedWorkingPoint</a></code>.<code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.update_state" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.update_state">update_state</a></code>
+</p>
+<div class="desc inherited"><p>Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+The total positives and total …</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint"><code class="flex name class">
+<span>class <span class="ident">ThresholdAtFixedWorkingPoint</span></span>
+<span>(</span><span>working_point: float = 0.5, num_thresholds: int = 200, fixed_label_id: Literal[0, 1] = 1, name: Optional[str] = 'threshold_at_fixed_efficiency', dtype: Optional[tensorflow.python.framework.dtypes.DType] = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the threshold at a fixed working point. The working point is defined by the user.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>working_point</code></strong> :&ensp;<code>float</code></dt>
+<dd>The working point. Defaults to 0.5.</dd>
+<dt><strong><code>fixed_label_id</code></strong> :&ensp;<code>Literal[0, 1]</code>, optional</dt>
+<dd>The label id whose efficiency is fixed. Defaults to 1.</dd>
+<dt><strong><code>num_thresholds</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The number of thresholds to use for the estimation. Defaults to 200.</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>The name of the metric. Defaults to 'threshold_at_fixed_wp'.</dd>
+<dt><strong><code>dtype</code></strong> :&ensp;<code>Optional[tf.dtypes.DType]</code>, optional</dt>
+<dd>The data type of the metric. Defaults to None.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ThresholdAtFixedWorkingPoint(FixedWorkingPointBase):
+    &#34;&#34;&#34;Calculates the threshold at a fixed working point. The working point is defined by the user.
+
+    Args:
+        working_point (float): The working point. Defaults to 0.5.
+        fixed_label_id (Literal[0, 1], optional): The label id whose efficiency is fixed. Defaults to 1.
+        num_thresholds (int, optional): The number of thresholds to use for the estimation. Defaults to 200.
+        name (Optional[str], optional): The name of the metric. Defaults to &#39;threshold_at_fixed_wp&#39;.
+        dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
+    &#34;&#34;&#34;
+
+    def __init__(self, working_point: float = 0.5, num_thresholds: int = 200, fixed_label_id: Literal[0, 1] = 1, name: Optional[str] = &#39;threshold_at_fixed_efficiency&#39;, dtype: Optional[tf.dtypes.DType] = None):
+        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype)
+        self.fixed_label_id = fixed_label_id
+
+    def result(self) -&gt; tf.Tensor:
+        &#34;&#34;&#34;Calculates the threshold at the working point.
+
+        Raises:
+            ValueError: If the fixed_label_id is not 0 or 1.
+
+        Returns:
+            tf.Tensor: The threshold at the working point.
+        &#34;&#34;&#34;
+
+        if self.fixed_label_id == 1:
+            efficiencies = self.true_positives / self.total_positives
+        elif self.fixed_label_id == 0:
+            efficiencies = self.false_negatives / self.total_negatives
+        else:
+            raise ValueError(f&#39;fixed_label_id must be 0 or 1, but is {self.fixed_label_id}&#39;)
+
+        closest_index = self._find_index_of_threshold(efficiencies, self.working_point)
+
+        return tf.gather(self.thresholds, closest_index)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></li>
+<li>keras.metrics.base_metric.Metric</li>
+<li>keras.engine.base_layer.Layer</li>
+<li>tensorflow.python.module.module.Module</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+<li>keras.utils.version_utils.LayerVersionSelector</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.reset_state"><code class="name flex">
+<span>def <span class="ident">reset_state</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></code>.<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state">reset_state</a></code>
+</p>
+<div class="desc inherited"><p>Resets the confusion matrix statistics.</p></div>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.result"><code class="name flex">
+<span>def <span class="ident">result</span></span>(<span>self) ‑> tensorflow.python.framework.ops.Tensor</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculates the threshold at the working point.</p>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the fixed_label_id is not 0 or 1.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.Tensor</code></dt>
+<dd>The threshold at the working point.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def result(self) -&gt; tf.Tensor:
+    &#34;&#34;&#34;Calculates the threshold at the working point.
+
+    Raises:
+        ValueError: If the fixed_label_id is not 0 or 1.
+
+    Returns:
+        tf.Tensor: The threshold at the working point.
+    &#34;&#34;&#34;
+
+    if self.fixed_label_id == 1:
+        efficiencies = self.true_positives / self.total_positives
+    elif self.fixed_label_id == 0:
+        efficiencies = self.false_negatives / self.total_negatives
+    else:
+        raise ValueError(f&#39;fixed_label_id must be 0 or 1, but is {self.fixed_label_id}&#39;)
+
+    closest_index = self._find_index_of_threshold(efficiencies, self.working_point)
+
+    return tf.gather(self.thresholds, closest_index)</code></pre>
+</details>
+</dd>
+<dt id="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.update_state"><code class="name flex">
+<span>def <span class="ident">update_state</span></span>(<span>self, y_true: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], y_pred: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray], sample_weight: Union[tensorflow.python.framework.ops.Tensor, numpy.ndarray, ForwardRef(None)] = None)</span>
+</code></dt>
+<dd>
+<p class="inheritance">
+<em>Inherited from:</em>
+<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></code>.<code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state">update_state</a></code>
+</p>
+<div class="desc inherited"><p>Accumulates the confusion matrix statistics. The true positives and false negatives are calculated for each threshold.
+The total positives and total …</p></div>
 </dd>
 </dl>
 </dd>
@@ -835,7 +2062,7 @@ metric value using the state variables.</p>
 <h4><code><a title="jidenn.evaluation.evaluation_metrics.BinaryEfficiency" href="#jidenn.evaluation.evaluation_metrics.BinaryEfficiency">BinaryEfficiency</a></code></h4>
 <ul class="">
 <li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.get_config" href="#jidenn.evaluation.evaluation_metrics.BinaryEfficiency.get_config">get_config</a></code></li>
-<li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.reset_states" href="#jidenn.evaluation.evaluation_metrics.BinaryEfficiency.reset_states">reset_states</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.reset_state" href="#jidenn.evaluation.evaluation_metrics.BinaryEfficiency.reset_state">reset_state</a></code></li>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.result" href="#jidenn.evaluation.evaluation_metrics.BinaryEfficiency.result">result</a></code></li>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryEfficiency.update_state" href="#jidenn.evaluation.evaluation_metrics.BinaryEfficiency.update_state">update_state</a></code></li>
 </ul>
@@ -844,9 +2071,34 @@ metric value using the state variables.</p>
 <h4><code><a title="jidenn.evaluation.evaluation_metrics.BinaryRejection" href="#jidenn.evaluation.evaluation_metrics.BinaryRejection">BinaryRejection</a></code></h4>
 <ul class="">
 <li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryRejection.get_config" href="#jidenn.evaluation.evaluation_metrics.BinaryRejection.get_config">get_config</a></code></li>
-<li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryRejection.reset_states" href="#jidenn.evaluation.evaluation_metrics.BinaryRejection.reset_states">reset_states</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryRejection.reset_state" href="#jidenn.evaluation.evaluation_metrics.BinaryRejection.reset_state">reset_state</a></code></li>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryRejection.result" href="#jidenn.evaluation.evaluation_metrics.BinaryRejection.result">result</a></code></li>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.BinaryRejection.update_state" href="#jidenn.evaluation.evaluation_metrics.BinaryRejection.update_state">update_state</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency" href="#jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency">EffectiveTaggingEfficiency</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.get_config" href="#jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.get_config">get_config</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.reset_state" href="#jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.reset_state">reset_state</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.result" href="#jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.result">result</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.update_state" href="#jidenn.evaluation.evaluation_metrics.EffectiveTaggingEfficiency.update_state">update_state</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint">EfficiencyAtFixedWorkingPoint</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.reset_state" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.reset_state">reset_state</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.result" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.result">result</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.update_state" href="#jidenn.evaluation.evaluation_metrics.EfficiencyAtFixedWorkingPoint.update_state">update_state</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase">FixedWorkingPointBase</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.reset_state">reset_state</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.result" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.result">result</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state" href="#jidenn.evaluation.evaluation_metrics.FixedWorkingPointBase.update_state">update_state</a></code></li>
 </ul>
 </li>
 <li>
@@ -855,6 +2107,22 @@ metric value using the state variables.</p>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtEfficiency.get_config" href="#jidenn.evaluation.evaluation_metrics.RejectionAtEfficiency.get_config">get_config</a></code></li>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtEfficiency.result" href="#jidenn.evaluation.evaluation_metrics.RejectionAtEfficiency.result">result</a></code></li>
 <li><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtEfficiency.update_state" href="#jidenn.evaluation.evaluation_metrics.RejectionAtEfficiency.update_state">update_state</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint">RejectionAtFixedWorkingPoint</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.reset_state" href="#jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.reset_state">reset_state</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.result" href="#jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.result">result</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.update_state" href="#jidenn.evaluation.evaluation_metrics.RejectionAtFixedWorkingPoint.update_state">update_state</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint" href="#jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint">ThresholdAtFixedWorkingPoint</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.reset_state" href="#jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.reset_state">reset_state</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.result" href="#jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.result">result</a></code></li>
+<li><code><a title="jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.update_state" href="#jidenn.evaluation.evaluation_metrics.ThresholdAtFixedWorkingPoint.update_state">update_state</a></code></li>
 </ul>
 </li>
 </ul>

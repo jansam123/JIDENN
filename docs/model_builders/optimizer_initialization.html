@@ -43,6 +43,144 @@ from jidenn.config import config
 from .LearningRateSchedulers import LinearWarmup
 
 
+class Lion(tf.keras.optimizers.Optimizer):
+    &#34;&#34;&#34;Original source: https://github.com/keras-team/keras/blob/master/keras/optimizers/lion.py
+    Optimizer that implements the Lion algorithm.
+
+    The Lion optimizer is a stochastic-gradient-descent method that uses the
+    sign operator to control the magnitude of the update, unlike other adaptive
+    optimizers such as Adam that rely on second-order moments. This make
+    Lion more memory-efficient as it only keeps track of the momentum. According
+    to the authors (see reference), its performance gain over Adam grows with
+    the batch size. Because the update of Lion is produced through the sign
+    operation, resulting in a larger norm, a suitable learning rate for Lion is
+    typically 3-10x smaller than that for AdamW. The weight decay for Lion
+    should be in turn 3-10x larger than that for AdamW to maintain a
+    similar strength (lr * wd).
+
+    Args:
+      learning_rate: A `tf.Tensor`, floating point value, a schedule that is a
+        `tf.keras.optimizers.schedules.LearningRateSchedule`, or a callable
+        that takes no arguments and returns the actual value to use. The
+        learning rate. Defaults to 0.0001.
+      beta_1: A float value or a constant float tensor, or a callable
+        that takes no arguments and returns the actual value to use. The rate
+        to combine the current gradient and the 1st moment estimate.
+      beta_2: A float value or a constant float tensor, or a callable
+        that takes no arguments and returns the actual value to use. The
+        exponential decay rate for the 1st moment estimate.
+
+
+    References:
+      - [Chen et al., 2023](http://arxiv.org/abs/2302.06675)
+      - [Authors&#39; implementation](
+          http://github.com/google/automl/tree/master/lion)
+
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        learning_rate=0.0001,
+        beta_1=0.9,
+        beta_2=0.99,
+        weight_decay=None,
+        clipnorm=None,
+        clipvalue=None,
+        global_clipnorm=None,
+        use_ema=False,
+        ema_momentum=0.99,
+        ema_overwrite_frequency=None,
+        jit_compile=True,
+        name=&#34;Lion&#34;,
+        **kwargs,
+    ):
+        super().__init__(
+            name=name,
+            weight_decay=weight_decay,
+            clipnorm=clipnorm,
+            clipvalue=clipvalue,
+            global_clipnorm=global_clipnorm,
+            use_ema=use_ema,
+            ema_momentum=ema_momentum,
+            ema_overwrite_frequency=ema_overwrite_frequency,
+            jit_compile=jit_compile,
+            **kwargs,
+        )
+        self._learning_rate = self._build_learning_rate(learning_rate)
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        if beta_1 &lt;= 0 or beta_1 &gt; 1:
+            raise ValueError(
+                f&#34;`beta_1`={beta_1} must be between ]0, 1]. Otherwise, &#34;
+                &#34;the optimizer degenerates to SignSGD.&#34;
+            )
+
+    def build(self, var_list):
+        &#34;&#34;&#34;Initialize optimizer variables.
+
+        Lion optimizer has one variable `momentums`.
+
+        Args:
+          var_list: list of model variables to build Lion variables on.
+        &#34;&#34;&#34;
+        super().build(var_list)
+        if hasattr(self, &#34;_built&#34;) and self._built:
+            return
+        self.momentums = []
+        for var in var_list:
+            self.momentums.append(
+                self.add_variable_from_reference(
+                    model_variable=var, variable_name=&#34;m&#34;
+                )
+            )
+        self._built = True
+
+    def update_step(self, gradient, variable):
+        &#34;&#34;&#34;Update step given gradient and the associated model variable.&#34;&#34;&#34;
+        lr = tf.cast(self.learning_rate, variable.dtype)
+        beta_1 = tf.cast(self.beta_1, variable.dtype)
+        beta_2 = tf.cast(self.beta_2, variable.dtype)
+        var_key = self._var_key(variable)
+        m = self.momentums[self._index_dict[var_key]]
+
+        if isinstance(gradient, tf.IndexedSlices):
+            # Sparse gradients (use m as a buffer)
+            m.assign(m * beta_1)
+            m.scatter_add(
+                tf.IndexedSlices(
+                    gradient.values * (1.0 - beta_1), gradient.indices
+                )
+            )
+            variable.assign_sub(lr * tf.math.sign(m))
+
+            m.assign(m * beta_2 / beta_1)
+            m.scatter_add(
+                tf.IndexedSlices(
+                    gradient.values * (1.0 - beta_2 / beta_1), gradient.indices
+                )
+            )
+        else:
+            # Dense gradients
+            variable.assign_sub(
+                lr * tf.math.sign(m * beta_1 + gradient * (1.0 - beta_1))
+            )
+            m.assign(m * beta_2 + gradient * (1.0 - beta_2))
+
+    def get_config(self):
+        config = super().get_config()
+
+        config.update(
+            {
+                &#34;learning_rate&#34;: self._serialize_hyperparameter(
+                    self._learning_rate
+                ),
+                &#34;beta_1&#34;: self.beta_1,
+                &#34;beta_2&#34;: self.beta_2,
+            }
+        )
+        return config
+
+
 def get_optimizer(args_optimizer: config.Optimizer) -&gt; tf.keras.optimizers.Optimizer:
     &#34;&#34;&#34;Initializes the optimizer from the config file.
     Possible optimizers are `tf.optimizers.Adam` and `tfa.optimizers.LAMB`.
@@ -67,9 +205,10 @@ def get_optimizer(args_optimizer: config.Optimizer) -&gt; tf.keras.optimizers.Op
     epsilon = 1e-6 if args_optimizer.epsilon is None else args_optimizer.epsilon
     clipnorm = None if args_optimizer.clipnorm is None or args_optimizer.clipnorm == 0.0 else args_optimizer.clipnorm
     weight_decay = 0.0 if args_optimizer.weight_decay is None else args_optimizer.weight_decay
-
+    min_lr = 0.0 if args_optimizer.min_learning_rate is None else args_optimizer.min_learning_rate
+    
     l_r = tf.keras.optimizers.schedules.CosineDecay(
-        learning_rate, decay_steps) if decay_steps is not None else learning_rate
+        learning_rate, decay_steps, alpha=min_lr) if decay_steps is not None else learning_rate
 
     if warmup_steps is not None:
         l_r = LinearWarmup(warmup_steps, l_r)
@@ -81,6 +220,13 @@ def get_optimizer(args_optimizer: config.Optimizer) -&gt; tf.keras.optimizers.Op
                                    beta_2=beta_2,
                                    epsilon=epsilon,
                                    clipnorm=clipnorm)
+    elif optimizer == &#39;Lion&#39;:
+        return Lion(learning_rate=l_r,
+                    weight_decay=weight_decay,
+                    beta_1=beta_1,
+                    beta_2=beta_2,
+                    clipnorm=clipnorm)
+
     elif optimizer == &#39;Adam&#39;:
         if weight_decay &gt; 0.0:
             return tfa.optimizers.AdamW(learning_rate=l_r,
@@ -156,9 +302,10 @@ If the <code>weight_decay</code> parameter is set, the <code>tfa.optimizers.Adam
     epsilon = 1e-6 if args_optimizer.epsilon is None else args_optimizer.epsilon
     clipnorm = None if args_optimizer.clipnorm is None or args_optimizer.clipnorm == 0.0 else args_optimizer.clipnorm
     weight_decay = 0.0 if args_optimizer.weight_decay is None else args_optimizer.weight_decay
-
+    min_lr = 0.0 if args_optimizer.min_learning_rate is None else args_optimizer.min_learning_rate
+    
     l_r = tf.keras.optimizers.schedules.CosineDecay(
-        learning_rate, decay_steps) if decay_steps is not None else learning_rate
+        learning_rate, decay_steps, alpha=min_lr) if decay_steps is not None else learning_rate
 
     if warmup_steps is not None:
         l_r = LinearWarmup(warmup_steps, l_r)
@@ -170,6 +317,13 @@ If the <code>weight_decay</code> parameter is set, the <code>tfa.optimizers.Adam
                                    beta_2=beta_2,
                                    epsilon=epsilon,
                                    clipnorm=clipnorm)
+    elif optimizer == &#39;Lion&#39;:
+        return Lion(learning_rate=l_r,
+                    weight_decay=weight_decay,
+                    beta_1=beta_1,
+                    beta_2=beta_2,
+                    clipnorm=clipnorm)
+
     elif optimizer == &#39;Adam&#39;:
         if weight_decay &gt; 0.0:
             return tfa.optimizers.AdamW(learning_rate=l_r,
@@ -191,6 +345,309 @@ If the <code>weight_decay</code> parameter is set, the <code>tfa.optimizers.Adam
 </dl>
 </section>
 <section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="jidenn.model_builders.optimizer_initialization.Lion"><code class="flex name class">
+<span>class <span class="ident">Lion</span></span>
+<span>(</span><span>learning_rate=0.0001, beta_1=0.9, beta_2=0.99, weight_decay=None, clipnorm=None, clipvalue=None, global_clipnorm=None, use_ema=False, ema_momentum=0.99, ema_overwrite_frequency=None, jit_compile=True, name='Lion', **kwargs)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Original source: <a href="https://github.com/keras-team/keras/blob/master/keras/optimizers/lion.py">https://github.com/keras-team/keras/blob/master/keras/optimizers/lion.py</a>
+Optimizer that implements the Lion algorithm.</p>
+<p>The Lion optimizer is a stochastic-gradient-descent method that uses the
+sign operator to control the magnitude of the update, unlike other adaptive
+optimizers such as Adam that rely on second-order moments. This make
+Lion more memory-efficient as it only keeps track of the momentum. According
+to the authors (see reference), its performance gain over Adam grows with
+the batch size. Because the update of Lion is produced through the sign
+operation, resulting in a larger norm, a suitable learning rate for Lion is
+typically 3-10x smaller than that for AdamW. The weight decay for Lion
+should be in turn 3-10x larger than that for AdamW to maintain a
+similar strength (lr * wd).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>learning_rate</code></strong></dt>
+<dd>A <code>tf.Tensor</code>, floating point value, a schedule that is a
+<code>tf.keras.optimizers.schedules.LearningRateSchedule</code>, or a callable
+that takes no arguments and returns the actual value to use. The
+learning rate. Defaults to 0.0001.</dd>
+<dt><strong><code>beta_1</code></strong></dt>
+<dd>A float value or a constant float tensor, or a callable
+that takes no arguments and returns the actual value to use. The rate
+to combine the current gradient and the 1st moment estimate.</dd>
+<dt><strong><code>beta_2</code></strong></dt>
+<dd>A float value or a constant float tensor, or a callable
+that takes no arguments and returns the actual value to use. The
+exponential decay rate for the 1st moment estimate.</dd>
+</dl>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="http://arxiv.org/abs/2302.06675">Chen et al., 2023</a></li>
+<li><a href="http://github.com/google/automl/tree/master/lion">Authors' implementation</a></li>
+</ul>
+<p>Create a new Optimizer.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Lion(tf.keras.optimizers.Optimizer):
+    &#34;&#34;&#34;Original source: https://github.com/keras-team/keras/blob/master/keras/optimizers/lion.py
+    Optimizer that implements the Lion algorithm.
+
+    The Lion optimizer is a stochastic-gradient-descent method that uses the
+    sign operator to control the magnitude of the update, unlike other adaptive
+    optimizers such as Adam that rely on second-order moments. This make
+    Lion more memory-efficient as it only keeps track of the momentum. According
+    to the authors (see reference), its performance gain over Adam grows with
+    the batch size. Because the update of Lion is produced through the sign
+    operation, resulting in a larger norm, a suitable learning rate for Lion is
+    typically 3-10x smaller than that for AdamW. The weight decay for Lion
+    should be in turn 3-10x larger than that for AdamW to maintain a
+    similar strength (lr * wd).
+
+    Args:
+      learning_rate: A `tf.Tensor`, floating point value, a schedule that is a
+        `tf.keras.optimizers.schedules.LearningRateSchedule`, or a callable
+        that takes no arguments and returns the actual value to use. The
+        learning rate. Defaults to 0.0001.
+      beta_1: A float value or a constant float tensor, or a callable
+        that takes no arguments and returns the actual value to use. The rate
+        to combine the current gradient and the 1st moment estimate.
+      beta_2: A float value or a constant float tensor, or a callable
+        that takes no arguments and returns the actual value to use. The
+        exponential decay rate for the 1st moment estimate.
+
+
+    References:
+      - [Chen et al., 2023](http://arxiv.org/abs/2302.06675)
+      - [Authors&#39; implementation](
+          http://github.com/google/automl/tree/master/lion)
+
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        learning_rate=0.0001,
+        beta_1=0.9,
+        beta_2=0.99,
+        weight_decay=None,
+        clipnorm=None,
+        clipvalue=None,
+        global_clipnorm=None,
+        use_ema=False,
+        ema_momentum=0.99,
+        ema_overwrite_frequency=None,
+        jit_compile=True,
+        name=&#34;Lion&#34;,
+        **kwargs,
+    ):
+        super().__init__(
+            name=name,
+            weight_decay=weight_decay,
+            clipnorm=clipnorm,
+            clipvalue=clipvalue,
+            global_clipnorm=global_clipnorm,
+            use_ema=use_ema,
+            ema_momentum=ema_momentum,
+            ema_overwrite_frequency=ema_overwrite_frequency,
+            jit_compile=jit_compile,
+            **kwargs,
+        )
+        self._learning_rate = self._build_learning_rate(learning_rate)
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
+        if beta_1 &lt;= 0 or beta_1 &gt; 1:
+            raise ValueError(
+                f&#34;`beta_1`={beta_1} must be between ]0, 1]. Otherwise, &#34;
+                &#34;the optimizer degenerates to SignSGD.&#34;
+            )
+
+    def build(self, var_list):
+        &#34;&#34;&#34;Initialize optimizer variables.
+
+        Lion optimizer has one variable `momentums`.
+
+        Args:
+          var_list: list of model variables to build Lion variables on.
+        &#34;&#34;&#34;
+        super().build(var_list)
+        if hasattr(self, &#34;_built&#34;) and self._built:
+            return
+        self.momentums = []
+        for var in var_list:
+            self.momentums.append(
+                self.add_variable_from_reference(
+                    model_variable=var, variable_name=&#34;m&#34;
+                )
+            )
+        self._built = True
+
+    def update_step(self, gradient, variable):
+        &#34;&#34;&#34;Update step given gradient and the associated model variable.&#34;&#34;&#34;
+        lr = tf.cast(self.learning_rate, variable.dtype)
+        beta_1 = tf.cast(self.beta_1, variable.dtype)
+        beta_2 = tf.cast(self.beta_2, variable.dtype)
+        var_key = self._var_key(variable)
+        m = self.momentums[self._index_dict[var_key]]
+
+        if isinstance(gradient, tf.IndexedSlices):
+            # Sparse gradients (use m as a buffer)
+            m.assign(m * beta_1)
+            m.scatter_add(
+                tf.IndexedSlices(
+                    gradient.values * (1.0 - beta_1), gradient.indices
+                )
+            )
+            variable.assign_sub(lr * tf.math.sign(m))
+
+            m.assign(m * beta_2 / beta_1)
+            m.scatter_add(
+                tf.IndexedSlices(
+                    gradient.values * (1.0 - beta_2 / beta_1), gradient.indices
+                )
+            )
+        else:
+            # Dense gradients
+            variable.assign_sub(
+                lr * tf.math.sign(m * beta_1 + gradient * (1.0 - beta_1))
+            )
+            m.assign(m * beta_2 + gradient * (1.0 - beta_2))
+
+    def get_config(self):
+        config = super().get_config()
+
+        config.update(
+            {
+                &#34;learning_rate&#34;: self._serialize_hyperparameter(
+                    self._learning_rate
+                ),
+                &#34;beta_1&#34;: self.beta_1,
+                &#34;beta_2&#34;: self.beta_2,
+            }
+        )
+        return config</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>keras.optimizers.optimizer_experimental.optimizer.Optimizer</li>
+<li>keras.optimizers.optimizer_experimental.optimizer._BaseOptimizer</li>
+<li>tensorflow.python.trackable.autotrackable.AutoTrackable</li>
+<li>tensorflow.python.trackable.base.Trackable</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="jidenn.model_builders.optimizer_initialization.Lion.build"><code class="name flex">
+<span>def <span class="ident">build</span></span>(<span>self, var_list)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize optimizer variables.</p>
+<p>Lion optimizer has one variable <code>momentums</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>var_list</code></strong></dt>
+<dd>list of model variables to build Lion variables on.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def build(self, var_list):
+    &#34;&#34;&#34;Initialize optimizer variables.
+
+    Lion optimizer has one variable `momentums`.
+
+    Args:
+      var_list: list of model variables to build Lion variables on.
+    &#34;&#34;&#34;
+    super().build(var_list)
+    if hasattr(self, &#34;_built&#34;) and self._built:
+        return
+    self.momentums = []
+    for var in var_list:
+        self.momentums.append(
+            self.add_variable_from_reference(
+                model_variable=var, variable_name=&#34;m&#34;
+            )
+        )
+    self._built = True</code></pre>
+</details>
+</dd>
+<dt id="jidenn.model_builders.optimizer_initialization.Lion.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Returns the config of the optimizer.</p>
+<p>An optimizer config is a Python dictionary (serializable)
+containing the configuration of an optimizer.
+The same optimizer can be reinstantiated later
+(without any saved state) from this configuration.</p>
+<p>Subclass optimizer should override this method to include other
+hyperparameters.</p>
+<h2 id="returns">Returns</h2>
+<p>Python dictionary.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    config = super().get_config()
+
+    config.update(
+        {
+            &#34;learning_rate&#34;: self._serialize_hyperparameter(
+                self._learning_rate
+            ),
+            &#34;beta_1&#34;: self.beta_1,
+            &#34;beta_2&#34;: self.beta_2,
+        }
+    )
+    return config</code></pre>
+</details>
+</dd>
+<dt id="jidenn.model_builders.optimizer_initialization.Lion.update_step"><code class="name flex">
+<span>def <span class="ident">update_step</span></span>(<span>self, gradient, variable)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Update step given gradient and the associated model variable.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_step(self, gradient, variable):
+    &#34;&#34;&#34;Update step given gradient and the associated model variable.&#34;&#34;&#34;
+    lr = tf.cast(self.learning_rate, variable.dtype)
+    beta_1 = tf.cast(self.beta_1, variable.dtype)
+    beta_2 = tf.cast(self.beta_2, variable.dtype)
+    var_key = self._var_key(variable)
+    m = self.momentums[self._index_dict[var_key]]
+
+    if isinstance(gradient, tf.IndexedSlices):
+        # Sparse gradients (use m as a buffer)
+        m.assign(m * beta_1)
+        m.scatter_add(
+            tf.IndexedSlices(
+                gradient.values * (1.0 - beta_1), gradient.indices
+            )
+        )
+        variable.assign_sub(lr * tf.math.sign(m))
+
+        m.assign(m * beta_2 / beta_1)
+        m.scatter_add(
+            tf.IndexedSlices(
+                gradient.values * (1.0 - beta_2 / beta_1), gradient.indices
+            )
+        )
+    else:
+        # Dense gradients
+        variable.assign_sub(
+            lr * tf.math.sign(m * beta_1 + gradient * (1.0 - beta_1))
+        )
+        m.assign(m * beta_2 + gradient * (1.0 - beta_2))</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -212,6 +669,18 @@ If the <code>weight_decay</code> parameter is set, the <code>tfa.optimizers.Adam
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="jidenn.model_builders.optimizer_initialization.get_optimizer" href="#jidenn.model_builders.optimizer_initialization.get_optimizer">get_optimizer</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="jidenn.model_builders.optimizer_initialization.Lion" href="#jidenn.model_builders.optimizer_initialization.Lion">Lion</a></code></h4>
+<ul class="">
+<li><code><a title="jidenn.model_builders.optimizer_initialization.Lion.build" href="#jidenn.model_builders.optimizer_initialization.Lion.build">build</a></code></li>
+<li><code><a title="jidenn.model_builders.optimizer_initialization.Lion.get_config" href="#jidenn.model_builders.optimizer_initialization.Lion.get_config">get_config</a></code></li>
+<li><code><a title="jidenn.model_builders.optimizer_initialization.Lion.update_step" href="#jidenn.model_builders.optimizer_initialization.Lion.update_step">update_step</a></code></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

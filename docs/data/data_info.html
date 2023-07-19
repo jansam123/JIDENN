@@ -87,9 +87,10 @@ def plot_corrolation_matrix(corr_matrix: pd.DataFrame, save_path: str) -&gt; Non
 def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,
                                 color_column: str = &#39;named_label&#39;,
+                                hue_order: Optional[List[str]] = None,
                                 xlabel_mapper: Optional[Dict[str, str]] = None) -&gt; None:
-    corr_matrix = df.corr()
-    plot_corrolation_matrix(corr_matrix, os.path.join(folder, &#39;correlation_matrix.jpg&#39;))
+    # corr_matrix = df.corr()
+    # plot_corrolation_matrix(corr_matrix, os.path.join(folder, &#39;correlation_matrix.jpg&#39;))
 
     var_names = list(df.columns)
     var_names.remove(color_column)
@@ -104,10 +105,15 @@ def generate_data_distributions(df: pd.DataFrame,
         if dtype == &#39;object&#39;:
             small_df = explode_nested_variables(small_df, var_name)
             small_df = small_df.loc[small_df[var_name] != 0]
+        try:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat=&#39;density&#39;, element=&#34;step&#34;, fill=True,
+                              palette=&#39;Set1&#39;, common_norm=False, hue_order=hue_order)
+        except:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat=&#39;density&#39;, element=&#34;step&#34;, fill=True,
+                              palette=&#39;Set1&#39;, common_norm=False, hue_order=hue_order, bins=100)
 
-        ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                          stat=&#39;density&#39;, element=&#34;step&#34;, fill=True,
-                          palette=&#39;Set1&#39;, common_norm=False, hue_order=[&#39;quark&#39;, &#39;gluon&#39;])
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
         plt.savefig(os.path.join(folder, &#39;jpg&#39;, f&#39;{var_name}.jpg&#39;), dpi=300, bbox_inches=&#39;tight&#39;)
@@ -195,7 +201,7 @@ def feature_importance(df: pd.DataFrame,
 </details>
 </dd>
 <dt id="jidenn.data.data_info.generate_data_distributions"><code class="name flex">
-<span>def <span class="ident">generate_data_distributions</span></span>(<span>df: pandas.core.frame.DataFrame, folder: str, color_column: str = 'named_label', xlabel_mapper: Optional[Dict[str, str]] = None) ‑> None</span>
+<span>def <span class="ident">generate_data_distributions</span></span>(<span>df: pandas.core.frame.DataFrame, folder: str, color_column: str = 'named_label', hue_order: Optional[List[str]] = None, xlabel_mapper: Optional[Dict[str, str]] = None) ‑> None</span>
 </code></dt>
 <dd>
 <div class="desc"></div>
@@ -206,9 +212,10 @@ def feature_importance(df: pd.DataFrame,
 <pre><code class="python">def generate_data_distributions(df: pd.DataFrame,
                                 folder: str,
                                 color_column: str = &#39;named_label&#39;,
+                                hue_order: Optional[List[str]] = None,
                                 xlabel_mapper: Optional[Dict[str, str]] = None) -&gt; None:
-    corr_matrix = df.corr()
-    plot_corrolation_matrix(corr_matrix, os.path.join(folder, &#39;correlation_matrix.jpg&#39;))
+    # corr_matrix = df.corr()
+    # plot_corrolation_matrix(corr_matrix, os.path.join(folder, &#39;correlation_matrix.jpg&#39;))
 
     var_names = list(df.columns)
     var_names.remove(color_column)
@@ -223,10 +230,15 @@ def feature_importance(df: pd.DataFrame,
         if dtype == &#39;object&#39;:
             small_df = explode_nested_variables(small_df, var_name)
             small_df = small_df.loc[small_df[var_name] != 0]
+        try:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat=&#39;density&#39;, element=&#34;step&#34;, fill=True,
+                              palette=&#39;Set1&#39;, common_norm=False, hue_order=hue_order)
+        except:
+            ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
+                              stat=&#39;density&#39;, element=&#34;step&#34;, fill=True,
+                              palette=&#39;Set1&#39;, common_norm=False, hue_order=hue_order, bins=100)
 
-        ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                          stat=&#39;density&#39;, element=&#34;step&#34;, fill=True,
-                          palette=&#39;Set1&#39;, common_norm=False, hue_order=[&#39;quark&#39;, &#39;gluon&#39;])
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
         plt.savefig(os.path.join(folder, &#39;jpg&#39;, f&#39;{var_name}.jpg&#39;), dpi=300, bbox_inches=&#39;tight&#39;)

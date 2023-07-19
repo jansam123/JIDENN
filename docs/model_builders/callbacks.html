@@ -45,8 +45,7 @@ from tensorflow.python.keras.utils import tf_utils
 import tensorflow as tf
 import shutil
 import logging
-
-from jidenn.config import config
+from datetime import datetime
 
 
 log = logging.getLogger(__name__)
@@ -214,7 +213,8 @@ def get_callbacks(base_logdir: str,
                   epochs: int,
                   log: Logger,
                   checkpoint: Optional[str] = &#39;checkpoints&#39;,
-                  backup: Optional[str] = &#39;backup&#39;) -&gt; List[tf.keras.callbacks.Callback]:
+                  backup: Optional[str] = &#39;backup&#39;,
+                  backup_freq: Optional[int] = None) -&gt; List[tf.keras.callbacks.Callback]:
     &#34;&#34;&#34;
     Returns a list of Keras callbacks for a training session.
 
@@ -224,6 +224,7 @@ def get_callbacks(base_logdir: str,
         log (logging.Logger): A logger object to use for logging information during training.
         checkpoint (str): The directory to use for saving model checkpoints. If None, no checkpoints will be saved.
         backup (str): The directory to use for saving backups of the training session. If None, no backups will be saved.
+        backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session. If None, backups will only be saved at the end of each epoch.
 
     Returns:
         A list of Keras callbacks to use during training. The list contains a `tf.keras.callbacks.TensorBoard` callback for logging training information, a `jidenn.callbacks.LogCallback.LogCallback` callback for logging training information, a `jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint` callback for saving model checkpoints, and a `tf.keras.callbacks.BackupAndRestore` callback for saving backups of the training session.
@@ -247,7 +248,8 @@ def get_callbacks(base_logdir: str,
 
     if backup is not None:
         os.makedirs(os.path.join(base_logdir, backup), exist_ok=True)
-        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(base_logdir, backup))
+        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(
+            base_logdir, backup), delete_checkpoint=False, save_freq=backup_freq if backup_freq is not None else &#34;epoch&#34;)
         callbacks.append(backup_callback)
 
     return callbacks</code></pre>
@@ -261,7 +263,7 @@ def get_callbacks(base_logdir: str,
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="jidenn.model_builders.callbacks.get_callbacks"><code class="name flex">
-<span>def <span class="ident">get_callbacks</span></span>(<span>base_logdir: str, epochs: int, log: logging.Logger, checkpoint: Optional[str] = 'checkpoints', backup: Optional[str] = 'backup') ‑> List[keras.callbacks.Callback]</span>
+<span>def <span class="ident">get_callbacks</span></span>(<span>base_logdir: str, epochs: int, log: logging.Logger, checkpoint: Optional[str] = 'checkpoints', backup: Optional[str] = 'backup', backup_freq: Optional[int] = None) ‑> List[keras.callbacks.Callback]</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Returns a list of Keras callbacks for a training session.</p>
@@ -277,6 +279,8 @@ def get_callbacks(base_logdir: str,
 <dd>The directory to use for saving model checkpoints. If None, no checkpoints will be saved.</dd>
 <dt><strong><code>backup</code></strong> :&ensp;<code>str</code></dt>
 <dd>The directory to use for saving backups of the training session. If None, no backups will be saved.</dd>
+<dt><strong><code>backup_freq</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The frequency (in batches) at which to save backups of the training session. If None, backups will only be saved at the end of each epoch.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>A list of Keras callbacks to use during training. The list contains a <code>tf.keras.callbacks.TensorBoard</code> callback for logging training information, a <code>jidenn.callbacks.LogCallback.LogCallback</code> callback for logging training information, a <code>jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint</code> callback for saving model checkpoints, and a <code>tf.keras.callbacks.BackupAndRestore</code> callback for saving backups of the training session.</p></div>
@@ -288,7 +292,8 @@ def get_callbacks(base_logdir: str,
                   epochs: int,
                   log: Logger,
                   checkpoint: Optional[str] = &#39;checkpoints&#39;,
-                  backup: Optional[str] = &#39;backup&#39;) -&gt; List[tf.keras.callbacks.Callback]:
+                  backup: Optional[str] = &#39;backup&#39;,
+                  backup_freq: Optional[int] = None) -&gt; List[tf.keras.callbacks.Callback]:
     &#34;&#34;&#34;
     Returns a list of Keras callbacks for a training session.
 
@@ -298,6 +303,7 @@ def get_callbacks(base_logdir: str,
         log (logging.Logger): A logger object to use for logging information during training.
         checkpoint (str): The directory to use for saving model checkpoints. If None, no checkpoints will be saved.
         backup (str): The directory to use for saving backups of the training session. If None, no backups will be saved.
+        backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session. If None, backups will only be saved at the end of each epoch.
 
     Returns:
         A list of Keras callbacks to use during training. The list contains a `tf.keras.callbacks.TensorBoard` callback for logging training information, a `jidenn.callbacks.LogCallback.LogCallback` callback for logging training information, a `jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint` callback for saving model checkpoints, and a `tf.keras.callbacks.BackupAndRestore` callback for saving backups of the training session.
@@ -321,7 +327,8 @@ def get_callbacks(base_logdir: str,
 
     if backup is not None:
         os.makedirs(os.path.join(base_logdir, backup), exist_ok=True)
-        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(base_logdir, backup))
+        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(
+            base_logdir, backup), delete_checkpoint=False, save_freq=backup_freq if backup_freq is not None else &#34;epoch&#34;)
         callbacks.append(backup_callback)
 
     return callbacks</code></pre>

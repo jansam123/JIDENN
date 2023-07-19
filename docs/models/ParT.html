@@ -579,7 +579,7 @@ class ParTModel(tf.keras.Model):
                 raise ValueError(&#34;preprocess must be a single layer when the input is a single tensor.&#34;)
             hidden = preprocess(hidden)
 
-        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
+        hidden = FCEmbedding(embed_dim, embed_layers, activation)(hidden)
 
         transformed = ParT(dim=embed_dim,
                            self_attn_layers=self_attn_layers,
@@ -1881,7 +1881,7 @@ each creating a separate input layer.</dd>
                 raise ValueError(&#34;preprocess must be a single layer when the input is a single tensor.&#34;)
             hidden = preprocess(hidden)
 
-        hidden = FCEmbedding(embedding_dim, num_embeding_layers, activation)(hidden)
+        hidden = FCEmbedding(embed_dim, embed_layers, activation)(hidden)
 
         transformed = ParT(dim=embed_dim,
                            self_attn_layers=self_attn_layers,

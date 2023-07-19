@@ -85,9 +85,12 @@ class FFN(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
 
-        self.wide_dense = tf.keras.layers.Dense(int(dim * expansion * 2 / 3), activation=activation, use_bias=False)
-        self.gate_dense = tf.keras.layers.Dense(int(dim * expansion * 2 / 3), activation=None, use_bias=False)
-        self.dense = tf.keras.layers.Dense(dim, activation=None, use_bias=False)
+        self.wide_dense = tf.keras.layers.Dense(
+            int(dim * expansion * 2 / 3), activation=activation, use_bias=False)
+        self.gate_dense = tf.keras.layers.Dense(
+            int(dim * expansion * 2 / 3), activation=None, use_bias=False)
+        self.dense = tf.keras.layers.Dense(
+            dim, activation=None, use_bias=False)
         self.ln = tf.keras.layers.LayerNormalization()
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
@@ -228,17 +231,23 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
         q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
 
-        attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
+        attention_weights = tf.linalg.matmul(
+            q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
 
-        attention_weights = self.linear_talking_1(tf.transpose(attention_weights, [0, 2, 3, 1]))  # (B, N, N, H)
-        attention_weights = tf.transpose(attention_weights, [0, 3, 1, 2])  # (B, H, N, N)
+        attention_weights = self.linear_talking_1(tf.transpose(
+            attention_weights, [0, 2, 3, 1]))  # (B, N, N, H)
+        attention_weights = tf.transpose(
+            attention_weights, [0, 3, 1, 2])  # (B, H, N, N)
 
         if interaction is not None:
-            interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
+            interaction = tf.transpose(
+                interaction, [0, 3, 1, 2])  # (B, H, N, N)
             attention_weights += interaction
 
-        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
-        attention = self.linear_talking_2(tf.transpose(attention, [0, 2, 3, 1]))  # (B, N, N, H)
+        attention = tf.keras.layers.Softmax()(
+            attention_weights, mask=mask)  # (B, H, N, N)
+        attention = self.linear_talking_2(tf.transpose(
+            attention, [0, 2, 3, 1]))  # (B, N, N, H)
         attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, N, N)
         attention = self.attn_drop(attention, training)  # (B, H, N, N)
 
@@ -305,13 +314,18 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
         q = self.linear_q(class_token)  # (B, 1, C)
         q = tf.reshape(q, [B, self.heads, 1, C // self.heads])  # (B, H, 1, C // H)
 
-        attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
+        attention_weights = tf.linalg.matmul(
+            q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
 
-        attention_weights = self.linear_talking_1(tf.transpose(attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
-        attention_weights = tf.transpose(attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
-
-        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, 1, N)
-        attention = self.linear_talking_2(tf.transpose(attention, [0, 2, 3, 1]))  # (B, 1, N, H)
+        attention_weights = self.linear_talking_1(tf.transpose(
+            attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
+        attention_weights = tf.transpose(
+            attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
+        mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
+        attention = tf.keras.layers.Softmax()(
+            attention_weights, mask=mask)  # (B, H, 1, N)
+        attention = self.linear_talking_2(tf.transpose(
+            attention, [0, 2, 3, 1]))  # (B, 1, N, H)
         attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, 1, N)
         attention = self.attn_drop(attention, training)  # (B, H, 1, N)
 
@@ -338,14 +352,16 @@ class MultiheadClassAttention(tf.keras.layers.Layer):
     def __init__(self, dim: int, heads: int, dropout: Optional[float] = None):
         super().__init__()
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads, dropout=dropout)
+        self.mha = tf.keras.layers.MultiHeadAttention(
+            key_dim=dim // heads, num_heads=heads, dropout=dropout)
 
     def get_config(self):
         config = super(MultiheadClassAttention, self).get_config()
-        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads,
+                      &#34;dropout&#34;: self.dropout})
         return config
 
-    def call(self, query, inputs, mask):
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
         &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
 
         Args:
@@ -357,7 +373,8 @@ class MultiheadClassAttention(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, 1, dim)`
         &#34;&#34;&#34;
-        output = self.mha(query=query, value=inputs, key=inputs, attention_mask=mask)
+        output = self.mha(query=class_token, value=inputs,
+                          key=inputs, attention_mask=mask)
         return output
 
 
@@ -485,7 +502,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         &#34;&#34;&#34;
         attented = tf.concat([class_token, inputs], axis=1)
         attented = self.pre_mhca_ln(attented)
-        attented = self.mhca(query=class_token, inputs=attented, mask=mask)
+        attented = self.mhca(class_token=class_token, inputs=attented, mask=mask)
         attented = self.post_mhca_scale(attented)
         attented = self.post_mhca_stoch_depth(attented)
         attented = attented + class_token
@@ -556,7 +573,7 @@ class DeParT(tf.keras.layers.Layer):
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
 
-        self.cls_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
 
     def stochastic_prob(self, step, total_steps, drop_rate):
         return drop_rate * step / total_steps
@@ -582,17 +599,20 @@ class DeParT(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         &#34;&#34;&#34;
-        sa_mask = mask[:, tf.newaxis, tf.newaxis, :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
+        sa_mask = mask[:, tf.newaxis, tf.newaxis,
+                       :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
         hidden = inputs
         for layer in self.sa_layers:
             hidden = layer(hidden, sa_mask, interaction)
 
-        cls_token = tf.tile(self.cls_token, (tf.shape(inputs)[0], 1, 1))
+        class_token = tf.tile(self.class_token, (tf.shape(inputs)[0], 1, 1))
         class_mask = mask[:, tf.newaxis, :]
-        class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
+        class_mask = tf.concat(
+            [tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
         for layer in self.ca_layers:
-            cls_token = layer(hidden, cls_token=cls_token, mask=class_mask)
-        return cls_token
+            class_token = layer(
+                hidden, class_token=class_token, mask=class_mask)
+        return class_token
 
 
 class FCEmbedding(tf.keras.layers.Layer):
@@ -613,7 +633,8 @@ class FCEmbedding(tf.keras.layers.Layer):
 
     def get_config(self):
         config = super(FCEmbedding, self).get_config()
-        config.update({name: getattr(self, name) for name in [&#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
+        config.update({name: getattr(self, name) for name in [
+                      &#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
         return config
 
     def call(self, inputs):
@@ -650,9 +671,11 @@ class CNNEmbedding(tf.keras.layers.Layer):
         super().__init__()
         self.activation, self.num_layers, self.layer_size, self.out_dim = activation, num_layers, layer_size, out_dim
 
-        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers = [tf.keras.layers.Conv1D(
+            layer_size, 1) for _ in range(num_layers)]
         self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
-        self.normlizations = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
+        self.normlizations = [tf.keras.layers.BatchNormalization()
+                              for _ in range(num_layers + 1)]
         self.activation_layer = tf.keras.layers.Activation(activation)
 
     def get_config(self):
@@ -676,7 +699,8 @@ class CNNEmbedding(tf.keras.layers.Layer):
         upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
         diag_mask = tf.linalg.band_part(ones, 0, 0)
         upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
-        flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+        flattened_upper_triag = tf.boolean_mask(
+            inputs, upper_tril_mask, axis=1)
 
         hidden = flattened_upper_triag
         for conv, norm in zip(self.conv_layers, self.normlizations):
@@ -773,7 +797,8 @@ class DeParTModel(tf.keras.Model):
 
                 preprocess, interaction_preprocess = preprocess
                 if interaction_preprocess is not None:
-                    interaction_hidden = interaction_preprocess(interaction_hidden)
+                    interaction_hidden = interaction_preprocess(
+                        interaction_hidden)
 
             if interaction_embed_layers is None or interaction_embed_layer_size is None:
                 raise ValueError(
@@ -793,7 +818,8 @@ class DeParTModel(tf.keras.Model):
 
         if preprocess is not None:
             if isinstance(preprocess, tuple):
-                raise ValueError(&#34;preprocess must be a single layer when the input is a single tensor.&#34;)
+                raise ValueError(
+                    &#34;preprocess must be a single layer when the input is a single tensor.&#34;)
             hidden = preprocess(hidden)
 
         hidden = FCEmbedding(embed_dim, embed_layers, activation)(hidden)
@@ -810,7 +836,8 @@ class DeParTModel(tf.keras.Model):
                              stochastic_depth_drop_rate=stochastic_depth_drop_rate,
                              class_stochastic_depth_drop_rate=class_stochastic_depth_drop_rate)(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction)
 
-        transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
+        transformed = tf.keras.layers.LayerNormalization()(
+            transformed[:, 0, :])
         output = output_layer(transformed)
 
         super().__init__(inputs=input, outputs=output)</code></pre>
@@ -869,9 +896,11 @@ is manually appended as an extra layer after <code>num_layers</code> layers.</dd
         super().__init__()
         self.activation, self.num_layers, self.layer_size, self.out_dim = activation, num_layers, layer_size, out_dim
 
-        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers = [tf.keras.layers.Conv1D(
+            layer_size, 1) for _ in range(num_layers)]
         self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
-        self.normlizations = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
+        self.normlizations = [tf.keras.layers.BatchNormalization()
+                              for _ in range(num_layers + 1)]
         self.activation_layer = tf.keras.layers.Activation(activation)
 
     def get_config(self):
@@ -895,7 +924,8 @@ is manually appended as an extra layer after <code>num_layers</code> layers.</dd
         upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
         diag_mask = tf.linalg.band_part(ones, 0, 0)
         upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
-        flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+        flattened_upper_triag = tf.boolean_mask(
+            inputs, upper_tril_mask, axis=1)
 
         hidden = flattened_upper_triag
         for conv, norm in zip(self.conv_layers, self.normlizations):
@@ -957,7 +987,8 @@ can be used fopr embedding. </dd>
     upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
     diag_mask = tf.linalg.band_part(ones, 0, 0)
     upper_tril_mask = tf.cast(upper_tril_mask - diag_mask, tf.bool)
-    flattened_upper_triag = tf.boolean_mask(inputs, upper_tril_mask, axis=1)
+    flattened_upper_triag = tf.boolean_mask(
+        inputs, upper_tril_mask, axis=1)
 
     hidden = flattened_upper_triag
     for conv, norm in zip(self.conv_layers, self.normlizations):
@@ -1090,7 +1121,7 @@ the dimension of the feed-forward network is <code>dim * expansion</code></dd>
         &#34;&#34;&#34;
         attented = tf.concat([class_token, inputs], axis=1)
         attented = self.pre_mhca_ln(attented)
-        attented = self.mhca(query=class_token, inputs=attented, mask=mask)
+        attented = self.mhca(class_token=class_token, inputs=attented, mask=mask)
         attented = self.post_mhca_scale(attented)
         attented = self.post_mhca_stoch_depth(attented)
         attented = attented + class_token
@@ -1156,7 +1187,7 @@ tf.RaggedTensor is converted to tf.Tensor.</dd>
     &#34;&#34;&#34;
     attented = tf.concat([class_token, inputs], axis=1)
     attented = self.pre_mhca_ln(attented)
-    attented = self.mhca(query=class_token, inputs=attented, mask=mask)
+    attented = self.mhca(class_token=class_token, inputs=attented, mask=mask)
     attented = self.post_mhca_scale(attented)
     attented = self.post_mhca_stoch_depth(attented)
     attented = attented + class_token
@@ -1293,7 +1324,7 @@ using the ClassAttentionBlock.</p>
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
 
-        self.cls_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
 
     def stochastic_prob(self, step, total_steps, drop_rate):
         return drop_rate * step / total_steps
@@ -1319,17 +1350,20 @@ using the ClassAttentionBlock.</p>
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         &#34;&#34;&#34;
-        sa_mask = mask[:, tf.newaxis, tf.newaxis, :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
+        sa_mask = mask[:, tf.newaxis, tf.newaxis,
+                       :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
         hidden = inputs
         for layer in self.sa_layers:
             hidden = layer(hidden, sa_mask, interaction)
 
-        cls_token = tf.tile(self.cls_token, (tf.shape(inputs)[0], 1, 1))
+        class_token = tf.tile(self.class_token, (tf.shape(inputs)[0], 1, 1))
         class_mask = mask[:, tf.newaxis, :]
-        class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
+        class_mask = tf.concat(
+            [tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
         for layer in self.ca_layers:
-            cls_token = layer(hidden, cls_token=cls_token, mask=class_mask)
-        return cls_token</code></pre>
+            class_token = layer(
+                hidden, class_token=class_token, mask=class_mask)
+        return class_token</code></pre>
 </details>
 <h3>Ancestors</h3>
 <ul class="hlist">
@@ -1381,17 +1415,20 @@ is calculated, which is used to mask out the attention of padding particles, gen
     Returns:
         tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
     &#34;&#34;&#34;
-    sa_mask = mask[:, tf.newaxis, tf.newaxis, :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
+    sa_mask = mask[:, tf.newaxis, tf.newaxis,
+                   :] &amp; mask[:, tf.newaxis, :, tf.newaxis]
     hidden = inputs
     for layer in self.sa_layers:
         hidden = layer(hidden, sa_mask, interaction)
 
-    cls_token = tf.tile(self.cls_token, (tf.shape(inputs)[0], 1, 1))
+    class_token = tf.tile(self.class_token, (tf.shape(inputs)[0], 1, 1))
     class_mask = mask[:, tf.newaxis, :]
-    class_mask = tf.concat([tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
+    class_mask = tf.concat(
+        [tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
     for layer in self.ca_layers:
-        cls_token = layer(hidden, cls_token=cls_token, mask=class_mask)
-    return cls_token</code></pre>
+        class_token = layer(
+            hidden, class_token=class_token, mask=class_mask)
+    return class_token</code></pre>
 </details>
 </dd>
 <dt id="jidenn.models.DeParT.DeParT.get_config"><code class="name flex">
@@ -1581,7 +1618,8 @@ each creating a separate input layer.</dd>
 
                 preprocess, interaction_preprocess = preprocess
                 if interaction_preprocess is not None:
-                    interaction_hidden = interaction_preprocess(interaction_hidden)
+                    interaction_hidden = interaction_preprocess(
+                        interaction_hidden)
 
             if interaction_embed_layers is None or interaction_embed_layer_size is None:
                 raise ValueError(
@@ -1601,7 +1639,8 @@ each creating a separate input layer.</dd>
 
         if preprocess is not None:
             if isinstance(preprocess, tuple):
-                raise ValueError(&#34;preprocess must be a single layer when the input is a single tensor.&#34;)
+                raise ValueError(
+                    &#34;preprocess must be a single layer when the input is a single tensor.&#34;)
             hidden = preprocess(hidden)
 
         hidden = FCEmbedding(embed_dim, embed_layers, activation)(hidden)
@@ -1618,7 +1657,8 @@ each creating a separate input layer.</dd>
                              stochastic_depth_drop_rate=stochastic_depth_drop_rate,
                              class_stochastic_depth_drop_rate=class_stochastic_depth_drop_rate)(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction)
 
-        transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
+        transformed = tf.keras.layers.LayerNormalization()(
+            transformed[:, 0, :])
         output = output_layer(transformed)
 
         super().__init__(inputs=input, outputs=output)</code></pre>
@@ -1670,7 +1710,8 @@ each creating a separate input layer.</dd>
 
     def get_config(self):
         config = super(FCEmbedding, self).get_config()
-        config.update({name: getattr(self, name) for name in [&#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
+        config.update({name: getattr(self, name) for name in [
+                      &#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
         return config
 
     def call(self, inputs):
@@ -1754,7 +1795,8 @@ returned dict if they want to modify it.</p>
 </summary>
 <pre><code class="python">def get_config(self):
     config = super(FCEmbedding, self).get_config()
-    config.update({name: getattr(self, name) for name in [&#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
+    config.update({name: getattr(self, name) for name in [
+                  &#34;embedding_dim&#34;, &#34;num_embeding_layers&#34;, &#34;activation&#34;]})
     return config</code></pre>
 </details>
 </dd>
@@ -1805,9 +1847,12 @@ hidden layer is the same dimension. </p>
         super().__init__()
         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
 
-        self.wide_dense = tf.keras.layers.Dense(int(dim * expansion * 2 / 3), activation=activation, use_bias=False)
-        self.gate_dense = tf.keras.layers.Dense(int(dim * expansion * 2 / 3), activation=None, use_bias=False)
-        self.dense = tf.keras.layers.Dense(dim, activation=None, use_bias=False)
+        self.wide_dense = tf.keras.layers.Dense(
+            int(dim * expansion * 2 / 3), activation=activation, use_bias=False)
+        self.gate_dense = tf.keras.layers.Dense(
+            int(dim * expansion * 2 / 3), activation=None, use_bias=False)
+        self.dense = tf.keras.layers.Dense(
+            dim, activation=None, use_bias=False)
         self.ln = tf.keras.layers.LayerNormalization()
         self.layer_dropout = tf.keras.layers.Dropout(dropout)
 
@@ -2036,14 +2081,16 @@ as the query.</p>
     def __init__(self, dim: int, heads: int, dropout: Optional[float] = None):
         super().__init__()
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads, dropout=dropout)
+        self.mha = tf.keras.layers.MultiHeadAttention(
+            key_dim=dim // heads, num_heads=heads, dropout=dropout)
 
     def get_config(self):
         config = super(MultiheadClassAttention, self).get_config()
-        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+        config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads,
+                      &#34;dropout&#34;: self.dropout})
         return config
 
-    def call(self, query, inputs, mask):
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
         &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
 
         Args:
@@ -2055,7 +2102,8 @@ as the query.</p>
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, 1, dim)`
         &#34;&#34;&#34;
-        output = self.mha(query=query, value=inputs, key=inputs, attention_mask=mask)
+        output = self.mha(query=class_token, value=inputs,
+                          key=inputs, attention_mask=mask)
         return output</code></pre>
 </details>
 <h3>Ancestors</h3>
@@ -2069,7 +2117,7 @@ as the query.</p>
 <h3>Methods</h3>
 <dl>
 <dt id="jidenn.models.DeParT.MultiheadClassAttention.call"><code class="name flex">
-<span>def <span class="ident">call</span></span>(<span>self, query, inputs, mask)</span>
+<span>def <span class="ident">call</span></span>(<span>self, inputs: tensorflow.python.framework.ops.Tensor, class_token: tensorflow.python.framework.ops.Tensor, mask: tensorflow.python.framework.ops.Tensor) ‑> tensorflow.python.framework.ops.Tensor</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Forward pass of the multi-head self-attention layer</p>
@@ -2093,7 +2141,7 @@ tf.RaggedTensor is converted to tf.Tensor.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def call(self, query, inputs, mask):
+<pre><code class="python">def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -&gt; tf.Tensor:
     &#34;&#34;&#34;Forward pass of the multi-head self-attention layer
 
     Args:
@@ -2105,7 +2153,8 @@ tf.RaggedTensor is converted to tf.Tensor.</dd>
     Returns:
         tf.Tensor: output tensor of shape `(batch_size, 1, dim)`
     &#34;&#34;&#34;
-    output = self.mha(query=query, value=inputs, key=inputs, attention_mask=mask)
+    output = self.mha(query=class_token, value=inputs,
+                      key=inputs, attention_mask=mask)
     return output</code></pre>
 </details>
 </dd>
@@ -2132,7 +2181,8 @@ returned dict if they want to modify it.</p>
 </summary>
 <pre><code class="python">def get_config(self):
     config = super(MultiheadClassAttention, self).get_config()
-    config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads, &#34;dropout&#34;: self.dropout})
+    config.update({&#34;dim&#34;: self.dim, &#34;heads&#34;: self.heads,
+                  &#34;dropout&#34;: self.dropout})
     return config</code></pre>
 </details>
 </dd>
@@ -2509,13 +2559,18 @@ includes the talking heads mechanism.</p>
         q = self.linear_q(class_token)  # (B, 1, C)
         q = tf.reshape(q, [B, self.heads, 1, C // self.heads])  # (B, H, 1, C // H)
 
-        attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
+        attention_weights = tf.linalg.matmul(
+            q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
 
-        attention_weights = self.linear_talking_1(tf.transpose(attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
-        attention_weights = tf.transpose(attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
-
-        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, 1, N)
-        attention = self.linear_talking_2(tf.transpose(attention, [0, 2, 3, 1]))  # (B, 1, N, H)
+        attention_weights = self.linear_talking_1(tf.transpose(
+            attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
+        attention_weights = tf.transpose(
+            attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
+        mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
+        attention = tf.keras.layers.Softmax()(
+            attention_weights, mask=mask)  # (B, H, 1, N)
+        attention = self.linear_talking_2(tf.transpose(
+            attention, [0, 2, 3, 1]))  # (B, 1, N, H)
         attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, 1, N)
         attention = self.attn_drop(attention, training)  # (B, H, 1, N)
 
@@ -2587,13 +2642,18 @@ tf.RaggedTensor is converted to tf.Tensor.</dd>
     q = self.linear_q(class_token)  # (B, 1, C)
     q = tf.reshape(q, [B, self.heads, 1, C // self.heads])  # (B, H, 1, C // H)
 
-    attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
+    attention_weights = tf.linalg.matmul(
+        q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
 
-    attention_weights = self.linear_talking_1(tf.transpose(attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
-    attention_weights = tf.transpose(attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
-
-    attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, 1, N)
-    attention = self.linear_talking_2(tf.transpose(attention, [0, 2, 3, 1]))  # (B, 1, N, H)
+    attention_weights = self.linear_talking_1(tf.transpose(
+        attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
+    attention_weights = tf.transpose(
+        attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
+    mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
+    attention = tf.keras.layers.Softmax()(
+        attention_weights, mask=mask)  # (B, H, 1, N)
+    attention = self.linear_talking_2(tf.transpose(
+        attention, [0, 2, 3, 1]))  # (B, 1, N, H)
     attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, 1, N)
     attention = self.attn_drop(attention, training)  # (B, H, 1, N)
 
@@ -2706,17 +2766,23 @@ includes the interaction variables and the talking heads mechanism.</p>
         qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
         q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
 
-        attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
+        attention_weights = tf.linalg.matmul(
+            q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
 
-        attention_weights = self.linear_talking_1(tf.transpose(attention_weights, [0, 2, 3, 1]))  # (B, N, N, H)
-        attention_weights = tf.transpose(attention_weights, [0, 3, 1, 2])  # (B, H, N, N)
+        attention_weights = self.linear_talking_1(tf.transpose(
+            attention_weights, [0, 2, 3, 1]))  # (B, N, N, H)
+        attention_weights = tf.transpose(
+            attention_weights, [0, 3, 1, 2])  # (B, H, N, N)
 
         if interaction is not None:
-            interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
+            interaction = tf.transpose(
+                interaction, [0, 3, 1, 2])  # (B, H, N, N)
             attention_weights += interaction
 
-        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
-        attention = self.linear_talking_2(tf.transpose(attention, [0, 2, 3, 1]))  # (B, N, N, H)
+        attention = tf.keras.layers.Softmax()(
+            attention_weights, mask=mask)  # (B, H, N, N)
+        attention = self.linear_talking_2(tf.transpose(
+            attention, [0, 2, 3, 1]))  # (B, N, N, H)
         attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, N, N)
         attention = self.attn_drop(attention, training)  # (B, H, N, N)
 
@@ -2785,17 +2851,23 @@ tf.RaggedTensor is converted to tf.Tensor.</dd>
     qkv = tf.transpose(qkv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
     q, k, v = qkv[0], qkv[1], qkv[2]  # 3 x (B, H, N, C // H)
 
-    attention_weights = tf.linalg.matmul(q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
+    attention_weights = tf.linalg.matmul(
+        q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, N, N)
 
-    attention_weights = self.linear_talking_1(tf.transpose(attention_weights, [0, 2, 3, 1]))  # (B, N, N, H)
-    attention_weights = tf.transpose(attention_weights, [0, 3, 1, 2])  # (B, H, N, N)
+    attention_weights = self.linear_talking_1(tf.transpose(
+        attention_weights, [0, 2, 3, 1]))  # (B, N, N, H)
+    attention_weights = tf.transpose(
+        attention_weights, [0, 3, 1, 2])  # (B, H, N, N)
 
     if interaction is not None:
-        interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
+        interaction = tf.transpose(
+            interaction, [0, 3, 1, 2])  # (B, H, N, N)
         attention_weights += interaction
 
-    attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
-    attention = self.linear_talking_2(tf.transpose(attention, [0, 2, 3, 1]))  # (B, N, N, H)
+    attention = tf.keras.layers.Softmax()(
+        attention_weights, mask=mask)  # (B, H, N, N)
+    attention = self.linear_talking_2(tf.transpose(
+        attention, [0, 2, 3, 1]))  # (B, N, N, H)
     attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, N, N)
     attention = self.attn_drop(attention, training)  # (B, H, N, N)
 
