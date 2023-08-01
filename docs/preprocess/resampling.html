@@ -1,0 +1,1049 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>jidenn.preprocess.resampling API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+<link rel="canonical" href="http://jansam.wieno.sk/JIDENN/jidenn/preprocess/resampling.html">
+<link rel="icon" href="images/q_g_tagging.jpeg">
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>jidenn.preprocess.resampling</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import tensorflow as tf
+import numpy as np
+from typing import Callable, List, Tuple, Union, Optional
+
+ROOTVariables = dict[str, Union[tf.Tensor, tf.RaggedTensor]]
+
+
+@tf.function
+def take_second(x, y):
+    return y
+
+@tf.function
+def take_first(x, y):
+    return x
+
+def get_bin_fn(bins: Union[int, List[float]] = 100,
+               lower_var_limit: int = 60_000,
+               upper_var_limit: int = 5_600_000,
+               log_binning_base: Optional[Union[int, float]] = None,
+               variable: str = &#39;jets_pt&#39;) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that returns the bin index of a variable. The intended use is to use this function
+    with tf.data.Dataset.rejection_resample() to resample a dataset to a target distribution.
+
+    Args:
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (int, optional): The lower limit of the variable. Defaults to 60_000.
+        upper_var_limit (int, optional): The upper limit of the variable. Defaults to 5_600_000.
+        variable (str, optional): Variable to bin. Defaults to &#39;jets_pt&#39;.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that returns the bin index of a variable.
+    &#34;&#34;&#34;
+    
+    if log_binning_base is not None and isinstance(bins, int):
+        bin_edges =  np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
+        bin_edges = tf.constant(bin_edges, dtype=tf.float32)
+    elif isinstance(bins, int):
+        lower_var_limit_casted = tf.cast(lower_var_limit, dtype=tf.float32)
+        upper_var_limit_casted = tf.cast(upper_var_limit, dtype=tf.float32)
+        bin_edges = tf.linspace(lower_var_limit_casted, upper_var_limit_casted, bins + 1)
+    else:
+        bin_edges = tf.constant(bins, dtype=tf.float32)
+        
+    @tf.function
+    def _rebin(data: ROOTVariables) -&gt; tf.Tensor:
+        var = data[variable]
+        var = tf.reshape(var, (1, ))
+        bin_indices = tf.searchsorted(bin_edges, var, side=&#39;right&#39;) - 1
+        bin_indices = tf.where(bin_indices &lt; 0, 0, bin_indices)
+        bin_indices = tf.clip_by_value(bin_indices, 0, len(bin_edges) - 2)
+        bin_indices = tf.squeeze(bin_indices)
+        return bin_indices
+    return _rebin
+
+
+def resample_dataset(dataset: tf.data.Dataset,
+                     bins: int = 100,
+                     lower_var_limit: int = 60_000,
+                     upper_var_limit: int = 5_600_000,
+                     variable: str = &#39;jets_pt&#39;,
+                     log_binning_base: Optional[Union[int, float]] = None,
+                     target_dist: Optional[List[int]] = None,
+                     precompute_init_dist: Optional[bool] = False) -&gt; tf.data.Dataset:
+    &#34;&#34;&#34;Resample a dataset to a target distribution. 
+
+    Args:
+        dataset (tf.data.Dataset): The dataset to resample.
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (int, optional): The lower limit of the binned variable (the lowest bin). 
+            Defaults to 60_000.
+        upper_var_limit (int, optional): The upper limit of the binned variable (the highest bin).
+            Defaults to 5_600_000.
+        variable (str, optional): Variable to bin. Defaults to &#39;jets_pt&#39;.
+        target_dist (Optional[List[int]], optional): The target distribution. If None, a uniform distribution
+            is used. Defaults to None. It must have the same length as the number of bins.
+
+    Returns:
+        tf.data.Dataset: The resampled dataset.
+    &#34;&#34;&#34;
+
+    dist = [1 / bins] * bins if target_dist is None else target_dist
+    
+    if target_dist is None and precompute_init_dist: 
+        initial_dist = dataset.map(get_bin_fn(bins=bins,
+                                            lower_var_limit=lower_var_limit,
+                                            upper_var_limit=upper_var_limit,
+                                            log_binning_base=log_binning_base,
+                                            variable=variable))
+        
+        initial_dist = initial_dist.reduce(tf.zeros(bins, dtype=tf.int64), lambda x, y: x + tf.one_hot(y, bins, dtype=tf.int64))
+        initial_dist = tf.cast(initial_dist, dtype=tf.float64)
+        initial_dist = initial_dist / tf.reduce_sum(initial_dist)
+        # initial_dist = tf.squeeze(initial_dist)
+        print(initial_dist)
+    else:
+        initial_dist = None
+    
+    
+    dataset = dataset.rejection_resample(get_bin_fn(bins=bins,
+                                                    lower_var_limit=lower_var_limit,
+                                                    log_binning_base=log_binning_base,
+                                                    upper_var_limit=upper_var_limit,
+                                                    variable=variable), target_dist=dist, initial_dist=initial_dist)
+    return dataset.map(take_second)
+
+
+def get_label_bin_fn(bins: int = 100,
+                     lower_var_limit: Union[int, float] = 60_000,
+                     upper_var_limit: Union[int, float] = 5_600_000,
+                     variable: str = &#39;jets_pt&#39;,
+                     label_variable: str = &#39;jets_PartonTruthLabelID&#39;,
+                     label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                     log_binning_base: Optional[Union[int, float]] = None,
+                     label_class_2: List[int] = [21]) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that returns the bin index of a data sample based on the value of the binned 
+    variable and the label. The intended use is to use this function with tf.data.Dataset.rejection_resample()
+    to resample a dataset to a target distribution.
+
+
+    Args:
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (Union[int, float], optional): The lower limit of the binned variable (the lowest bin). 
+            Defaults to 60_000.
+        upper_var_limit (Union[int, float], optional): The upper limit of the binned variable (the highest bin).
+            Defaults to 5_600_000.
+        variable (str, optional): Name of the variable to bin. Defaults to &#39;jets_pt&#39;.
+        label_variable (str, optional): Name of the label variable. Defaults to &#39;jets_PartonTruthLabelID&#39;.
+        label_class_1 (List[int], optional): Values of the label variable that correspond to the first class.
+            The values will be regarded as the same class. Defaults to [1, 2, 3, 4, 5, 6].
+        label_class_2 (List[int], optional): Values of the label variable that correspond to the second class.
+            The values will be regarded as the same class. Defaults to [21].
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: _description_
+    &#34;&#34;&#34;
+    if log_binning_base is not None and isinstance(bins, int):
+        bin_edges =  np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
+        bin_edges = tf.constant(bin_edges, dtype=tf.float32)
+    elif isinstance(bins, int):
+        lower_var_limit_casted = tf.cast(lower_var_limit, dtype=tf.float32)
+        upper_var_limit_casted = tf.cast(upper_var_limit, dtype=tf.float32)
+        bin_edges = tf.linspace(lower_var_limit_casted, upper_var_limit_casted, bins + 1)
+    else:
+        bin_edges = tf.constant(bins, dtype=tf.float32)
+        
+    n_bins = len(bin_edges) - 1
+        
+    @tf.function
+    def _rebin(data: ROOTVariables) -&gt; tf.Tensor:
+        var = data[variable]
+        label = data[label_variable]
+        var = tf.reshape(var, (1, ))
+        bin_indices = tf.searchsorted(bin_edges, var, side=&#39;right&#39;) - 1
+        # bin_indices = tf.where(bin_indices &lt; 0, 0, bin_indices)
+        bin_indices = tf.clip_by_value(bin_indices, 0, n_bins - 1)
+        bin_indices = tf.squeeze(bin_indices)
+        if tf.reduce_any(tf.equal(label, tf.constant(label_class_1, dtype=label.dtype))):
+            return bin_indices
+        elif tf.reduce_any(tf.equal(label, tf.constant(label_class_2, dtype=label.dtype))):
+            return bin_indices + n_bins
+        else:
+            return tf.constant(0, dtype=tf.int32)
+    return _rebin
+
+
+def rasample_from_min_bin_count(dataset: tf.data.Dataset,
+                                bin_fn: Callable[[ROOTVariables], tf.Tensor],
+                                min_bin_count: int,
+                                bins: int = 100,) -&gt; tf.data.Dataset:
+    
+    @tf.function
+    def assign_if_filter_fn(state, x):
+        bin_idx = bin_fn(x)
+        state = state + tf.one_hot(bin_idx, bins, dtype=tf.int64)
+        return state, (x, tf.greater(min_bin_count, state[bin_idx]))
+
+    dataset = dataset.scan(tf.zeros((bins), dtype=tf.int64), assign_if_filter_fn)
+    dataset = dataset.filter(take_second).map(take_first)
+    
+    return dataset
+                                
+
+
+def resample_with_labels_dataset(dataset: tf.data.Dataset,
+                                 bins: int = 100,
+                                 lower_var_limit: int = 60_000,
+                                 upper_var_limit: int = 5_600_000,
+                                 variable: str = &#39;jets_pt&#39;,
+                                 label_variable: str = &#39;jets_PartonTruthLabelID&#39;,
+                                 label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                                 label_class_2: List[int] = [21],
+                                 target_dist: Optional[List[int]] = None,
+                                 log_binning_base: Optional[Union[int, float]] = None,
+                                 precompute_init_dist: Optional[bool] = False,
+                                 from_min_count: bool = False) -&gt; tf.data.Dataset:
+    &#34;&#34;&#34;Resample a dataset to a target distribution based on the value of the label variable and the binned variable.
+
+
+    Args:
+        dataset (tf.data.Dataset): The dataset to resample.
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (Union[int, float], optional): The lower limit of the binned variable (the lowest bin). 
+            Defaults to 60_000.
+        upper_var_limit (Union[int, float], optional): The upper limit of the binned variable (the highest bin).
+            Defaults to 5_600_000.
+        variable (str, optional): Name of the variable to bin. Defaults to &#39;jets_pt&#39;.
+        label_variable (str, optional): Name of the label variable. Defaults to &#39;jets_PartonTruthLabelID&#39;.
+        label_class_1 (List[int], optional): Values of the label variable that correspond to the first class.
+            The values will be regarded as the same class. Defaults to [1, 2, 3, 4, 5, 6].
+        label_class_2 (List[int], optional): Values of the label variable that correspond to the second class.
+            The values will be regarded as the same class. Defaults to [21].
+        target_dist (Optional[List[int]], optional): The target distribution. If None, a uniform distribution
+            is used. Defaults to None. It must have the same length as the number of bins.
+
+    Returns:
+        tf.data.Dataset: The resampled dataset.
+    &#34;&#34;&#34;
+    dist = [1 / (bins * 2)] * bins * 2 if target_dist is None else target_dist
+    
+    if target_dist is None and precompute_init_dist: 
+        initial_dist = dataset.map(get_label_bin_fn(bins=bins,
+                                                            lower_var_limit=lower_var_limit,
+                                                            upper_var_limit=upper_var_limit,
+                                                            variable=variable,
+                                                            label_variable=label_variable,
+                                                            log_binning_base=log_binning_base,
+                                                            label_class_1=label_class_1,
+                                                            label_class_2=label_class_2))
+        initial_dist = initial_dist.reduce(tf.zeros((bins * 2), dtype=tf.int64), lambda x, y: x + tf.one_hot(y, bins * 2, dtype=tf.int64))
+        min_count = tf.reduce_min(initial_dist).numpy()
+        min_count = tf.cast(min_count, dtype=tf.int64)
+        initial_dist = tf.cast(initial_dist, dtype=tf.float64)
+        print(f&#39;Min count: {min_count:,}&#39;)
+        print(f&#39;Estimated number of samples: {min_count * bins * 2:,}&#39;)
+        initial_dist = initial_dist / tf.reduce_sum(initial_dist)
+        print(initial_dist)
+    else:
+        initial_dist = None
+        
+    label_bin_fn = get_label_bin_fn(bins=bins,
+                                    lower_var_limit=lower_var_limit,
+                                    upper_var_limit=upper_var_limit,
+                                    variable=variable,
+                                    log_binning_base=log_binning_base,
+                                    label_variable=label_variable,
+                                    label_class_1=label_class_1,
+                                    label_class_2=label_class_2)
+        
+    if from_min_count:
+        return rasample_from_min_bin_count(dataset, label_bin_fn, min_bin_count=min_count, bins=bins * 2)
+    else:
+        dataset = dataset.rejection_resample(label_bin_fn, target_dist=dist, initial_dist=initial_dist)
+        return dataset.map(take_second)
+
+
+def write_new_variable(variable_value: int, variable_name: str = &#39;JZ_slice&#39;) -&gt; Callable[[ROOTVariables], ROOTVariables]:
+    &#34;&#34;&#34;Get a function that writes a new variable to a dataset. The intended use is to use this function
+    with tf.data.Dataset.map() to add a new variable to a dataset. The value is the same for all samples.
+
+    Args:
+        variable_value (int): The value of the new variable.
+        variable_name (str, optional): The name of the new variable. Defaults to &#39;JZ_slice&#39;.
+
+    Returns:
+        Callable[[ROOTVariables], ROOTVariables]: Function that writes a new variable to a dataset.
+    &#34;&#34;&#34;
+
+    @tf.function
+    def _write(data: ROOTVariables) -&gt; ROOTVariables:
+        new_data = data.copy()
+        new_data[variable_name] = variable_value
+        return new_data
+    return _write
+
+
+def get_label_splitting_fn(label_variable: str = &#39;jets_PartonTruthLabelID&#39;,
+                           label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                           label_class_2: List[int] = [21]) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that splits a dataset based on the value of the label variable. The intended use is to use this function
+    with tf.data.Dataset.filter() to split a dataset into two classes.
+
+    Args:
+        label_variable (str, optional): Name of the label variable. Defaults to &#39;jets_PartonTruthLabelID&#39;.
+        label_class_1 (List[int], optional): Values of the label variable that correspond to the first class.
+        label_class_2 (List[int], optional): Values of the label variable that correspond to the second class.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that splits a dataset based on the value of the label variable.
+    &#34;&#34;&#34;
+    @tf.function
+    def _split(data: ROOTVariables) -&gt; tf.Tensor:
+        label = data[label_variable]
+        if tf.reduce_any(tf.equal(label, tf.constant(label_class_1, dtype=tf.int32))):
+            return tf.constant(1, dtype=tf.int32)
+        elif tf.reduce_any(tf.equal(label, tf.constant(label_class_2, dtype=tf.int32))):
+            return tf.constant(0, dtype=tf.int32)
+        else:
+            return tf.constant(0, dtype=tf.int32)
+    return _split
+
+
+def get_cut_fn(variable: str = &#39;jets_pt&#39;, lower_limit: Optional[float] = None, upper_limit: Optional[float] = None) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that cuts a dataset based on the value of a variable. The intended use is to use this function
+    with tf.data.Dataset.filter() to cut a dataset.
+
+    Args:
+        variable (str, optional): Name of the variable to cut. Defaults to &#39;jets_pt&#39;.
+        lower_limit (Optional[float], optional): The lower limit of the variable. Defaults to None.
+        upper_limit (Optional[float], optional): The upper limit of the variable. Defaults to None.
+
+    Raises:
+        ValueError: At least one of the limits must be specified.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that cuts a dataset based on the value of a variable.
+    &#34;&#34;&#34;
+
+    if lower_limit is None and upper_limit is None:
+        raise ValueError(&#39;At least one of the limits must be specified.&#39;)
+
+    @tf.function
+    def _low_cut(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_all(data[variable] &gt; lower_limit)
+
+    @tf.function
+    def _up_cut(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_all(data[variable] &lt; upper_limit)
+
+    @tf.function
+    def _up_low_cut(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_all([data[variable] &gt; lower_limit, data[variable] &lt; upper_limit])
+
+    if lower_limit is None:
+        return _up_cut
+    elif upper_limit is None:
+        return _low_cut
+    else:
+        return _up_low_cut
+
+
+def get_filter_fn(variable: str, values: List[Union[float, int]]) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that filters a dataset based on the value of a variable. The intended use is to use this function
+    with tf.data.Dataset.filter() to filter a dataset.
+
+    Args:
+        variable (str): Name of the variable to filter.
+        values (List[Union[float, int]]): Values to keep.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that filters a dataset based on the value of a variable.
+    &#34;&#34;&#34;
+    @tf.function
+    def _filter(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_any(tf.equal(data[variable], tf.constant(values)))
+    return _filter</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="jidenn.preprocess.resampling.get_bin_fn"><code class="name flex">
+<span>def <span class="ident">get_bin_fn</span></span>(<span>bins: Union[int, List[float]] = 100, lower_var_limit: int = 60000, upper_var_limit: int = 5600000, log_binning_base: Union[int, float, ForwardRef(None)] = None, variable: str = 'jets_pt') ‑> Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], tensorflow.python.framework.ops.Tensor]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a function that returns the bin index of a variable. The intended use is to use this function
+with tf.data.Dataset.rejection_resample() to resample a dataset to a target distribution.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>n_bins</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of bins to use. Defaults to 100.</dd>
+<dt><strong><code>lower_var_limit</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The lower limit of the variable. Defaults to 60_000.</dd>
+<dt><strong><code>upper_var_limit</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The upper limit of the variable. Defaults to 5_600_000.</dd>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Variable to bin. Defaults to 'jets_pt'.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Callable[[ROOTVariables], tf.Tensor]</code></dt>
+<dd>Function that returns the bin index of a variable.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_bin_fn(bins: Union[int, List[float]] = 100,
+               lower_var_limit: int = 60_000,
+               upper_var_limit: int = 5_600_000,
+               log_binning_base: Optional[Union[int, float]] = None,
+               variable: str = &#39;jets_pt&#39;) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that returns the bin index of a variable. The intended use is to use this function
+    with tf.data.Dataset.rejection_resample() to resample a dataset to a target distribution.
+
+    Args:
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (int, optional): The lower limit of the variable. Defaults to 60_000.
+        upper_var_limit (int, optional): The upper limit of the variable. Defaults to 5_600_000.
+        variable (str, optional): Variable to bin. Defaults to &#39;jets_pt&#39;.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that returns the bin index of a variable.
+    &#34;&#34;&#34;
+    
+    if log_binning_base is not None and isinstance(bins, int):
+        bin_edges =  np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
+        bin_edges = tf.constant(bin_edges, dtype=tf.float32)
+    elif isinstance(bins, int):
+        lower_var_limit_casted = tf.cast(lower_var_limit, dtype=tf.float32)
+        upper_var_limit_casted = tf.cast(upper_var_limit, dtype=tf.float32)
+        bin_edges = tf.linspace(lower_var_limit_casted, upper_var_limit_casted, bins + 1)
+    else:
+        bin_edges = tf.constant(bins, dtype=tf.float32)
+        
+    @tf.function
+    def _rebin(data: ROOTVariables) -&gt; tf.Tensor:
+        var = data[variable]
+        var = tf.reshape(var, (1, ))
+        bin_indices = tf.searchsorted(bin_edges, var, side=&#39;right&#39;) - 1
+        bin_indices = tf.where(bin_indices &lt; 0, 0, bin_indices)
+        bin_indices = tf.clip_by_value(bin_indices, 0, len(bin_edges) - 2)
+        bin_indices = tf.squeeze(bin_indices)
+        return bin_indices
+    return _rebin</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.get_cut_fn"><code class="name flex">
+<span>def <span class="ident">get_cut_fn</span></span>(<span>variable: str = 'jets_pt', lower_limit: Optional[float] = None, upper_limit: Optional[float] = None) ‑> Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], tensorflow.python.framework.ops.Tensor]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a function that cuts a dataset based on the value of a variable. The intended use is to use this function
+with tf.data.Dataset.filter() to cut a dataset.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Name of the variable to cut. Defaults to 'jets_pt'.</dd>
+<dt><strong><code>lower_limit</code></strong> :&ensp;<code>Optional[float]</code>, optional</dt>
+<dd>The lower limit of the variable. Defaults to None.</dd>
+<dt><strong><code>upper_limit</code></strong> :&ensp;<code>Optional[float]</code>, optional</dt>
+<dd>The upper limit of the variable. Defaults to None.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>At least one of the limits must be specified.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Callable[[ROOTVariables], tf.Tensor]</code></dt>
+<dd>Function that cuts a dataset based on the value of a variable.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_cut_fn(variable: str = &#39;jets_pt&#39;, lower_limit: Optional[float] = None, upper_limit: Optional[float] = None) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that cuts a dataset based on the value of a variable. The intended use is to use this function
+    with tf.data.Dataset.filter() to cut a dataset.
+
+    Args:
+        variable (str, optional): Name of the variable to cut. Defaults to &#39;jets_pt&#39;.
+        lower_limit (Optional[float], optional): The lower limit of the variable. Defaults to None.
+        upper_limit (Optional[float], optional): The upper limit of the variable. Defaults to None.
+
+    Raises:
+        ValueError: At least one of the limits must be specified.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that cuts a dataset based on the value of a variable.
+    &#34;&#34;&#34;
+
+    if lower_limit is None and upper_limit is None:
+        raise ValueError(&#39;At least one of the limits must be specified.&#39;)
+
+    @tf.function
+    def _low_cut(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_all(data[variable] &gt; lower_limit)
+
+    @tf.function
+    def _up_cut(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_all(data[variable] &lt; upper_limit)
+
+    @tf.function
+    def _up_low_cut(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_all([data[variable] &gt; lower_limit, data[variable] &lt; upper_limit])
+
+    if lower_limit is None:
+        return _up_cut
+    elif upper_limit is None:
+        return _low_cut
+    else:
+        return _up_low_cut</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.get_filter_fn"><code class="name flex">
+<span>def <span class="ident">get_filter_fn</span></span>(<span>variable: str, values: List[Union[float, int]]) ‑> Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], tensorflow.python.framework.ops.Tensor]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a function that filters a dataset based on the value of a variable. The intended use is to use this function
+with tf.data.Dataset.filter() to filter a dataset.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the variable to filter.</dd>
+<dt><strong><code>values</code></strong> :&ensp;<code>List[Union[float, int]]</code></dt>
+<dd>Values to keep.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Callable[[ROOTVariables], tf.Tensor]</code></dt>
+<dd>Function that filters a dataset based on the value of a variable.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_filter_fn(variable: str, values: List[Union[float, int]]) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that filters a dataset based on the value of a variable. The intended use is to use this function
+    with tf.data.Dataset.filter() to filter a dataset.
+
+    Args:
+        variable (str): Name of the variable to filter.
+        values (List[Union[float, int]]): Values to keep.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that filters a dataset based on the value of a variable.
+    &#34;&#34;&#34;
+    @tf.function
+    def _filter(data: ROOTVariables) -&gt; tf.Tensor:
+        return tf.reduce_any(tf.equal(data[variable], tf.constant(values)))
+    return _filter</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.get_label_bin_fn"><code class="name flex">
+<span>def <span class="ident">get_label_bin_fn</span></span>(<span>bins: int = 100, lower_var_limit: Union[int, float] = 60000, upper_var_limit: Union[int, float] = 5600000, variable: str = 'jets_pt', label_variable: str = 'jets_PartonTruthLabelID', label_class_1: List[int] = [1, 2, 3, 4, 5, 6], log_binning_base: Union[int, float, ForwardRef(None)] = None, label_class_2: List[int] = [21]) ‑> Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], tensorflow.python.framework.ops.Tensor]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a function that returns the bin index of a data sample based on the value of the binned
+variable and the label. The intended use is to use this function with tf.data.Dataset.rejection_resample()
+to resample a dataset to a target distribution.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>n_bins</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of bins to use. Defaults to 100.</dd>
+<dt><strong><code>lower_var_limit</code></strong> :&ensp;<code>Union[int, float]</code>, optional</dt>
+<dd>The lower limit of the binned variable (the lowest bin).
+Defaults to 60_000.</dd>
+<dt><strong><code>upper_var_limit</code></strong> :&ensp;<code>Union[int, float]</code>, optional</dt>
+<dd>The upper limit of the binned variable (the highest bin).
+Defaults to 5_600_000.</dd>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Name of the variable to bin. Defaults to 'jets_pt'.</dd>
+<dt><strong><code>label_variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Name of the label variable. Defaults to 'jets_PartonTruthLabelID'.</dd>
+<dt><strong><code>label_class_1</code></strong> :&ensp;<code>List[int]</code>, optional</dt>
+<dd>Values of the label variable that correspond to the first class.
+The values will be regarded as the same class. Defaults to [1, 2, 3, 4, 5, 6].</dd>
+<dt><strong><code>label_class_2</code></strong> :&ensp;<code>List[int]</code>, optional</dt>
+<dd>Values of the label variable that correspond to the second class.
+The values will be regarded as the same class. Defaults to [21].</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Callable[[ROOTVariables], tf.Tensor]</code></dt>
+<dd><em>description</em></dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_label_bin_fn(bins: int = 100,
+                     lower_var_limit: Union[int, float] = 60_000,
+                     upper_var_limit: Union[int, float] = 5_600_000,
+                     variable: str = &#39;jets_pt&#39;,
+                     label_variable: str = &#39;jets_PartonTruthLabelID&#39;,
+                     label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                     log_binning_base: Optional[Union[int, float]] = None,
+                     label_class_2: List[int] = [21]) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that returns the bin index of a data sample based on the value of the binned 
+    variable and the label. The intended use is to use this function with tf.data.Dataset.rejection_resample()
+    to resample a dataset to a target distribution.
+
+
+    Args:
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (Union[int, float], optional): The lower limit of the binned variable (the lowest bin). 
+            Defaults to 60_000.
+        upper_var_limit (Union[int, float], optional): The upper limit of the binned variable (the highest bin).
+            Defaults to 5_600_000.
+        variable (str, optional): Name of the variable to bin. Defaults to &#39;jets_pt&#39;.
+        label_variable (str, optional): Name of the label variable. Defaults to &#39;jets_PartonTruthLabelID&#39;.
+        label_class_1 (List[int], optional): Values of the label variable that correspond to the first class.
+            The values will be regarded as the same class. Defaults to [1, 2, 3, 4, 5, 6].
+        label_class_2 (List[int], optional): Values of the label variable that correspond to the second class.
+            The values will be regarded as the same class. Defaults to [21].
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: _description_
+    &#34;&#34;&#34;
+    if log_binning_base is not None and isinstance(bins, int):
+        bin_edges =  np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
+        bin_edges = tf.constant(bin_edges, dtype=tf.float32)
+    elif isinstance(bins, int):
+        lower_var_limit_casted = tf.cast(lower_var_limit, dtype=tf.float32)
+        upper_var_limit_casted = tf.cast(upper_var_limit, dtype=tf.float32)
+        bin_edges = tf.linspace(lower_var_limit_casted, upper_var_limit_casted, bins + 1)
+    else:
+        bin_edges = tf.constant(bins, dtype=tf.float32)
+        
+    n_bins = len(bin_edges) - 1
+        
+    @tf.function
+    def _rebin(data: ROOTVariables) -&gt; tf.Tensor:
+        var = data[variable]
+        label = data[label_variable]
+        var = tf.reshape(var, (1, ))
+        bin_indices = tf.searchsorted(bin_edges, var, side=&#39;right&#39;) - 1
+        # bin_indices = tf.where(bin_indices &lt; 0, 0, bin_indices)
+        bin_indices = tf.clip_by_value(bin_indices, 0, n_bins - 1)
+        bin_indices = tf.squeeze(bin_indices)
+        if tf.reduce_any(tf.equal(label, tf.constant(label_class_1, dtype=label.dtype))):
+            return bin_indices
+        elif tf.reduce_any(tf.equal(label, tf.constant(label_class_2, dtype=label.dtype))):
+            return bin_indices + n_bins
+        else:
+            return tf.constant(0, dtype=tf.int32)
+    return _rebin</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.get_label_splitting_fn"><code class="name flex">
+<span>def <span class="ident">get_label_splitting_fn</span></span>(<span>label_variable: str = 'jets_PartonTruthLabelID', label_class_1: List[int] = [1, 2, 3, 4, 5, 6], label_class_2: List[int] = [21]) ‑> Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], tensorflow.python.framework.ops.Tensor]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a function that splits a dataset based on the value of the label variable. The intended use is to use this function
+with tf.data.Dataset.filter() to split a dataset into two classes.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>label_variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Name of the label variable. Defaults to 'jets_PartonTruthLabelID'.</dd>
+<dt><strong><code>label_class_1</code></strong> :&ensp;<code>List[int]</code>, optional</dt>
+<dd>Values of the label variable that correspond to the first class.</dd>
+<dt><strong><code>label_class_2</code></strong> :&ensp;<code>List[int]</code>, optional</dt>
+<dd>Values of the label variable that correspond to the second class.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Callable[[ROOTVariables], tf.Tensor]</code></dt>
+<dd>Function that splits a dataset based on the value of the label variable.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_label_splitting_fn(label_variable: str = &#39;jets_PartonTruthLabelID&#39;,
+                           label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                           label_class_2: List[int] = [21]) -&gt; Callable[[ROOTVariables], tf.Tensor]:
+    &#34;&#34;&#34;Get a function that splits a dataset based on the value of the label variable. The intended use is to use this function
+    with tf.data.Dataset.filter() to split a dataset into two classes.
+
+    Args:
+        label_variable (str, optional): Name of the label variable. Defaults to &#39;jets_PartonTruthLabelID&#39;.
+        label_class_1 (List[int], optional): Values of the label variable that correspond to the first class.
+        label_class_2 (List[int], optional): Values of the label variable that correspond to the second class.
+
+    Returns:
+        Callable[[ROOTVariables], tf.Tensor]: Function that splits a dataset based on the value of the label variable.
+    &#34;&#34;&#34;
+    @tf.function
+    def _split(data: ROOTVariables) -&gt; tf.Tensor:
+        label = data[label_variable]
+        if tf.reduce_any(tf.equal(label, tf.constant(label_class_1, dtype=tf.int32))):
+            return tf.constant(1, dtype=tf.int32)
+        elif tf.reduce_any(tf.equal(label, tf.constant(label_class_2, dtype=tf.int32))):
+            return tf.constant(0, dtype=tf.int32)
+        else:
+            return tf.constant(0, dtype=tf.int32)
+    return _split</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.rasample_from_min_bin_count"><code class="name flex">
+<span>def <span class="ident">rasample_from_min_bin_count</span></span>(<span>dataset: tensorflow.python.data.ops.dataset_ops.DatasetV2, bin_fn: Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], tensorflow.python.framework.ops.Tensor], min_bin_count: int, bins: int = 100) ‑> tensorflow.python.data.ops.dataset_ops.DatasetV2</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def rasample_from_min_bin_count(dataset: tf.data.Dataset,
+                                bin_fn: Callable[[ROOTVariables], tf.Tensor],
+                                min_bin_count: int,
+                                bins: int = 100,) -&gt; tf.data.Dataset:
+    
+    @tf.function
+    def assign_if_filter_fn(state, x):
+        bin_idx = bin_fn(x)
+        state = state + tf.one_hot(bin_idx, bins, dtype=tf.int64)
+        return state, (x, tf.greater(min_bin_count, state[bin_idx]))
+
+    dataset = dataset.scan(tf.zeros((bins), dtype=tf.int64), assign_if_filter_fn)
+    dataset = dataset.filter(take_second).map(take_first)
+    
+    return dataset</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.resample_dataset"><code class="name flex">
+<span>def <span class="ident">resample_dataset</span></span>(<span>dataset: tensorflow.python.data.ops.dataset_ops.DatasetV2, bins: int = 100, lower_var_limit: int = 60000, upper_var_limit: int = 5600000, variable: str = 'jets_pt', log_binning_base: Union[int, float, ForwardRef(None)] = None, target_dist: Optional[List[int]] = None, precompute_init_dist: Optional[bool] = False) ‑> tensorflow.python.data.ops.dataset_ops.DatasetV2</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Resample a dataset to a target distribution. </p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dataset</code></strong> :&ensp;<code>tf.data.Dataset</code></dt>
+<dd>The dataset to resample.</dd>
+<dt><strong><code>n_bins</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of bins to use. Defaults to 100.</dd>
+<dt><strong><code>lower_var_limit</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The lower limit of the binned variable (the lowest bin).
+Defaults to 60_000.</dd>
+<dt><strong><code>upper_var_limit</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The upper limit of the binned variable (the highest bin).
+Defaults to 5_600_000.</dd>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Variable to bin. Defaults to 'jets_pt'.</dd>
+<dt><strong><code>target_dist</code></strong> :&ensp;<code>Optional[List[int]]</code>, optional</dt>
+<dd>The target distribution. If None, a uniform distribution
+is used. Defaults to None. It must have the same length as the number of bins.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.data.Dataset</code></dt>
+<dd>The resampled dataset.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def resample_dataset(dataset: tf.data.Dataset,
+                     bins: int = 100,
+                     lower_var_limit: int = 60_000,
+                     upper_var_limit: int = 5_600_000,
+                     variable: str = &#39;jets_pt&#39;,
+                     log_binning_base: Optional[Union[int, float]] = None,
+                     target_dist: Optional[List[int]] = None,
+                     precompute_init_dist: Optional[bool] = False) -&gt; tf.data.Dataset:
+    &#34;&#34;&#34;Resample a dataset to a target distribution. 
+
+    Args:
+        dataset (tf.data.Dataset): The dataset to resample.
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (int, optional): The lower limit of the binned variable (the lowest bin). 
+            Defaults to 60_000.
+        upper_var_limit (int, optional): The upper limit of the binned variable (the highest bin).
+            Defaults to 5_600_000.
+        variable (str, optional): Variable to bin. Defaults to &#39;jets_pt&#39;.
+        target_dist (Optional[List[int]], optional): The target distribution. If None, a uniform distribution
+            is used. Defaults to None. It must have the same length as the number of bins.
+
+    Returns:
+        tf.data.Dataset: The resampled dataset.
+    &#34;&#34;&#34;
+
+    dist = [1 / bins] * bins if target_dist is None else target_dist
+    
+    if target_dist is None and precompute_init_dist: 
+        initial_dist = dataset.map(get_bin_fn(bins=bins,
+                                            lower_var_limit=lower_var_limit,
+                                            upper_var_limit=upper_var_limit,
+                                            log_binning_base=log_binning_base,
+                                            variable=variable))
+        
+        initial_dist = initial_dist.reduce(tf.zeros(bins, dtype=tf.int64), lambda x, y: x + tf.one_hot(y, bins, dtype=tf.int64))
+        initial_dist = tf.cast(initial_dist, dtype=tf.float64)
+        initial_dist = initial_dist / tf.reduce_sum(initial_dist)
+        # initial_dist = tf.squeeze(initial_dist)
+        print(initial_dist)
+    else:
+        initial_dist = None
+    
+    
+    dataset = dataset.rejection_resample(get_bin_fn(bins=bins,
+                                                    lower_var_limit=lower_var_limit,
+                                                    log_binning_base=log_binning_base,
+                                                    upper_var_limit=upper_var_limit,
+                                                    variable=variable), target_dist=dist, initial_dist=initial_dist)
+    return dataset.map(take_second)</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.resample_with_labels_dataset"><code class="name flex">
+<span>def <span class="ident">resample_with_labels_dataset</span></span>(<span>dataset: tensorflow.python.data.ops.dataset_ops.DatasetV2, bins: int = 100, lower_var_limit: int = 60000, upper_var_limit: int = 5600000, variable: str = 'jets_pt', label_variable: str = 'jets_PartonTruthLabelID', label_class_1: List[int] = [1, 2, 3, 4, 5, 6], label_class_2: List[int] = [21], target_dist: Optional[List[int]] = None, log_binning_base: Union[int, float, ForwardRef(None)] = None, precompute_init_dist: Optional[bool] = False, from_min_count: bool = False) ‑> tensorflow.python.data.ops.dataset_ops.DatasetV2</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Resample a dataset to a target distribution based on the value of the label variable and the binned variable.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dataset</code></strong> :&ensp;<code>tf.data.Dataset</code></dt>
+<dd>The dataset to resample.</dd>
+<dt><strong><code>n_bins</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of bins to use. Defaults to 100.</dd>
+<dt><strong><code>lower_var_limit</code></strong> :&ensp;<code>Union[int, float]</code>, optional</dt>
+<dd>The lower limit of the binned variable (the lowest bin).
+Defaults to 60_000.</dd>
+<dt><strong><code>upper_var_limit</code></strong> :&ensp;<code>Union[int, float]</code>, optional</dt>
+<dd>The upper limit of the binned variable (the highest bin).
+Defaults to 5_600_000.</dd>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Name of the variable to bin. Defaults to 'jets_pt'.</dd>
+<dt><strong><code>label_variable</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Name of the label variable. Defaults to 'jets_PartonTruthLabelID'.</dd>
+<dt><strong><code>label_class_1</code></strong> :&ensp;<code>List[int]</code>, optional</dt>
+<dd>Values of the label variable that correspond to the first class.
+The values will be regarded as the same class. Defaults to [1, 2, 3, 4, 5, 6].</dd>
+<dt><strong><code>label_class_2</code></strong> :&ensp;<code>List[int]</code>, optional</dt>
+<dd>Values of the label variable that correspond to the second class.
+The values will be regarded as the same class. Defaults to [21].</dd>
+<dt><strong><code>target_dist</code></strong> :&ensp;<code>Optional[List[int]]</code>, optional</dt>
+<dd>The target distribution. If None, a uniform distribution
+is used. Defaults to None. It must have the same length as the number of bins.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tf.data.Dataset</code></dt>
+<dd>The resampled dataset.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def resample_with_labels_dataset(dataset: tf.data.Dataset,
+                                 bins: int = 100,
+                                 lower_var_limit: int = 60_000,
+                                 upper_var_limit: int = 5_600_000,
+                                 variable: str = &#39;jets_pt&#39;,
+                                 label_variable: str = &#39;jets_PartonTruthLabelID&#39;,
+                                 label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                                 label_class_2: List[int] = [21],
+                                 target_dist: Optional[List[int]] = None,
+                                 log_binning_base: Optional[Union[int, float]] = None,
+                                 precompute_init_dist: Optional[bool] = False,
+                                 from_min_count: bool = False) -&gt; tf.data.Dataset:
+    &#34;&#34;&#34;Resample a dataset to a target distribution based on the value of the label variable and the binned variable.
+
+
+    Args:
+        dataset (tf.data.Dataset): The dataset to resample.
+        n_bins (int, optional): Number of bins to use. Defaults to 100.
+        lower_var_limit (Union[int, float], optional): The lower limit of the binned variable (the lowest bin). 
+            Defaults to 60_000.
+        upper_var_limit (Union[int, float], optional): The upper limit of the binned variable (the highest bin).
+            Defaults to 5_600_000.
+        variable (str, optional): Name of the variable to bin. Defaults to &#39;jets_pt&#39;.
+        label_variable (str, optional): Name of the label variable. Defaults to &#39;jets_PartonTruthLabelID&#39;.
+        label_class_1 (List[int], optional): Values of the label variable that correspond to the first class.
+            The values will be regarded as the same class. Defaults to [1, 2, 3, 4, 5, 6].
+        label_class_2 (List[int], optional): Values of the label variable that correspond to the second class.
+            The values will be regarded as the same class. Defaults to [21].
+        target_dist (Optional[List[int]], optional): The target distribution. If None, a uniform distribution
+            is used. Defaults to None. It must have the same length as the number of bins.
+
+    Returns:
+        tf.data.Dataset: The resampled dataset.
+    &#34;&#34;&#34;
+    dist = [1 / (bins * 2)] * bins * 2 if target_dist is None else target_dist
+    
+    if target_dist is None and precompute_init_dist: 
+        initial_dist = dataset.map(get_label_bin_fn(bins=bins,
+                                                            lower_var_limit=lower_var_limit,
+                                                            upper_var_limit=upper_var_limit,
+                                                            variable=variable,
+                                                            label_variable=label_variable,
+                                                            log_binning_base=log_binning_base,
+                                                            label_class_1=label_class_1,
+                                                            label_class_2=label_class_2))
+        initial_dist = initial_dist.reduce(tf.zeros((bins * 2), dtype=tf.int64), lambda x, y: x + tf.one_hot(y, bins * 2, dtype=tf.int64))
+        min_count = tf.reduce_min(initial_dist).numpy()
+        min_count = tf.cast(min_count, dtype=tf.int64)
+        initial_dist = tf.cast(initial_dist, dtype=tf.float64)
+        print(f&#39;Min count: {min_count:,}&#39;)
+        print(f&#39;Estimated number of samples: {min_count * bins * 2:,}&#39;)
+        initial_dist = initial_dist / tf.reduce_sum(initial_dist)
+        print(initial_dist)
+    else:
+        initial_dist = None
+        
+    label_bin_fn = get_label_bin_fn(bins=bins,
+                                    lower_var_limit=lower_var_limit,
+                                    upper_var_limit=upper_var_limit,
+                                    variable=variable,
+                                    log_binning_base=log_binning_base,
+                                    label_variable=label_variable,
+                                    label_class_1=label_class_1,
+                                    label_class_2=label_class_2)
+        
+    if from_min_count:
+        return rasample_from_min_bin_count(dataset, label_bin_fn, min_bin_count=min_count, bins=bins * 2)
+    else:
+        dataset = dataset.rejection_resample(label_bin_fn, target_dist=dist, initial_dist=initial_dist)
+        return dataset.map(take_second)</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.take_first"><code class="name flex">
+<span>def <span class="ident">take_first</span></span>(<span>x, y)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@tf.function
+def take_first(x, y):
+    return x</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.take_second"><code class="name flex">
+<span>def <span class="ident">take_second</span></span>(<span>x, y)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@tf.function
+def take_second(x, y):
+    return y</code></pre>
+</details>
+</dd>
+<dt id="jidenn.preprocess.resampling.write_new_variable"><code class="name flex">
+<span>def <span class="ident">write_new_variable</span></span>(<span>variable_value: int, variable_name: str = 'JZ_slice') ‑> Callable[[dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]], dict[str, Union[tensorflow.python.framework.ops.Tensor, tensorflow.python.ops.ragged.ragged_tensor.RaggedTensor]]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get a function that writes a new variable to a dataset. The intended use is to use this function
+with tf.data.Dataset.map() to add a new variable to a dataset. The value is the same for all samples.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>variable_value</code></strong> :&ensp;<code>int</code></dt>
+<dd>The value of the new variable.</dd>
+<dt><strong><code>variable_name</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The name of the new variable. Defaults to 'JZ_slice'.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Callable[[ROOTVariables], ROOTVariables]</code></dt>
+<dd>Function that writes a new variable to a dataset.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def write_new_variable(variable_value: int, variable_name: str = &#39;JZ_slice&#39;) -&gt; Callable[[ROOTVariables], ROOTVariables]:
+    &#34;&#34;&#34;Get a function that writes a new variable to a dataset. The intended use is to use this function
+    with tf.data.Dataset.map() to add a new variable to a dataset. The value is the same for all samples.
+
+    Args:
+        variable_value (int): The value of the new variable.
+        variable_name (str, optional): The name of the new variable. Defaults to &#39;JZ_slice&#39;.
+
+    Returns:
+        Callable[[ROOTVariables], ROOTVariables]: Function that writes a new variable to a dataset.
+    &#34;&#34;&#34;
+
+    @tf.function
+    def _write(data: ROOTVariables) -&gt; ROOTVariables:
+        new_data = data.copy()
+        new_data[variable_name] = variable_value
+        return new_data
+    return _write</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<header>
+<a class="homelink" rel="home" title="JIDENN" href="https://jansam.wieno.sk/JIDENN/">
+<img src="images/q_g_tagging.jpeg" alt=""> JIDENN
+</a>
+</header>
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="jidenn.preprocess" href="index.html">jidenn.preprocess</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="jidenn.preprocess.resampling.get_bin_fn" href="#jidenn.preprocess.resampling.get_bin_fn">get_bin_fn</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.get_cut_fn" href="#jidenn.preprocess.resampling.get_cut_fn">get_cut_fn</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.get_filter_fn" href="#jidenn.preprocess.resampling.get_filter_fn">get_filter_fn</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.get_label_bin_fn" href="#jidenn.preprocess.resampling.get_label_bin_fn">get_label_bin_fn</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.get_label_splitting_fn" href="#jidenn.preprocess.resampling.get_label_splitting_fn">get_label_splitting_fn</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.rasample_from_min_bin_count" href="#jidenn.preprocess.resampling.rasample_from_min_bin_count">rasample_from_min_bin_count</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.resample_dataset" href="#jidenn.preprocess.resampling.resample_dataset">resample_dataset</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.resample_with_labels_dataset" href="#jidenn.preprocess.resampling.resample_with_labels_dataset">resample_with_labels_dataset</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.take_first" href="#jidenn.preprocess.resampling.take_first">take_first</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.take_second" href="#jidenn.preprocess.resampling.take_second">take_second</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling.write_new_variable" href="#jidenn.preprocess.resampling.write_new_variable">write_new_variable</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

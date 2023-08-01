@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>jidenn.data API documentation</title>
-<meta name="description" content="This moduele contains all the necessary toolkit to: …" />
+<meta name="description" content="This module contains all the necessary toolkit to: …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -25,7 +25,7 @@
 <h1 class="title">Module <code>jidenn.data</code></h1>
 </header>
 <section id="section-intro">
-<p>This moduele contains all the necessary toolkit to:</p>
+<p>This module contains all the necessary toolkit to:</p>
 <ul>
 <li>convert a ROOT file into a Tensorflow <code>tf.data.Dataset</code> object </li>
 <li>flatten the dataset from events to individal jets</li>
@@ -44,7 +44,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;
-This moduele contains all the necessary toolkit to:
+This module contains all the necessary toolkit to:
 
 - convert a ROOT file into a Tensorflow `tf.data.Dataset` object 
 - flatten the dataset from events to individal jets
@@ -68,7 +68,7 @@ These functionalities can be configured using the `jidenn.config` module.
 <dl>
 <dt><code class="name"><a title="jidenn.data.JIDENNDataset" href="JIDENNDataset.html">jidenn.data.JIDENNDataset</a></code></dt>
 <dd>
-<div class="desc"><p>Module containing the <code><a title="jidenn.data.JIDENNDataset" href="JIDENNDataset.html">jidenn.data.JIDENNDataset</a></code> dataclass that is a wrapper for a TensorFlow dataset that allows for easy loading and processing of dataset …</p></div>
+<div class="desc"><p>Module containing the <code><a title="jidenn.data.JIDENNDataset" href="JIDENNDataset.html">jidenn.data.JIDENNDataset</a></code> dataclass that is a wrapper for a TensorFlow dataset that allows for easy adding and processing of dataset …</p></div>
 </dd>
 <dt><code class="name"><a title="jidenn.data.ROOTDataset" href="ROOTDataset.html">jidenn.data.ROOTDataset</a></code></dt>
 <dd>
@@ -79,6 +79,10 @@ The module contains the <code><a title="jidenn.data.ROOTDataset" href="ROOTDatas
 <dd>
 <div class="desc"><p>Module containing classes that create the various types of input variables for all the neural networks.
 Each type of input variables is a subclass of …</p></div>
+</dd>
+<dt><code class="name"><a title="jidenn.data.convert_h5" href="convert_h5.html">jidenn.data.convert_h5</a></code></dt>
+<dd>
+<div class="desc"></div>
 </dd>
 <dt><code class="name"><a title="jidenn.data.data_info" href="data_info.html">jidenn.data.data_info</a></code></dt>
 <dd>
@@ -129,6 +133,7 @@ The two commonly operations …</p></div>
 <li><code><a title="jidenn.data.JIDENNDataset" href="JIDENNDataset.html">jidenn.data.JIDENNDataset</a></code></li>
 <li><code><a title="jidenn.data.ROOTDataset" href="ROOTDataset.html">jidenn.data.ROOTDataset</a></code></li>
 <li><code><a title="jidenn.data.TrainInput" href="TrainInput.html">jidenn.data.TrainInput</a></code></li>
+<li><code><a title="jidenn.data.convert_h5" href="convert_h5.html">jidenn.data.convert_h5</a></code></li>
 <li><code><a title="jidenn.data.data_info" href="data_info.html">jidenn.data.data_info</a></code></li>
 <li><code><a title="jidenn.data.four_vector_transform" href="four_vector_transform.html">jidenn.data.four_vector_transform</a></code></li>
 <li><code><a title="jidenn.data.get_dataset" href="get_dataset.html">jidenn.data.get_dataset</a></code></li>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>jidenn.data.JIDENNDataset API documentation</title>
-<meta name="description" content="Module containing the `JIDENNDataset` dataclass that is a wrapper for a TensorFlow dataset that allows for easy loading and processing of dataset …" />
+<meta name="description" content="Module containing the `JIDENNDataset` dataclass that is a wrapper for a TensorFlow dataset that allows for easy adding and processing of dataset …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -25,14 +25,14 @@
 <h1 class="title">Module <code>jidenn.data.JIDENNDataset</code></h1>
 </header>
 <section id="section-intro">
-<p>Module containing the <code><a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></code> dataclass that is a wrapper for a TensorFlow dataset that allows for easy loading and processing of dataset files.
+<p>Module containing the <code><a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></code> dataclass that is a wrapper for a TensorFlow dataset that allows for easy adding and processing of dataset files.
 It contains all the necessary tools to perform a preprocessing of the jet dataset for training.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;
-Module containing the `JIDENNDataset` dataclass that is a wrapper for a TensorFlow dataset that allows for easy loading and processing of dataset files.
+Module containing the `JIDENNDataset` dataclass that is a wrapper for a TensorFlow dataset that allows for easy adding and processing of dataset files.
 It contains all the necessary tools to perform a preprocessing of the jet dataset for training. 
 &#34;&#34;&#34;
 from __future__ import annotations
@@ -43,8 +43,9 @@ from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Any
 import os
 import pickle
 #
-import jidenn.config.config
+import jidenn.config.config as config
 from jidenn.data.string_conversions import Cut, Expression
+from jidenn.evaluation.plotter import plot_data_distributions
 
 
 ROOTVariables = Dict[str, Union[tf.RaggedTensor, tf.Tensor]]
@@ -58,27 +59,6 @@ variables = {
     &#39;eventNumber&#39;: tf.Tensor([1, 2], dtype=tf.int32),
     ...
 }
-```
-&#34;&#34;&#34;
-
-JIDENNVariables = Dict[Union[Literal[&#39;perEvent&#39;], Literal[&#39;perJet&#39;], Literal[&#39;perJetTuple&#39;]], ROOTVariables]
-&#34;&#34;&#34;Type alias for a dictionary of JIDENN variables. The variables are separated into per-event, per-jet, 
-and per-jet-tuple variables to allow for more efficient processing of the data and preparation for training. 
-For each of these categories, the values are `ROOTVariables`.
-These variables are used in the `tf.data.Dataset` where the events have been flattened into individual jets, i.e.
-data sample from `tf.data.Dataset` are jets.
-
-Example:
-```python
-jet_1 = {
-    &#39;perEvent&#39;: {&#39;eventNumber&#39;: tf.Tensor([2], dtype=tf.int32), ... },
-    &#39;perJet&#39;: { &#39;jets_pt&#39;: tf.Tensor([10_000], dtype=tf.float32), ... },
-    &#39;perJetTuple&#39;: {&#39;jets_PFO_pt&#39;: tf.RaggedTensor([5_000, 3_000, 2_000], dtype=tf.float32), ... }
-# jet from the same event
-jet_2 = {
-    &#39;perEvent&#39;: {&#39;eventNumber&#39;: tf.Tensor([2], dtype=tf.int32), ... },
-    &#39;perJet&#39;: { &#39;jets_pt&#39;: tf.Tensor([500_000], dtype=tf.float32), ... },
-    &#39;perJetTuple&#39;: {&#39;jets_PFO_pt&#39;: tf.RaggedTensor([300_000, 100_000, 50_000, 25_000, 25_000], dtype=tf.float32), ... }
 ```
 &#34;&#34;&#34;
 
@@ -137,26 +117,24 @@ class JIDENNDataset:
         return sample
 
     @tf.function 
-    def train_input(sample: JIDENNVariables) -&gt; ROOTVariables:
+    def train_input(sample: ROOTVariables) -&gt; ROOTVariables:
         output = {
-            &#39;N_PFO&#39;: sample[&#39;perJet&#39;][&#39;jets_PFO_n&#39;],
-            &#39;pt&#39;: sample[&#39;perJet&#39;][&#39;jets_pt&#39;],
-            &#39;width&#39;: sample[&#39;perJet&#39;][&#39;jets_Width&#39;],
-            &#39;EMFrac&#39;: sample[&#39;perJet&#39;][&#39;jets_EMFrac&#39;],
-            &#39;mu&#39;: sample[&#39;perEvent&#39;][&#39;corrected_averageInteractionsPerCrossing[0]&#39;]
+            &#39;N_PFO&#39;: sample[&#39;jets_PFO_n&#39;],
+            &#39;pt&#39;: sample[&#39;jets_pt&#39;],
+            &#39;width&#39;: sample[&#39;jets_Width&#39;],
+            &#39;EMFrac&#39;: sample[&#39;jets_EMFrac&#39;],
+            &#39;mu&#39;: sample[&#39;corrected_averageInteractionsPerCrossing[0]&#39;]
         }
         return output
 
-    variables = Variables(perEvent=[&#39;corrected_averageInteractionsPerCrossing[0]&#39;],
-                            perJet=[&#39;jets_pt&#39;, &#39;jets_Width&#39;, &#39;jets_EMFrac&#39;],
-                            perJetTuple=[&#39;jets_PFO_pt&#39;])
+    variables = [&#39;corrected_averageInteractionsPerCrossing[0]&#39;, &#39;jets_pt&#39;, &#39;jets_Width&#39;, &#39;jets_EMFrac&#39;,&#39;jets_PFO_pt&#39;]
 
     jidenn_dataset = JIDENNDataset(variables=variables,
                                    target=&#39;jets_TruthLabelID&#39;,
                                    weight=None)
     jidenn_dataset = jidenn_dataset.load_dataset(&#39;path/to/dataset&#39;)
 
-    jidenn_dataset = jidenn_dataset.create_JIDENNVariables(cut=Cut(&#39;jets_pt &gt; 10_000&#39;), map_dataset=count_PFO)
+    jidenn_dataset = jidenn_dataset.create_variables(cut=Cut(&#39;jets_pt &gt; 10_000&#39;), map_dataset=count_PFO)
     jidenn_dataset = jidenn_dataset.resample_dataset(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32), [0.5, 0.5])
     jidenn_dataset = jidenn_dataset.remap_labels(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32))
     jidenn_dataset = jidenn_dataset.create_train_input(train_input)
@@ -168,14 +146,15 @@ class JIDENNDataset:
     ```
 
     Args:
-        variables (jidenn.config.config_subclasses.Variables): The configuration dataclass of the variables to be used in the dataset.
+        variables (List[str]): The list of variables to be used in the dataset.
         target (str, optional): The name of the target variable. Defaults to `None`.
         weight (str, optional): The name of the weight variable. Defaults to `None`.
 
 
     &#34;&#34;&#34;
-    variables: config.Variables
-    &#34;&#34;&#34;The configuration dataclass of the variables to be used in the dataset.&#34;&#34;&#34;
+    variables: Optional[List[str]] = None
+    &#34;&#34;&#34;The configuration dataclass of the variables to be used in the dataset. 
+        If `None`, the variables are set automatically during loading with JIDENNDataset.load().&#34;&#34;&#34;
     target: Optional[str] = None
     &#34;&#34;&#34;The name of the target variable. `None` if no target variable is used.&#34;&#34;&#34;
     weight: Optional[str] = None
@@ -205,6 +184,39 @@ class JIDENNDataset:
         dataset = tf.data.Dataset.load(
             file, compression=&#39;GZIP&#39;, element_spec=jidenn_dataset.element_spec)
         return jidenn_dataset._set_dataset(dataset)
+
+    @staticmethod
+    def load(path: str, element_spec_path: Optional[str] = None) -&gt; JIDENNDataset:
+        &#34;&#34;&#34;Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
+        The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
+
+        Args:
+            path (str): The path to the dataset directory.
+            element_spec_path (str, optional): The path to the `element_spec` file. Defaults to `None`. 
+                If `None`, the `element_spec` is loaded from the `element_spec` file inside the dataset directory.
+
+        Raises:
+            ValueError: If the `element_spec` is not a dictionary or a tuple whose first element is a dictionary.
+
+        Returns:
+            JIDENNDataset: The JIDENNDataset object with set dataset and `element_spec`.
+        &#34;&#34;&#34;
+
+        if element_spec_path is None:
+            element_spec_path = os.path.join(path, &#39;element_spec&#39;)
+        with open(element_spec_path, &#39;rb&#39;) as f:
+            element_spec = pickle.load(f)
+
+        if isinstance(element_spec, dict):
+            variables = list(element_spec.keys())
+
+        elif isinstance(element_spec[0], dict):
+            variables = list(element_spec[0].keys())
+
+        else:
+            raise ValueError(&#39;Element spec is not a dictionary.&#39;)
+
+        return JIDENNDataset(variables=variables).load_dataset(path)
 
     def save_dataset(self, file: str, num_shards: Optional[int] = None) -&gt; None:
         &#34;&#34;&#34;Saves the dataset to a file. The dataset is stored in the `tf.data.Dataset` format.
@@ -247,9 +259,9 @@ class JIDENNDataset:
             element_spec = pickle.load(f)
         return self._set_element_spec(element_spec)
 
-    def create_JIDENNVariables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -&gt; JIDENNDataset:
-        &#34;&#34;&#34;Creates a `JIDENNVariables` dataset from the `ROOTVariables` dataset and creates labels and weights.
-        The variables are selected according to the `variables` configuration dataclass and 
+    def create_variables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -&gt; JIDENNDataset:
+        &#34;&#34;&#34;Creates a &#39;tf.data.Dataset&#39; from selected variables and creates labels and weights.
+        The variables are selected according to the `variables` loaded from config.
         the `target` and `weight` class variables are used to create labels and weights from the `ROOTVariables`.
 
         Optionally, a `Cut` can be applied to the dataset. It is done **before** the variables are selected.
@@ -264,7 +276,7 @@ class JIDENNDataset:
             ValueError: If the dataset is not loaded yet.
 
         Returns:
-            JIDENNDataset: The JIDENNDataset object with the signature of `(JIDENNVariables, label, weight)`.
+            JIDENNDataset: The JIDENNDataset object with the signature of `(ROOTVariables, label, weight)`.
         &#34;&#34;&#34;
         if self.dataset is None:
             raise ValueError(&#39;Dataset not loaded yet.&#39;)
@@ -279,7 +291,7 @@ class JIDENNDataset:
 
     def remap_labels(self, label_mapping: Callable[[int], int]) -&gt; JIDENNDataset:
         &#34;&#34;&#34;Remaps the labels in the dataset using the `label_mapping` function.
-        Should be used after the `create_JIDENNVariables` method. 
+        Should be used after the `create_variables` method. 
 
         Args:
             label_mapping (Callable[[int], int]): The function that maps the labels.
@@ -338,7 +350,7 @@ class JIDENNDataset:
         &#34;&#34;&#34;Sets the `tf.data.Dataset` object and the `element_spec` of the dataset.
 
         Args:
-            dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables` or `JIDENNVariables`.
+            dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables`.
             element_spec (Dict[str, Union[tf.TensorSpec, tf.RaggedTensorSpec]]): The `element_spec` of the dataset.
 
         Returns:
@@ -354,14 +366,10 @@ class JIDENNDataset:
     @property
     def _var_picker(self):
         @tf.function
-        def _pick_variables(sample: ROOTVariables) -&gt; Union[Tuple[JIDENNVariables, tf.RaggedTensor, tf.RaggedTensor], JIDENNVariables, Tuple[JIDENNVariables, tf.RaggedTensor]]:
-            new_sample = {&#39;perEvent&#39;: {}, &#39;perJet&#39;: {}, &#39;perJetTuple&#39;: {}}
-            for var in self.variables.per_event if self.variables.per_event is not None else []:
-                new_sample[&#39;perEvent&#39;][var] = Expression(var)(sample)
-            for var in self.variables.per_jet if self.variables.per_jet is not None else []:
-                new_sample[&#39;perJet&#39;][var] = Expression(var)(sample)
-            for var in self.variables.per_jet_tuple if self.variables.per_jet_tuple is not None else []:
-                new_sample[&#39;perJetTuple&#39;][var] = Expression(var)(sample)
+        def _pick_variables(sample: ROOTVariables) -&gt; Union[Tuple[ROOTVariables, tf.RaggedTensor, tf.RaggedTensor], ROOTVariables, Tuple[ROOTVariables, tf.RaggedTensor]]:
+
+            new_sample = {var: Expression(var)(sample)
+                          for var in self.variables}
 
             if self.target is None:
                 return new_sample
@@ -371,14 +379,14 @@ class JIDENNDataset:
                 return new_sample, Expression(self.target)(sample), Expression(self.weight)(sample)
         return _pick_variables
 
-    def resample_dataset(self, resampling_func: Callable[[JIDENNVariables, Any], int], target_dist: List[float]):
+    def resample_dataset(self, resampling_func: Callable[[ROOTVariables, Any], int], target_dist: List[float]):
         &#34;&#34;&#34;Resamples the dataset using the `resampling_func` function. The function computes the bin index for each sample in the dataset. 
         The dataset is then resampled to match the `target_dist` distribution. Be careful that this may **slow down the training process**,
         if the target distribution is very different from the original one as the dataset is resampled on the fly and is waiting 
         for the appropriate sample to be drawn.
 
         Args:
-            resampling_func (Callable[[JIDENNVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
+            resampling_func (Callable[[ROOTVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
             target_dist (List[float]): The target distribution of the resampled dataset.
 
         Raises:
@@ -391,9 +399,10 @@ class JIDENNDataset:
             raise ValueError(&#39;Dataset not loaded yet.&#39;)
 
         @tf.function
-        def _data_only(_, data):
+        def _data_only(x, data):
             return data
-        dataset = self.dataset.rejection_resample(resampling_func, target_dist=target_dist).map(_data_only)
+        dataset = self.dataset.rejection_resample(
+            resampling_func, target_dist=target_dist).map(_data_only)
         return self._set_dataset(dataset)
 
     @staticmethod
@@ -407,8 +416,10 @@ class JIDENNDataset:
         Returns:
             JIDENNDataset: Combined `JIDENNDataset` object.
         &#34;&#34;&#34;
-        dataset = tf.data.Dataset.sample_from_datasets([dataset.dataset for dataset in datasets], weights=weights)
-        jidenn_dataset = JIDENNDataset(datasets[0].variables, datasets[0].target, datasets[0].weight)
+        dataset = tf.data.Dataset.sample_from_datasets(
+            [dataset.dataset for dataset in datasets], weights=weights)
+        jidenn_dataset = JIDENNDataset(
+            datasets[0].variables, datasets[0].target, datasets[0].weight)
         return jidenn_dataset._set_dataset(dataset)
 
     def apply(self, func: Callable[[tf.data.Dataset], tf.data.Dataset]) -&gt; JIDENNDataset:
@@ -426,13 +437,13 @@ class JIDENNDataset:
         dataset = func(self.dataset)
         return self._set_dataset(dataset)
 
-    def create_train_input(self, func: Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -&gt; JIDENNDataset:
-        &#34;&#34;&#34;Creates a training input from the dataset using the `func` function. The function must take a `JIDENNVariables` object and return a `ROOTVariables` object.
+    def create_train_input(self, func: Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -&gt; JIDENNDataset:
+        &#34;&#34;&#34;Creates a training input from the dataset using the `func` function. The function must take a `ROOTVariables` object and return a `ROOTVariables` object.
         The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).
 
 
         Args:
-            func (Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
+            func (Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
 
         Raises:
             ValueError: If the dataset is not loaded yet.
@@ -449,7 +460,7 @@ class JIDENNDataset:
         dataset = self.dataset.map(input_wrapper)
         return self._set_dataset(dataset)
 
-    def to_pandas(self) -&gt; pd.DataFrame:
+    def to_pandas(self, variables: Optional[List[str]] = None) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Converts the dataset to a pandas DataFrame. The dataset must be loaded before calling this function.
         The function uses `tensorflow_datasets.as_dataframe` to convert the dataset to a pandas DataFrame, so 
         the `tensorflow_datasets` package must be installed.
@@ -463,8 +474,11 @@ class JIDENNDataset:
         df = jidenn_dataset.to_pandas()
         ```
 
-        If the dataset contains tuples, i.e. has `perJetTuple` variables, consider using `jidenn.data.data_info.explode_nested_variables` 
+        If the dataset contains nested tuples consider using `jidenn.data.data_info.explode_nested_variables` 
         on the tuple columns of the convereted dataframe.
+
+        Args:
+            variables (Optional[List[str]], optional): List of variables to convert to a pandas DataFrame. If `None`, all variables are converted. Defaults to `None`.
 
         Raises:
             ImportError: If `tensorflow_datasets` is not installed.
@@ -482,22 +496,45 @@ class JIDENNDataset:
         if self.dataset is None:
             raise ValueError(&#39;Dataset not loaded yet.&#39;)
 
-        @tf.function
-        def tuple_to_dict(data, label, weight=None):
-            if isinstance(data, tuple):
-                data = {**data[0], **data[1]}
-            return {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+        if isinstance(self.element_spec, tuple) and variables is None:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                data = {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+                return data
+
+        elif isinstance(self.element_spec, tuple) and variables is not None:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                data = {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+                return {k: data[k] for k in variables + [&#39;label&#39;, &#39;weight&#39;]}
+
+        elif isinstance(self.element_spec, dict) and variables is not None:
+            @tf.function
+            def tuple_to_dict(data):
+                return {k: data[k] for k in variables}
+
+        elif isinstance(self.element_spec, dict) and variables is None:
+            @tf.function
+            def tuple_to_dict(data):
+                return data
+
+        else:
+            raise ValueError(&#39;The dataset must be a tuple or a dict.&#39;)
 
         dataset = self.dataset.map(tuple_to_dict)
         df = tfds.as_dataframe(dataset)
         df = df.rename(lambda x: x.replace(&#39;/&#39;, &#39;.&#39;), axis=&#39;columns&#39;)
         return df
 
-    def filter(self, filter: Callable[[JIDENNVariables], bool]) -&gt; JIDENNDataset:
+    def filter(self, filter: Callable[[ROOTVariables], bool]) -&gt; JIDENNDataset:
         &#34;&#34;&#34;Filters the dataset using the `filter` function. 
 
         Args:
-            filter (Callable[[JIDENNVariables], bool]): Function to apply to the data.
+            filter (Callable[[ROOTVariables], bool]): Function to apply to the data.
 
         Raises:
             ValueError: If the dataset is not loaded yet.
@@ -543,13 +580,44 @@ class JIDENNDataset:
             dataset = self.dataset.map(map_func)
         else:
             dataset = self.dataset.map(dict_to_stacked_array)
-        dataset = dataset.shuffle(shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
+        dataset = dataset.shuffle(
+            shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
         if take is not None:
             dataset = dataset.take(take)
-            dataset = dataset.apply(tf.data.experimental.assert_cardinality(take)) if assert_length else dataset
-        dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size))
+            dataset = dataset.apply(tf.data.experimental.assert_cardinality(
+                take)) if assert_length else dataset
+        dataset = dataset.apply(
+            tf.data.experimental.dense_to_ragged_batch(batch_size))
+        # dataset = dataset.ragged_batch(batch_size)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
-        return dataset</code></pre>
+        return dataset
+
+    def plot_data_distributions(self,
+                                folder: str,
+                                variables: Optional[List[str]] = None,
+                                hue_variable: Optional[str] = None,
+                                named_labels: Optional[Dict[int, str]] = None,
+                                xlabel_mapper: Optional[Dict[str, str]] = None) -&gt; None:
+        &#34;&#34;&#34;Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
+        The function uses `jidenn.evaluation.plotter.plot_data_distributions` to plot the data distributions.
+
+        Args:
+            folder (str): The path to the directory where the plots are saved.
+            variables (Optional[List[str]], optional): List of variables to plot. If `None`, all variables are plotted. Defaults to `None`.
+            named_labels (Dict[int, str], optional): Dictionary mapping truth values to custom labels.
+                If not provided, the truth values will be used as labels. 
+
+        Raises:
+            ValueError: If the dataset is not loaded yet.
+
+        Returns:
+            None
+        &#34;&#34;&#34;
+        if self.dataset is None:
+            raise ValueError(&#39;Dataset not loaded yet.&#39;)
+        df = self.to_pandas(variables)
+        plot_data_distributions(df, folder=folder, named_labels=named_labels,
+                                xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)</code></pre>
 </details>
 </section>
 <section>
@@ -557,25 +625,6 @@ class JIDENNDataset:
 <section>
 <h2 class="section-title" id="header-variables">Global variables</h2>
 <dl>
-<dt id="jidenn.data.JIDENNDataset.JIDENNVariables"><code class="name">var <span class="ident">JIDENNVariables</span></code></dt>
-<dd>
-<div class="desc"><p>Type alias for a dictionary of JIDENN variables. The variables are separated into per-event, per-jet,
-and per-jet-tuple variables to allow for more efficient processing of the data and preparation for training.
-For each of these categories, the values are <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code>.
-These variables are used in the <code>tf.data.Dataset</code> where the events have been flattened into individual jets, i.e.
-data sample from <code>tf.data.Dataset</code> are jets.</p>
-<p>Example:</p>
-<pre><code class="language-python">jet_1 = {
-    'perEvent': {'eventNumber': tf.Tensor([2], dtype=tf.int32), ... },
-    'perJet': { 'jets_pt': tf.Tensor([10_000], dtype=tf.float32), ... },
-    'perJetTuple': {'jets_PFO_pt': tf.RaggedTensor([5_000, 3_000, 2_000], dtype=tf.float32), ... }
-# jet from the same event
-jet_2 = {
-    'perEvent': {'eventNumber': tf.Tensor([2], dtype=tf.int32), ... },
-    'perJet': { 'jets_pt': tf.Tensor([500_000], dtype=tf.float32), ... },
-    'perJetTuple': {'jets_PFO_pt': tf.RaggedTensor([300_000, 100_000, 50_000, 25_000, 25_000], dtype=tf.float32), ... }
-</code></pre></div>
-</dd>
 <dt id="jidenn.data.JIDENNDataset.ROOTVariables"><code class="name">var <span class="ident">ROOTVariables</span></code></dt>
 <dd>
 <div class="desc"><p>Type alias for a dictionary of ROOT variables. The keys are the variable
@@ -657,7 +706,7 @@ def dict_to_stacked_array(data: Union[ROOTVariables, Tuple[ROOTVariables, ROOTVa
 <dl>
 <dt id="jidenn.data.JIDENNDataset.JIDENNDataset"><code class="flex name class">
 <span>class <span class="ident">JIDENNDataset</span></span>
-<span>(</span><span>variables: config.Variables, target: Optional[str] = None, weight: Optional[str] = None)</span>
+<span>(</span><span>variables: Optional[List[str]] = None, target: Optional[str] = None, weight: Optional[str] = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>The JIDENNDataset dataclass is a wrapper for a TensorFlow dataset that allows for easy loading and processing of dataset files
@@ -680,26 +729,24 @@ def count_PFO(sample: ROOTVariables) -&gt; ROOTVariables:
     return sample
 
 @tf.function 
-def train_input(sample: JIDENNVariables) -&gt; ROOTVariables:
+def train_input(sample: ROOTVariables) -&gt; ROOTVariables:
     output = {
-        'N_PFO': sample['perJet']['jets_PFO_n'],
-        'pt': sample['perJet']['jets_pt'],
-        'width': sample['perJet']['jets_Width'],
-        'EMFrac': sample['perJet']['jets_EMFrac'],
-        'mu': sample['perEvent']['corrected_averageInteractionsPerCrossing[0]']
+        'N_PFO': sample['jets_PFO_n'],
+        'pt': sample['jets_pt'],
+        'width': sample['jets_Width'],
+        'EMFrac': sample['jets_EMFrac'],
+        'mu': sample['corrected_averageInteractionsPerCrossing[0]']
     }
     return output
 
-variables = Variables(perEvent=['corrected_averageInteractionsPerCrossing[0]'],
-                        perJet=['jets_pt', 'jets_Width', 'jets_EMFrac'],
-                        perJetTuple=['jets_PFO_pt'])
+variables = ['corrected_averageInteractionsPerCrossing[0]', 'jets_pt', 'jets_Width', 'jets_EMFrac','jets_PFO_pt']
 
 jidenn_dataset = JIDENNDataset(variables=variables,
                                target='jets_TruthLabelID',
                                weight=None)
 jidenn_dataset = jidenn_dataset.load_dataset('path/to/dataset')
 
-jidenn_dataset = jidenn_dataset.create_JIDENNVariables(cut=Cut('jets_pt &gt; 10_000'), map_dataset=count_PFO)
+jidenn_dataset = jidenn_dataset.create_variables(cut=Cut('jets_pt &gt; 10_000'), map_dataset=count_PFO)
 jidenn_dataset = jidenn_dataset.resample_dataset(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32), [0.5, 0.5])
 jidenn_dataset = jidenn_dataset.remap_labels(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32))
 jidenn_dataset = jidenn_dataset.create_train_input(train_input)
@@ -711,8 +758,8 @@ model.fit(dataset, epochs=10)
 </code></pre>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>variables</code></strong> :&ensp;<code>jidenn.config.config_subclasses.Variables</code></dt>
-<dd>The configuration dataclass of the variables to be used in the dataset.</dd>
+<dt><strong><code>variables</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>The list of variables to be used in the dataset.</dd>
 <dt><strong><code>target</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>The name of the target variable. Defaults to <code>None</code>.</dd>
 <dt><strong><code>weight</code></strong> :&ensp;<code>str</code>, optional</dt>
@@ -746,26 +793,24 @@ class JIDENNDataset:
         return sample
 
     @tf.function 
-    def train_input(sample: JIDENNVariables) -&gt; ROOTVariables:
+    def train_input(sample: ROOTVariables) -&gt; ROOTVariables:
         output = {
-            &#39;N_PFO&#39;: sample[&#39;perJet&#39;][&#39;jets_PFO_n&#39;],
-            &#39;pt&#39;: sample[&#39;perJet&#39;][&#39;jets_pt&#39;],
-            &#39;width&#39;: sample[&#39;perJet&#39;][&#39;jets_Width&#39;],
-            &#39;EMFrac&#39;: sample[&#39;perJet&#39;][&#39;jets_EMFrac&#39;],
-            &#39;mu&#39;: sample[&#39;perEvent&#39;][&#39;corrected_averageInteractionsPerCrossing[0]&#39;]
+            &#39;N_PFO&#39;: sample[&#39;jets_PFO_n&#39;],
+            &#39;pt&#39;: sample[&#39;jets_pt&#39;],
+            &#39;width&#39;: sample[&#39;jets_Width&#39;],
+            &#39;EMFrac&#39;: sample[&#39;jets_EMFrac&#39;],
+            &#39;mu&#39;: sample[&#39;corrected_averageInteractionsPerCrossing[0]&#39;]
         }
         return output
 
-    variables = Variables(perEvent=[&#39;corrected_averageInteractionsPerCrossing[0]&#39;],
-                            perJet=[&#39;jets_pt&#39;, &#39;jets_Width&#39;, &#39;jets_EMFrac&#39;],
-                            perJetTuple=[&#39;jets_PFO_pt&#39;])
+    variables = [&#39;corrected_averageInteractionsPerCrossing[0]&#39;, &#39;jets_pt&#39;, &#39;jets_Width&#39;, &#39;jets_EMFrac&#39;,&#39;jets_PFO_pt&#39;]
 
     jidenn_dataset = JIDENNDataset(variables=variables,
                                    target=&#39;jets_TruthLabelID&#39;,
                                    weight=None)
     jidenn_dataset = jidenn_dataset.load_dataset(&#39;path/to/dataset&#39;)
 
-    jidenn_dataset = jidenn_dataset.create_JIDENNVariables(cut=Cut(&#39;jets_pt &gt; 10_000&#39;), map_dataset=count_PFO)
+    jidenn_dataset = jidenn_dataset.create_variables(cut=Cut(&#39;jets_pt &gt; 10_000&#39;), map_dataset=count_PFO)
     jidenn_dataset = jidenn_dataset.resample_dataset(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32), [0.5, 0.5])
     jidenn_dataset = jidenn_dataset.remap_labels(lambda data, label: tf.cast(tf.greater(label, 0), tf.int32))
     jidenn_dataset = jidenn_dataset.create_train_input(train_input)
@@ -777,14 +822,15 @@ class JIDENNDataset:
     ```
 
     Args:
-        variables (jidenn.config.config_subclasses.Variables): The configuration dataclass of the variables to be used in the dataset.
+        variables (List[str]): The list of variables to be used in the dataset.
         target (str, optional): The name of the target variable. Defaults to `None`.
         weight (str, optional): The name of the weight variable. Defaults to `None`.
 
 
     &#34;&#34;&#34;
-    variables: config.Variables
-    &#34;&#34;&#34;The configuration dataclass of the variables to be used in the dataset.&#34;&#34;&#34;
+    variables: Optional[List[str]] = None
+    &#34;&#34;&#34;The configuration dataclass of the variables to be used in the dataset. 
+        If `None`, the variables are set automatically during loading with JIDENNDataset.load().&#34;&#34;&#34;
     target: Optional[str] = None
     &#34;&#34;&#34;The name of the target variable. `None` if no target variable is used.&#34;&#34;&#34;
     weight: Optional[str] = None
@@ -814,6 +860,39 @@ class JIDENNDataset:
         dataset = tf.data.Dataset.load(
             file, compression=&#39;GZIP&#39;, element_spec=jidenn_dataset.element_spec)
         return jidenn_dataset._set_dataset(dataset)
+
+    @staticmethod
+    def load(path: str, element_spec_path: Optional[str] = None) -&gt; JIDENNDataset:
+        &#34;&#34;&#34;Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
+        The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
+
+        Args:
+            path (str): The path to the dataset directory.
+            element_spec_path (str, optional): The path to the `element_spec` file. Defaults to `None`. 
+                If `None`, the `element_spec` is loaded from the `element_spec` file inside the dataset directory.
+
+        Raises:
+            ValueError: If the `element_spec` is not a dictionary or a tuple whose first element is a dictionary.
+
+        Returns:
+            JIDENNDataset: The JIDENNDataset object with set dataset and `element_spec`.
+        &#34;&#34;&#34;
+
+        if element_spec_path is None:
+            element_spec_path = os.path.join(path, &#39;element_spec&#39;)
+        with open(element_spec_path, &#39;rb&#39;) as f:
+            element_spec = pickle.load(f)
+
+        if isinstance(element_spec, dict):
+            variables = list(element_spec.keys())
+
+        elif isinstance(element_spec[0], dict):
+            variables = list(element_spec[0].keys())
+
+        else:
+            raise ValueError(&#39;Element spec is not a dictionary.&#39;)
+
+        return JIDENNDataset(variables=variables).load_dataset(path)
 
     def save_dataset(self, file: str, num_shards: Optional[int] = None) -&gt; None:
         &#34;&#34;&#34;Saves the dataset to a file. The dataset is stored in the `tf.data.Dataset` format.
@@ -856,9 +935,9 @@ class JIDENNDataset:
             element_spec = pickle.load(f)
         return self._set_element_spec(element_spec)
 
-    def create_JIDENNVariables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -&gt; JIDENNDataset:
-        &#34;&#34;&#34;Creates a `JIDENNVariables` dataset from the `ROOTVariables` dataset and creates labels and weights.
-        The variables are selected according to the `variables` configuration dataclass and 
+    def create_variables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -&gt; JIDENNDataset:
+        &#34;&#34;&#34;Creates a &#39;tf.data.Dataset&#39; from selected variables and creates labels and weights.
+        The variables are selected according to the `variables` loaded from config.
         the `target` and `weight` class variables are used to create labels and weights from the `ROOTVariables`.
 
         Optionally, a `Cut` can be applied to the dataset. It is done **before** the variables are selected.
@@ -873,7 +952,7 @@ class JIDENNDataset:
             ValueError: If the dataset is not loaded yet.
 
         Returns:
-            JIDENNDataset: The JIDENNDataset object with the signature of `(JIDENNVariables, label, weight)`.
+            JIDENNDataset: The JIDENNDataset object with the signature of `(ROOTVariables, label, weight)`.
         &#34;&#34;&#34;
         if self.dataset is None:
             raise ValueError(&#39;Dataset not loaded yet.&#39;)
@@ -888,7 +967,7 @@ class JIDENNDataset:
 
     def remap_labels(self, label_mapping: Callable[[int], int]) -&gt; JIDENNDataset:
         &#34;&#34;&#34;Remaps the labels in the dataset using the `label_mapping` function.
-        Should be used after the `create_JIDENNVariables` method. 
+        Should be used after the `create_variables` method. 
 
         Args:
             label_mapping (Callable[[int], int]): The function that maps the labels.
@@ -947,7 +1026,7 @@ class JIDENNDataset:
         &#34;&#34;&#34;Sets the `tf.data.Dataset` object and the `element_spec` of the dataset.
 
         Args:
-            dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables` or `JIDENNVariables`.
+            dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables`.
             element_spec (Dict[str, Union[tf.TensorSpec, tf.RaggedTensorSpec]]): The `element_spec` of the dataset.
 
         Returns:
@@ -963,14 +1042,10 @@ class JIDENNDataset:
     @property
     def _var_picker(self):
         @tf.function
-        def _pick_variables(sample: ROOTVariables) -&gt; Union[Tuple[JIDENNVariables, tf.RaggedTensor, tf.RaggedTensor], JIDENNVariables, Tuple[JIDENNVariables, tf.RaggedTensor]]:
-            new_sample = {&#39;perEvent&#39;: {}, &#39;perJet&#39;: {}, &#39;perJetTuple&#39;: {}}
-            for var in self.variables.per_event if self.variables.per_event is not None else []:
-                new_sample[&#39;perEvent&#39;][var] = Expression(var)(sample)
-            for var in self.variables.per_jet if self.variables.per_jet is not None else []:
-                new_sample[&#39;perJet&#39;][var] = Expression(var)(sample)
-            for var in self.variables.per_jet_tuple if self.variables.per_jet_tuple is not None else []:
-                new_sample[&#39;perJetTuple&#39;][var] = Expression(var)(sample)
+        def _pick_variables(sample: ROOTVariables) -&gt; Union[Tuple[ROOTVariables, tf.RaggedTensor, tf.RaggedTensor], ROOTVariables, Tuple[ROOTVariables, tf.RaggedTensor]]:
+
+            new_sample = {var: Expression(var)(sample)
+                          for var in self.variables}
 
             if self.target is None:
                 return new_sample
@@ -980,14 +1055,14 @@ class JIDENNDataset:
                 return new_sample, Expression(self.target)(sample), Expression(self.weight)(sample)
         return _pick_variables
 
-    def resample_dataset(self, resampling_func: Callable[[JIDENNVariables, Any], int], target_dist: List[float]):
+    def resample_dataset(self, resampling_func: Callable[[ROOTVariables, Any], int], target_dist: List[float]):
         &#34;&#34;&#34;Resamples the dataset using the `resampling_func` function. The function computes the bin index for each sample in the dataset. 
         The dataset is then resampled to match the `target_dist` distribution. Be careful that this may **slow down the training process**,
         if the target distribution is very different from the original one as the dataset is resampled on the fly and is waiting 
         for the appropriate sample to be drawn.
 
         Args:
-            resampling_func (Callable[[JIDENNVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
+            resampling_func (Callable[[ROOTVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
             target_dist (List[float]): The target distribution of the resampled dataset.
 
         Raises:
@@ -1000,9 +1075,10 @@ class JIDENNDataset:
             raise ValueError(&#39;Dataset not loaded yet.&#39;)
 
         @tf.function
-        def _data_only(_, data):
+        def _data_only(x, data):
             return data
-        dataset = self.dataset.rejection_resample(resampling_func, target_dist=target_dist).map(_data_only)
+        dataset = self.dataset.rejection_resample(
+            resampling_func, target_dist=target_dist).map(_data_only)
         return self._set_dataset(dataset)
 
     @staticmethod
@@ -1016,8 +1092,10 @@ class JIDENNDataset:
         Returns:
             JIDENNDataset: Combined `JIDENNDataset` object.
         &#34;&#34;&#34;
-        dataset = tf.data.Dataset.sample_from_datasets([dataset.dataset for dataset in datasets], weights=weights)
-        jidenn_dataset = JIDENNDataset(datasets[0].variables, datasets[0].target, datasets[0].weight)
+        dataset = tf.data.Dataset.sample_from_datasets(
+            [dataset.dataset for dataset in datasets], weights=weights)
+        jidenn_dataset = JIDENNDataset(
+            datasets[0].variables, datasets[0].target, datasets[0].weight)
         return jidenn_dataset._set_dataset(dataset)
 
     def apply(self, func: Callable[[tf.data.Dataset], tf.data.Dataset]) -&gt; JIDENNDataset:
@@ -1035,13 +1113,13 @@ class JIDENNDataset:
         dataset = func(self.dataset)
         return self._set_dataset(dataset)
 
-    def create_train_input(self, func: Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -&gt; JIDENNDataset:
-        &#34;&#34;&#34;Creates a training input from the dataset using the `func` function. The function must take a `JIDENNVariables` object and return a `ROOTVariables` object.
+    def create_train_input(self, func: Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -&gt; JIDENNDataset:
+        &#34;&#34;&#34;Creates a training input from the dataset using the `func` function. The function must take a `ROOTVariables` object and return a `ROOTVariables` object.
         The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).
 
 
         Args:
-            func (Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
+            func (Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
 
         Raises:
             ValueError: If the dataset is not loaded yet.
@@ -1058,7 +1136,7 @@ class JIDENNDataset:
         dataset = self.dataset.map(input_wrapper)
         return self._set_dataset(dataset)
 
-    def to_pandas(self) -&gt; pd.DataFrame:
+    def to_pandas(self, variables: Optional[List[str]] = None) -&gt; pd.DataFrame:
         &#34;&#34;&#34;Converts the dataset to a pandas DataFrame. The dataset must be loaded before calling this function.
         The function uses `tensorflow_datasets.as_dataframe` to convert the dataset to a pandas DataFrame, so 
         the `tensorflow_datasets` package must be installed.
@@ -1072,8 +1150,11 @@ class JIDENNDataset:
         df = jidenn_dataset.to_pandas()
         ```
 
-        If the dataset contains tuples, i.e. has `perJetTuple` variables, consider using `jidenn.data.data_info.explode_nested_variables` 
+        If the dataset contains nested tuples consider using `jidenn.data.data_info.explode_nested_variables` 
         on the tuple columns of the convereted dataframe.
+
+        Args:
+            variables (Optional[List[str]], optional): List of variables to convert to a pandas DataFrame. If `None`, all variables are converted. Defaults to `None`.
 
         Raises:
             ImportError: If `tensorflow_datasets` is not installed.
@@ -1091,22 +1172,45 @@ class JIDENNDataset:
         if self.dataset is None:
             raise ValueError(&#39;Dataset not loaded yet.&#39;)
 
-        @tf.function
-        def tuple_to_dict(data, label, weight=None):
-            if isinstance(data, tuple):
-                data = {**data[0], **data[1]}
-            return {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+        if isinstance(self.element_spec, tuple) and variables is None:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                data = {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+                return data
+
+        elif isinstance(self.element_spec, tuple) and variables is not None:
+            @tf.function
+            def tuple_to_dict(data, label, weight=None):
+                if isinstance(data, tuple):
+                    data = {**data[0], **data[1]}
+                data = {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+                return {k: data[k] for k in variables + [&#39;label&#39;, &#39;weight&#39;]}
+
+        elif isinstance(self.element_spec, dict) and variables is not None:
+            @tf.function
+            def tuple_to_dict(data):
+                return {k: data[k] for k in variables}
+
+        elif isinstance(self.element_spec, dict) and variables is None:
+            @tf.function
+            def tuple_to_dict(data):
+                return data
+
+        else:
+            raise ValueError(&#39;The dataset must be a tuple or a dict.&#39;)
 
         dataset = self.dataset.map(tuple_to_dict)
         df = tfds.as_dataframe(dataset)
         df = df.rename(lambda x: x.replace(&#39;/&#39;, &#39;.&#39;), axis=&#39;columns&#39;)
         return df
 
-    def filter(self, filter: Callable[[JIDENNVariables], bool]) -&gt; JIDENNDataset:
+    def filter(self, filter: Callable[[ROOTVariables], bool]) -&gt; JIDENNDataset:
         &#34;&#34;&#34;Filters the dataset using the `filter` function. 
 
         Args:
-            filter (Callable[[JIDENNVariables], bool]): Function to apply to the data.
+            filter (Callable[[ROOTVariables], bool]): Function to apply to the data.
 
         Raises:
             ValueError: If the dataset is not loaded yet.
@@ -1152,13 +1256,44 @@ class JIDENNDataset:
             dataset = self.dataset.map(map_func)
         else:
             dataset = self.dataset.map(dict_to_stacked_array)
-        dataset = dataset.shuffle(shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
+        dataset = dataset.shuffle(
+            shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
         if take is not None:
             dataset = dataset.take(take)
-            dataset = dataset.apply(tf.data.experimental.assert_cardinality(take)) if assert_length else dataset
-        dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size))
+            dataset = dataset.apply(tf.data.experimental.assert_cardinality(
+                take)) if assert_length else dataset
+        dataset = dataset.apply(
+            tf.data.experimental.dense_to_ragged_batch(batch_size))
+        # dataset = dataset.ragged_batch(batch_size)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
-        return dataset</code></pre>
+        return dataset
+
+    def plot_data_distributions(self,
+                                folder: str,
+                                variables: Optional[List[str]] = None,
+                                hue_variable: Optional[str] = None,
+                                named_labels: Optional[Dict[int, str]] = None,
+                                xlabel_mapper: Optional[Dict[str, str]] = None) -&gt; None:
+        &#34;&#34;&#34;Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
+        The function uses `jidenn.evaluation.plotter.plot_data_distributions` to plot the data distributions.
+
+        Args:
+            folder (str): The path to the directory where the plots are saved.
+            variables (Optional[List[str]], optional): List of variables to plot. If `None`, all variables are plotted. Defaults to `None`.
+            named_labels (Dict[int, str], optional): Dictionary mapping truth values to custom labels.
+                If not provided, the truth values will be used as labels. 
+
+        Raises:
+            ValueError: If the dataset is not loaded yet.
+
+        Returns:
+            None
+        &#34;&#34;&#34;
+        if self.dataset is None:
+            raise ValueError(&#39;Dataset not loaded yet.&#39;)
+        df = self.to_pandas(variables)
+        plot_data_distributions(df, folder=folder, named_labels=named_labels,
+                                xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
@@ -1166,9 +1301,10 @@ class JIDENNDataset:
 <dd>
 <div class="desc"><p>The name of the target variable. <code>None</code> if no target variable is used.</p></div>
 </dd>
-<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.variables"><code class="name">var <span class="ident">variables</span> : config.Variables</code></dt>
+<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.variables"><code class="name">var <span class="ident">variables</span> : Optional[List[str]]</code></dt>
 <dd>
-<div class="desc"><p>The configuration dataclass of the variables to be used in the dataset.</p></div>
+<div class="desc"><p>The configuration dataclass of the variables to be used in the dataset.
+If <code>None</code>, the variables are set automatically during loading with JIDENNDataset.load().</p></div>
 </dd>
 <dt id="jidenn.data.JIDENNDataset.JIDENNDataset.weight"><code class="name">var <span class="ident">weight</span> : Optional[str]</code></dt>
 <dd>
@@ -1209,9 +1345,73 @@ def combine(datasets: List[JIDENNDataset], weights: List[float]) -&gt; JIDENNDat
     Returns:
         JIDENNDataset: Combined `JIDENNDataset` object.
     &#34;&#34;&#34;
-    dataset = tf.data.Dataset.sample_from_datasets([dataset.dataset for dataset in datasets], weights=weights)
-    jidenn_dataset = JIDENNDataset(datasets[0].variables, datasets[0].target, datasets[0].weight)
+    dataset = tf.data.Dataset.sample_from_datasets(
+        [dataset.dataset for dataset in datasets], weights=weights)
+    jidenn_dataset = JIDENNDataset(
+        datasets[0].variables, datasets[0].target, datasets[0].weight)
     return jidenn_dataset._set_dataset(dataset)</code></pre>
+</details>
+</dd>
+<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.load"><code class="name flex">
+<span>def <span class="ident">load</span></span>(<span>path: str, element_spec_path: Optional[str] = None) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Loads a dataset from a file. The dataset is stored in the <code>tf.data.Dataset</code> format.
+The assumed dataset elements are <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code> dictionaries or a tuple of <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code>, <code>label</code> and <code>weight</code>.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>path</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path to the dataset directory.</dd>
+<dt><strong><code>element_spec_path</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The path to the <code>element_spec</code> file. Defaults to <code>None</code>.
+If <code>None</code>, the <code>element_spec</code> is loaded from the <code>element_spec</code> file inside the dataset directory.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the <code>element_spec</code> is not a dictionary or a tuple whose first element is a dictionary.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></code></dt>
+<dd>The JIDENNDataset object with set dataset and <code>element_spec</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def load(path: str, element_spec_path: Optional[str] = None) -&gt; JIDENNDataset:
+    &#34;&#34;&#34;Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
+    The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
+
+    Args:
+        path (str): The path to the dataset directory.
+        element_spec_path (str, optional): The path to the `element_spec` file. Defaults to `None`. 
+            If `None`, the `element_spec` is loaded from the `element_spec` file inside the dataset directory.
+
+    Raises:
+        ValueError: If the `element_spec` is not a dictionary or a tuple whose first element is a dictionary.
+
+    Returns:
+        JIDENNDataset: The JIDENNDataset object with set dataset and `element_spec`.
+    &#34;&#34;&#34;
+
+    if element_spec_path is None:
+        element_spec_path = os.path.join(path, &#39;element_spec&#39;)
+    with open(element_spec_path, &#39;rb&#39;) as f:
+        element_spec = pickle.load(f)
+
+    if isinstance(element_spec, dict):
+        variables = list(element_spec.keys())
+
+    elif isinstance(element_spec[0], dict):
+        variables = list(element_spec[0].keys())
+
+    else:
+        raise ValueError(&#39;Element spec is not a dictionary.&#39;)
+
+    return JIDENNDataset(variables=variables).load_dataset(path)</code></pre>
 </details>
 </dd>
 </dl>
@@ -1281,12 +1481,62 @@ def element_spec(self) -&gt; Union[Dict[str, Union[tf.TensorSpec, tf.RaggedTenso
     return self._set_dataset(dataset)</code></pre>
 </details>
 </dd>
-<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.create_JIDENNVariables"><code class="name flex">
-<span>def <span class="ident">create_JIDENNVariables</span></span>(<span>self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>], <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>]] = None) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
+<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.create_train_input"><code class="name flex">
+<span>def <span class="ident">create_train_input</span></span>(<span>self, func: Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>], Union[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, Tuple[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>]]]) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
 </code></dt>
 <dd>
-<div class="desc"><p>Creates a <code><a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a></code> dataset from the <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code> dataset and creates labels and weights.
-The variables are selected according to the <code>variables</code> configuration dataclass and
+<div class="desc"><p>Creates a training input from the dataset using the <code>func</code> function. The function must take a <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code> object and return a <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code> object.
+The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>func</code></strong> :&ensp;<code>Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>], Union[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, Tuple[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>]]]</code></dt>
+<dd>Function to apply to the data to create the training input.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the dataset is not loaded yet.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></code></dt>
+<dd>The JIDENNDataset object
+with signature <code>((<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>), &hellip;)</code> or <code>(<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, &hellip;)</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_train_input(self, func: Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -&gt; JIDENNDataset:
+    &#34;&#34;&#34;Creates a training input from the dataset using the `func` function. The function must take a `ROOTVariables` object and return a `ROOTVariables` object.
+    The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).
+
+
+    Args:
+        func (Callable[[ROOTVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
+
+    Raises:
+        ValueError: If the dataset is not loaded yet.
+
+    Returns:
+        JIDENNDataset: The JIDENNDataset object  with signature `((ROOTVariables, ROOTVariables), ...)` or `(ROOTVariables, ...)`.
+    &#34;&#34;&#34;
+    if self.dataset is None:
+        raise ValueError(&#39;Dataset not loaded yet.&#39;)
+
+    @tf.function
+    def input_wrapper(data, label, w=None):
+        return func(data), label
+    dataset = self.dataset.map(input_wrapper)
+    return self._set_dataset(dataset)</code></pre>
+</details>
+</dd>
+<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.create_variables"><code class="name flex">
+<span>def <span class="ident">create_variables</span></span>(<span>self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>], <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>]] = None) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Creates a 'tf.data.Dataset' from selected variables and creates labels and weights.
+The variables are selected according to the <code>variables</code> loaded from config.
 the <code>target</code> and <code>weight</code> class variables are used to create labels and weights from the <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code>.</p>
 <p>Optionally, a <code>Cut</code> can be applied to the dataset. It is done <strong>before</strong> the variables are selected.
 The <code>map_dataset</code> function can be used to apply a function to the dataset before the variables are selected.
@@ -1306,15 +1556,15 @@ It could be used to create new variables from the existing ones.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></code></dt>
-<dd>The JIDENNDataset object with the signature of <code>(<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>, label, weight)</code>.</dd>
+<dd>The JIDENNDataset object with the signature of <code>(<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, label, weight)</code>.</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def create_JIDENNVariables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -&gt; JIDENNDataset:
-    &#34;&#34;&#34;Creates a `JIDENNVariables` dataset from the `ROOTVariables` dataset and creates labels and weights.
-    The variables are selected according to the `variables` configuration dataclass and 
+<pre><code class="python">def create_variables(self, cut: Optional[Cut] = None, map_dataset: Optional[Callable[[ROOTVariables], ROOTVariables]] = None) -&gt; JIDENNDataset:
+    &#34;&#34;&#34;Creates a &#39;tf.data.Dataset&#39; from selected variables and creates labels and weights.
+    The variables are selected according to the `variables` loaded from config.
     the `target` and `weight` class variables are used to create labels and weights from the `ROOTVariables`.
 
     Optionally, a `Cut` can be applied to the dataset. It is done **before** the variables are selected.
@@ -1329,7 +1579,7 @@ It could be used to create new variables from the existing ones.</p>
         ValueError: If the dataset is not loaded yet.
 
     Returns:
-        JIDENNDataset: The JIDENNDataset object with the signature of `(JIDENNVariables, label, weight)`.
+        JIDENNDataset: The JIDENNDataset object with the signature of `(ROOTVariables, label, weight)`.
     &#34;&#34;&#34;
     if self.dataset is None:
         raise ValueError(&#39;Dataset not loaded yet.&#39;)
@@ -1343,64 +1593,14 @@ It could be used to create new variables from the existing ones.</p>
     return self._set_dataset(dataset)</code></pre>
 </details>
 </dd>
-<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.create_train_input"><code class="name flex">
-<span>def <span class="ident">create_train_input</span></span>(<span>self, func: Callable[[<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>], Union[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, Tuple[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>]]]) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
-</code></dt>
-<dd>
-<div class="desc"><p>Creates a training input from the dataset using the <code>func</code> function. The function must take a <code><a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a></code> object and return a <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code> object.
-The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>func</code></strong> :&ensp;<code>Callable[[<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>], Union[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, Tuple[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>]]]</code></dt>
-<dd>Function to apply to the data to create the training input.</dd>
-</dl>
-<h2 id="raises">Raises</h2>
-<dl>
-<dt><code>ValueError</code></dt>
-<dd>If the dataset is not loaded yet.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></code></dt>
-<dd>The JIDENNDataset object
-with signature <code>((<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, <a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>), &hellip;)</code> or <code>(<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, &hellip;)</code>.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def create_train_input(self, func: Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]) -&gt; JIDENNDataset:
-    &#34;&#34;&#34;Creates a training input from the dataset using the `func` function. The function must take a `JIDENNVariables` object and return a `ROOTVariables` object.
-    The output of the function is of the form Dict[str, tf.Tensor] or Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]] (optionally aslo tf.RaggedTensor).
-
-
-    Args:
-        func (Callable[[JIDENNVariables], Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]]): Function to apply to the data to create the training input.
-
-    Raises:
-        ValueError: If the dataset is not loaded yet.
-
-    Returns:
-        JIDENNDataset: The JIDENNDataset object  with signature `((ROOTVariables, ROOTVariables), ...)` or `(ROOTVariables, ...)`.
-    &#34;&#34;&#34;
-    if self.dataset is None:
-        raise ValueError(&#39;Dataset not loaded yet.&#39;)
-
-    @tf.function
-    def input_wrapper(data, label, w=None):
-        return func(data), label
-    dataset = self.dataset.map(input_wrapper)
-    return self._set_dataset(dataset)</code></pre>
-</details>
-</dd>
 <dt id="jidenn.data.JIDENNDataset.JIDENNDataset.filter"><code class="name flex">
-<span>def <span class="ident">filter</span></span>(<span>self, filter: Callable[[<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>], bool]) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
+<span>def <span class="ident">filter</span></span>(<span>self, filter: Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>], bool]) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Filters the dataset using the <code>filter</code> function. </p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>filter</code></strong> :&ensp;<code>Callable[[<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>], bool]</code></dt>
+<dt><strong><code>filter</code></strong> :&ensp;<code>Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>], bool]</code></dt>
 <dd>Function to apply to the data.</dd>
 </dl>
 <h2 id="raises">Raises</h2>
@@ -1417,11 +1617,11 @@ with signature <code>((<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def filter(self, filter: Callable[[JIDENNVariables], bool]) -&gt; JIDENNDataset:
+<pre><code class="python">def filter(self, filter: Callable[[ROOTVariables], bool]) -&gt; JIDENNDataset:
     &#34;&#34;&#34;Filters the dataset using the `filter` function. 
 
     Args:
-        filter (Callable[[JIDENNVariables], bool]): Function to apply to the data.
+        filter (Callable[[ROOTVariables], bool]): Function to apply to the data.
 
     Raises:
         ValueError: If the dataset is not loaded yet.
@@ -1504,11 +1704,15 @@ The dataset is also batched, shuffled, shortend (using <code>take</code>) and ma
         dataset = self.dataset.map(map_func)
     else:
         dataset = self.dataset.map(dict_to_stacked_array)
-    dataset = dataset.shuffle(shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
+    dataset = dataset.shuffle(
+        shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
     if take is not None:
         dataset = dataset.take(take)
-        dataset = dataset.apply(tf.data.experimental.assert_cardinality(take)) if assert_length else dataset
-    dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size))
+        dataset = dataset.apply(tf.data.experimental.assert_cardinality(
+            take)) if assert_length else dataset
+    dataset = dataset.apply(
+        tf.data.experimental.dense_to_ragged_batch(batch_size))
+    # dataset = dataset.ragged_batch(batch_size)
     dataset = dataset.prefetch(tf.data.AUTOTUNE)
     return dataset</code></pre>
 </details>
@@ -1589,12 +1793,67 @@ Alternatively, the <code>element_spec</code> can be loaded manually using the <c
     return self._set_element_spec(element_spec)</code></pre>
 </details>
 </dd>
+<dt id="jidenn.data.JIDENNDataset.JIDENNDataset.plot_data_distributions"><code class="name flex">
+<span>def <span class="ident">plot_data_distributions</span></span>(<span>self, folder: str, variables: Optional[List[str]] = None, hue_variable: Optional[str] = None, named_labels: Optional[Dict[int, str]] = None, xlabel_mapper: Optional[Dict[str, str]] = None) ‑> None</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
+The function uses <code><a title="jidenn.evaluation.plotter.plot_data_distributions" href="../evaluation/plotter.html#jidenn.evaluation.plotter.plot_data_distributions">plot_data_distributions()</a></code> to plot the data distributions.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>folder</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path to the directory where the plots are saved.</dd>
+<dt><strong><code>variables</code></strong> :&ensp;<code>Optional[List[str]]</code>, optional</dt>
+<dd>List of variables to plot. If <code>None</code>, all variables are plotted. Defaults to <code>None</code>.</dd>
+<dt><strong><code>named_labels</code></strong> :&ensp;<code>Dict[int, str]</code>, optional</dt>
+<dd>Dictionary mapping truth values to custom labels.
+If not provided, the truth values will be used as labels. </dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If the dataset is not loaded yet.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>None</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_data_distributions(self,
+                            folder: str,
+                            variables: Optional[List[str]] = None,
+                            hue_variable: Optional[str] = None,
+                            named_labels: Optional[Dict[int, str]] = None,
+                            xlabel_mapper: Optional[Dict[str, str]] = None) -&gt; None:
+    &#34;&#34;&#34;Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
+    The function uses `jidenn.evaluation.plotter.plot_data_distributions` to plot the data distributions.
+
+    Args:
+        folder (str): The path to the directory where the plots are saved.
+        variables (Optional[List[str]], optional): List of variables to plot. If `None`, all variables are plotted. Defaults to `None`.
+        named_labels (Dict[int, str], optional): Dictionary mapping truth values to custom labels.
+            If not provided, the truth values will be used as labels. 
+
+    Raises:
+        ValueError: If the dataset is not loaded yet.
+
+    Returns:
+        None
+    &#34;&#34;&#34;
+    if self.dataset is None:
+        raise ValueError(&#39;Dataset not loaded yet.&#39;)
+    df = self.to_pandas(variables)
+    plot_data_distributions(df, folder=folder, named_labels=named_labels,
+                            xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)</code></pre>
+</details>
+</dd>
 <dt id="jidenn.data.JIDENNDataset.JIDENNDataset.remap_labels"><code class="name flex">
 <span>def <span class="ident">remap_labels</span></span>(<span>self, label_mapping: Callable[[int], int]) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Remaps the labels in the dataset using the <code>label_mapping</code> function.
-Should be used after the <code>create_JIDENNVariables</code> method. </p>
+Should be used after the <code>create_variables</code> method. </p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>label_mapping</code></strong> :&ensp;<code>Callable[[int], int]</code></dt>
@@ -1618,7 +1877,7 @@ Should be used after the <code>create_JIDENNVariables</code> method. </p>
 </summary>
 <pre><code class="python">def remap_labels(self, label_mapping: Callable[[int], int]) -&gt; JIDENNDataset:
     &#34;&#34;&#34;Remaps the labels in the dataset using the `label_mapping` function.
-    Should be used after the `create_JIDENNVariables` method. 
+    Should be used after the `create_variables` method. 
 
     Args:
         label_mapping (Callable[[int], int]): The function that maps the labels.
@@ -1649,7 +1908,7 @@ Should be used after the <code>create_JIDENNVariables</code> method. </p>
 </details>
 </dd>
 <dt id="jidenn.data.JIDENNDataset.JIDENNDataset.resample_dataset"><code class="name flex">
-<span>def <span class="ident">resample_dataset</span></span>(<span>self, resampling_func: Callable[[<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>, Any], int], target_dist: List[float])</span>
+<span>def <span class="ident">resample_dataset</span></span>(<span>self, resampling_func: Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, Any], int], target_dist: List[float])</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Resamples the dataset using the <code>resampling_func</code> function. The function computes the bin index for each sample in the dataset.
@@ -1658,7 +1917,7 @@ if the target distribution is very different from the original one as the datase
 for the appropriate sample to be drawn.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>resampling_func</code></strong> :&ensp;<code>Callable[[<a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a>, Any], int]</code></dt>
+<dt><strong><code>resampling_func</code></strong> :&ensp;<code>Callable[[<a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a>, Any], int]</code></dt>
 <dd>Function that bins the data. It must return an integer between 0 and <code>len(target_dist) - 1</code>.</dd>
 <dt><strong><code>target_dist</code></strong> :&ensp;<code>List[float]</code></dt>
 <dd>The target distribution of the resampled dataset.</dd>
@@ -1677,14 +1936,14 @@ for the appropriate sample to be drawn.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def resample_dataset(self, resampling_func: Callable[[JIDENNVariables, Any], int], target_dist: List[float]):
+<pre><code class="python">def resample_dataset(self, resampling_func: Callable[[ROOTVariables, Any], int], target_dist: List[float]):
     &#34;&#34;&#34;Resamples the dataset using the `resampling_func` function. The function computes the bin index for each sample in the dataset. 
     The dataset is then resampled to match the `target_dist` distribution. Be careful that this may **slow down the training process**,
     if the target distribution is very different from the original one as the dataset is resampled on the fly and is waiting 
     for the appropriate sample to be drawn.
 
     Args:
-        resampling_func (Callable[[JIDENNVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
+        resampling_func (Callable[[ROOTVariables, Any], int]): Function that bins the data. It must return an integer between 0 and `len(target_dist) - 1`.
         target_dist (List[float]): The target distribution of the resampled dataset.
 
     Raises:
@@ -1697,9 +1956,10 @@ for the appropriate sample to be drawn.</p>
         raise ValueError(&#39;Dataset not loaded yet.&#39;)
 
     @tf.function
-    def _data_only(_, data):
+    def _data_only(x, data):
         return data
-    dataset = self.dataset.rejection_resample(resampling_func, target_dist=target_dist).map(_data_only)
+    dataset = self.dataset.rejection_resample(
+        resampling_func, target_dist=target_dist).map(_data_only)
     return self._set_dataset(dataset)</code></pre>
 </details>
 </dd>
@@ -1768,7 +2028,7 @@ Ternsorflow file has the <code>.pb</code> extension.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>dataset</code></strong> :&ensp;<code>tf.data.Dataset</code></dt>
-<dd>The <code>tf.data.Dataset</code> object consisting of <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code> or <code><a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a></code>.</dd>
+<dd>The <code>tf.data.Dataset</code> object consisting of <code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code>.</dd>
 <dt><strong><code>element_spec</code></strong> :&ensp;<code>Dict[str, Union[tf.TensorSpec, tf.RaggedTensorSpec]]</code></dt>
 <dd>The <code>element_spec</code> of the dataset.</dd>
 </dl>
@@ -1785,7 +2045,7 @@ Ternsorflow file has the <code>.pb</code> extension.</p>
     &#34;&#34;&#34;Sets the `tf.data.Dataset` object and the `element_spec` of the dataset.
 
     Args:
-        dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables` or `JIDENNVariables`.
+        dataset (tf.data.Dataset): The `tf.data.Dataset` object consisting of `ROOTVariables`.
         element_spec (Dict[str, Union[tf.TensorSpec, tf.RaggedTensorSpec]]): The `element_spec` of the dataset.
 
     Returns:
@@ -1800,7 +2060,7 @@ Ternsorflow file has the <code>.pb</code> extension.</p>
 </details>
 </dd>
 <dt id="jidenn.data.JIDENNDataset.JIDENNDataset.to_pandas"><code class="name flex">
-<span>def <span class="ident">to_pandas</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
+<span>def <span class="ident">to_pandas</span></span>(<span>self, variables: Optional[List[str]] = None) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Converts the dataset to a pandas DataFrame. The dataset must be loaded before calling this function.
@@ -1813,8 +2073,13 @@ Consider taking only a subset of the dataset before converting it to a pandas Da
 jidenn_dataset = jidenn_dataset.apply(lambda dataset: dataset.take(1_000))
 df = jidenn_dataset.to_pandas()
 </code></pre>
-<p>If the dataset contains tuples, i.e. has <code>perJetTuple</code> variables, consider using <code><a title="jidenn.data.data_info.explode_nested_variables" href="data_info.html#jidenn.data.data_info.explode_nested_variables">explode_nested_variables()</a></code>
+<p>If the dataset contains nested tuples consider using <code><a title="jidenn.data.data_info.explode_nested_variables" href="data_info.html#jidenn.data.data_info.explode_nested_variables">explode_nested_variables()</a></code>
 on the tuple columns of the convereted dataframe.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>variables</code></strong> :&ensp;<code>Optional[List[str]]</code>, optional</dt>
+<dd>List of variables to convert to a pandas DataFrame. If <code>None</code>, all variables are converted. Defaults to <code>None</code>.</dd>
+</dl>
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><code>ImportError</code></dt>
@@ -1831,7 +2096,7 @@ on the tuple columns of the convereted dataframe.</p>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def to_pandas(self) -&gt; pd.DataFrame:
+<pre><code class="python">def to_pandas(self, variables: Optional[List[str]] = None) -&gt; pd.DataFrame:
     &#34;&#34;&#34;Converts the dataset to a pandas DataFrame. The dataset must be loaded before calling this function.
     The function uses `tensorflow_datasets.as_dataframe` to convert the dataset to a pandas DataFrame, so 
     the `tensorflow_datasets` package must be installed.
@@ -1845,8 +2110,11 @@ on the tuple columns of the convereted dataframe.</p>
     df = jidenn_dataset.to_pandas()
     ```
 
-    If the dataset contains tuples, i.e. has `perJetTuple` variables, consider using `jidenn.data.data_info.explode_nested_variables` 
+    If the dataset contains nested tuples consider using `jidenn.data.data_info.explode_nested_variables` 
     on the tuple columns of the convereted dataframe.
+
+    Args:
+        variables (Optional[List[str]], optional): List of variables to convert to a pandas DataFrame. If `None`, all variables are converted. Defaults to `None`.
 
     Raises:
         ImportError: If `tensorflow_datasets` is not installed.
@@ -1864,11 +2132,34 @@ on the tuple columns of the convereted dataframe.</p>
     if self.dataset is None:
         raise ValueError(&#39;Dataset not loaded yet.&#39;)
 
-    @tf.function
-    def tuple_to_dict(data, label, weight=None):
-        if isinstance(data, tuple):
-            data = {**data[0], **data[1]}
-        return {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+    if isinstance(self.element_spec, tuple) and variables is None:
+        @tf.function
+        def tuple_to_dict(data, label, weight=None):
+            if isinstance(data, tuple):
+                data = {**data[0], **data[1]}
+            data = {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+            return data
+
+    elif isinstance(self.element_spec, tuple) and variables is not None:
+        @tf.function
+        def tuple_to_dict(data, label, weight=None):
+            if isinstance(data, tuple):
+                data = {**data[0], **data[1]}
+            data = {**data, &#39;label&#39;: label, &#39;weight&#39;: weight}
+            return {k: data[k] for k in variables + [&#39;label&#39;, &#39;weight&#39;]}
+
+    elif isinstance(self.element_spec, dict) and variables is not None:
+        @tf.function
+        def tuple_to_dict(data):
+            return {k: data[k] for k in variables}
+
+    elif isinstance(self.element_spec, dict) and variables is None:
+        @tf.function
+        def tuple_to_dict(data):
+            return data
+
+    else:
+        raise ValueError(&#39;The dataset must be a tuple or a dict.&#39;)
 
     dataset = self.dataset.map(tuple_to_dict)
     df = tfds.as_dataframe(dataset)
@@ -1899,7 +2190,6 @@ on the tuple columns of the convereted dataframe.</p>
 </li>
 <li><h3><a href="#header-variables">Global variables</a></h3>
 <ul class="">
-<li><code><a title="jidenn.data.JIDENNDataset.JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNVariables">JIDENNVariables</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.ROOTVariables" href="#jidenn.data.JIDENNDataset.ROOTVariables">ROOTVariables</a></code></li>
 </ul>
 </li>
@@ -1915,14 +2205,16 @@ on the tuple columns of the convereted dataframe.</p>
 <ul class="">
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.apply" href="#jidenn.data.JIDENNDataset.JIDENNDataset.apply">apply</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.combine" href="#jidenn.data.JIDENNDataset.JIDENNDataset.combine">combine</a></code></li>
-<li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.create_JIDENNVariables" href="#jidenn.data.JIDENNDataset.JIDENNDataset.create_JIDENNVariables">create_JIDENNVariables</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.create_train_input" href="#jidenn.data.JIDENNDataset.JIDENNDataset.create_train_input">create_train_input</a></code></li>
+<li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.create_variables" href="#jidenn.data.JIDENNDataset.JIDENNDataset.create_variables">create_variables</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.dataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset.dataset">dataset</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.element_spec" href="#jidenn.data.JIDENNDataset.JIDENNDataset.element_spec">element_spec</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.filter" href="#jidenn.data.JIDENNDataset.JIDENNDataset.filter">filter</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.get_prepared_dataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset.get_prepared_dataset">get_prepared_dataset</a></code></li>
+<li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.load" href="#jidenn.data.JIDENNDataset.JIDENNDataset.load">load</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.load_dataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset.load_dataset">load_dataset</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.load_element_spec" href="#jidenn.data.JIDENNDataset.JIDENNDataset.load_element_spec">load_element_spec</a></code></li>
+<li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.plot_data_distributions" href="#jidenn.data.JIDENNDataset.JIDENNDataset.plot_data_distributions">plot_data_distributions</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.remap_labels" href="#jidenn.data.JIDENNDataset.JIDENNDataset.remap_labels">remap_labels</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.resample_dataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset.resample_dataset">resample_dataset</a></code></li>
 <li><code><a title="jidenn.data.JIDENNDataset.JIDENNDataset.save_dataset" href="#jidenn.data.JIDENNDataset.JIDENNDataset.save_dataset">save_dataset</a></code></li>

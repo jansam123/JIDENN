@@ -65,7 +65,7 @@ def get_normalization(dataset: tf.data.Dataset,
     &#34;&#34;&#34;
 
     if not adapt:
-        log.info(&#34;Normalization not adapting. Loading weights expected.&#34;)
+        log.warning(&#34;Normalization not adapting. Loading weights expected.&#34;)
         if not interaction:
             return tf.keras.layers.Normalization(axis=-1)
         else:
@@ -75,13 +75,16 @@ def get_normalization(dataset: tf.data.Dataset,
 
     log.info(&#34;Getting std and mean of the dataset...&#34;)
     log.info(f&#34;Subsample size (num of batches): {normalization_steps}&#34;)
-    
+
     if not ragged:
-        def picker(*x): return x[0]
+        def picker(*x):
+            return x[0]
     elif interaction:
-        def picker(*x): return x[0][0].to_tensor()
+        def picker(*x):
+            return x[0][0].to_tensor()
     else:
-        def picker(*x): return x[0].to_tensor()
+        def picker(*x):
+            return x[0].to_tensor()
 
     try:
         normalizer.adapt(dataset.map(picker), steps=normalization_steps)
@@ -92,7 +95,7 @@ def get_normalization(dataset: tf.data.Dataset,
     if not interaction:
         log.info(&#34;No interaction normalization&#34;)
         return normalizer
-    
+
     log.info(&#34;Getting std and mean of the **interaction** dataset...&#34;)
 
     def picker_interaction(*x):
@@ -106,7 +109,8 @@ def get_normalization(dataset: tf.data.Dataset,
 
     normalizer_interaction = tf.keras.layers.Normalization(axis=-1)
     try:
-        normalizer_interaction.adapt(dataset.map(picker_interaction), steps=normalization_steps)
+        normalizer_interaction.adapt(dataset.map(
+            picker_interaction), steps=normalization_steps)
     except Exception as e:
         log.error(f&#34;Interaction normalization failed: {e}&#34;)
         normalizer_interaction = None
@@ -174,7 +178,7 @@ one layer if there is no interaction, two layers as a <code>tuple</code> if ther
     &#34;&#34;&#34;
 
     if not adapt:
-        log.info(&#34;Normalization not adapting. Loading weights expected.&#34;)
+        log.warning(&#34;Normalization not adapting. Loading weights expected.&#34;)
         if not interaction:
             return tf.keras.layers.Normalization(axis=-1)
         else:
@@ -184,13 +188,16 @@ one layer if there is no interaction, two layers as a <code>tuple</code> if ther
 
     log.info(&#34;Getting std and mean of the dataset...&#34;)
     log.info(f&#34;Subsample size (num of batches): {normalization_steps}&#34;)
-    
+
     if not ragged:
-        def picker(*x): return x[0]
+        def picker(*x):
+            return x[0]
     elif interaction:
-        def picker(*x): return x[0][0].to_tensor()
+        def picker(*x):
+            return x[0][0].to_tensor()
     else:
-        def picker(*x): return x[0].to_tensor()
+        def picker(*x):
+            return x[0].to_tensor()
 
     try:
         normalizer.adapt(dataset.map(picker), steps=normalization_steps)
@@ -201,7 +208,7 @@ one layer if there is no interaction, two layers as a <code>tuple</code> if ther
     if not interaction:
         log.info(&#34;No interaction normalization&#34;)
         return normalizer
-    
+
     log.info(&#34;Getting std and mean of the **interaction** dataset...&#34;)
 
     def picker_interaction(*x):
@@ -215,7 +222,8 @@ one layer if there is no interaction, two layers as a <code>tuple</code> if ther
 
     normalizer_interaction = tf.keras.layers.Normalization(axis=-1)
     try:
-        normalizer_interaction.adapt(dataset.map(picker_interaction), steps=normalization_steps)
+        normalizer_interaction.adapt(dataset.map(
+            picker_interaction), steps=normalization_steps)
     except Exception as e:
         log.error(f&#34;Interaction normalization failed: {e}&#34;)
         normalizer_interaction = None
