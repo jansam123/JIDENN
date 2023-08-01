@@ -9,9 +9,11 @@ ROOTVariables = dict[str, Union[tf.Tensor, tf.RaggedTensor]]
 def take_second(x, y):
     return y
 
+
 @tf.function
 def take_first(x, y):
     return x
+
 
 def get_bin_fn(bins: Union[int, List[float]] = 100,
                lower_var_limit: int = 60_000,
@@ -30,9 +32,10 @@ def get_bin_fn(bins: Union[int, List[float]] = 100,
     Returns:
         Callable[[ROOTVariables], tf.Tensor]: Function that returns the bin index of a variable.
     """
-    
+    np.emath.logn(lower_var_limit, log_binning_base)
+
     if log_binning_base is not None and isinstance(bins, int):
-        bin_edges =  np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
+        bin_edges = np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
         bin_edges = tf.constant(bin_edges, dtype=tf.float32)
     elif isinstance(bins, int):
         lower_var_limit_casted = tf.cast(lower_var_limit, dtype=tf.float32)
@@ -40,7 +43,7 @@ def get_bin_fn(bins: Union[int, List[float]] = 100,
         bin_edges = tf.linspace(lower_var_limit_casted, upper_var_limit_casted, bins + 1)
     else:
         bin_edges = tf.constant(bins, dtype=tf.float32)
-        
+
     @tf.function
     def _rebin(data: ROOTVariables) -> tf.Tensor:
         var = data[variable]
@@ -79,23 +82,23 @@ def resample_dataset(dataset: tf.data.Dataset,
     """
 
     dist = [1 / bins] * bins if target_dist is None else target_dist
-    
-    if target_dist is None and precompute_init_dist: 
+
+    if target_dist is None and precompute_init_dist:
         initial_dist = dataset.map(get_bin_fn(bins=bins,
-                                            lower_var_limit=lower_var_limit,
-                                            upper_var_limit=upper_var_limit,
-                                            log_binning_base=log_binning_base,
-                                            variable=variable))
-        
-        initial_dist = initial_dist.reduce(tf.zeros(bins, dtype=tf.int64), lambda x, y: x + tf.one_hot(y, bins, dtype=tf.int64))
+                                              lower_var_limit=lower_var_limit,
+                                              upper_var_limit=upper_var_limit,
+                                              log_binning_base=log_binning_base,
+                                              variable=variable))
+
+        initial_dist = initial_dist.reduce(tf.zeros(bins, dtype=tf.int64), lambda x,
+                                           y: x + tf.one_hot(y, bins, dtype=tf.int64))
         initial_dist = tf.cast(initial_dist, dtype=tf.float64)
         initial_dist = initial_dist / tf.reduce_sum(initial_dist)
         # initial_dist = tf.squeeze(initial_dist)
         print(initial_dist)
     else:
         initial_dist = None
-    
-    
+
     dataset = dataset.rejection_resample(get_bin_fn(bins=bins,
                                                     lower_var_limit=lower_var_limit,
                                                     log_binning_base=log_binning_base,
@@ -134,7 +137,7 @@ def get_label_bin_fn(bins: int = 100,
         Callable[[ROOTVariables], tf.Tensor]: _description_
     """
     if log_binning_base is not None and isinstance(bins, int):
-        bin_edges =  np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
+        bin_edges = np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)
         bin_edges = tf.constant(bin_edges, dtype=tf.float32)
     elif isinstance(bins, int):
         lower_var_limit_casted = tf.cast(lower_var_limit, dtype=tf.float32)
@@ -142,16 +145,15 @@ def get_label_bin_fn(bins: int = 100,
         bin_edges = tf.linspace(lower_var_limit_casted, upper_var_limit_casted, bins + 1)
     else:
         bin_edges = tf.constant(bins, dtype=tf.float32)
-        
+
     n_bins = len(bin_edges) - 1
-        
+
     @tf.function
     def _rebin(data: ROOTVariables) -> tf.Tensor:
         var = data[variable]
         label = data[label_variable]
         var = tf.reshape(var, (1, ))
         bin_indices = tf.searchsorted(bin_edges, var, side='right') - 1
-        # bin_indices = tf.where(bin_indices < 0, 0, bin_indices)
         bin_indices = tf.clip_by_value(bin_indices, 0, n_bins - 1)
         bin_indices = tf.squeeze(bin_indices)
         if tf.reduce_any(tf.equal(label, tf.constant(label_class_1, dtype=label.dtype))):
@@ -163,11 +165,11 @@ def get_label_bin_fn(bins: int = 100,
     return _rebin
 
 
-def rasample_from_min_bin_count(dataset: tf.data.Dataset,
+def resample_from_min_bin_count(dataset: tf.data.Dataset,
                                 bin_fn: Callable[[ROOTVariables], tf.Tensor],
                                 min_bin_count: int,
                                 bins: int = 100,) -> tf.data.Dataset:
-    
+
     @tf.function
     def assign_if_filter_fn(state, x):
         bin_idx = bin_fn(x)
@@ -176,9 +178,8 @@ def rasample_from_min_bin_count(dataset: tf.data.Dataset,
 
     dataset = dataset.scan(tf.zeros((bins), dtype=tf.int64), assign_if_filter_fn)
     dataset = dataset.filter(take_second).map(take_first)
-    
+
     return dataset
-                                
 
 
 def resample_with_labels_dataset(dataset: tf.data.Dataset,
@@ -216,17 +217,18 @@ def resample_with_labels_dataset(dataset: tf.data.Dataset,
         tf.data.Dataset: The resampled dataset.
     """
     dist = [1 / (bins * 2)] * bins * 2 if target_dist is None else target_dist
-    
-    if target_dist is None and precompute_init_dist: 
+
+    if target_dist is None and precompute_init_dist:
         initial_dist = dataset.map(get_label_bin_fn(bins=bins,
-                                                            lower_var_limit=lower_var_limit,
-                                                            upper_var_limit=upper_var_limit,
-                                                            variable=variable,
-                                                            label_variable=label_variable,
-                                                            log_binning_base=log_binning_base,
-                                                            label_class_1=label_class_1,
-                                                            label_class_2=label_class_2))
-        initial_dist = initial_dist.reduce(tf.zeros((bins * 2), dtype=tf.int64), lambda x, y: x + tf.one_hot(y, bins * 2, dtype=tf.int64))
+                                                    lower_var_limit=lower_var_limit,
+                                                    upper_var_limit=upper_var_limit,
+                                                    variable=variable,
+                                                    label_variable=label_variable,
+                                                    log_binning_base=log_binning_base,
+                                                    label_class_1=label_class_1,
+                                                    label_class_2=label_class_2), deterministic=True)
+        initial_dist = initial_dist.reduce(tf.zeros((bins * 2), dtype=tf.int64),
+                                           lambda x, y: x + tf.one_hot(y, bins * 2, dtype=tf.int64))
         min_count = tf.reduce_min(initial_dist).numpy()
         min_count = tf.cast(min_count, dtype=tf.int64)
         initial_dist = tf.cast(initial_dist, dtype=tf.float64)
@@ -236,7 +238,7 @@ def resample_with_labels_dataset(dataset: tf.data.Dataset,
         print(initial_dist)
     else:
         initial_dist = None
-        
+
     label_bin_fn = get_label_bin_fn(bins=bins,
                                     lower_var_limit=lower_var_limit,
                                     upper_var_limit=upper_var_limit,
@@ -245,10 +247,12 @@ def resample_with_labels_dataset(dataset: tf.data.Dataset,
                                     label_variable=label_variable,
                                     label_class_1=label_class_1,
                                     label_class_2=label_class_2)
-        
+
     if from_min_count:
-        return rasample_from_min_bin_count(dataset, label_bin_fn, min_bin_count=min_count, bins=bins * 2)
+        print('Using min count')
+        return resample_from_min_bin_count(dataset, label_bin_fn, min_bin_count=min_count, bins=bins * 2)
     else:
+        print('Random resampling')
         dataset = dataset.rejection_resample(label_bin_fn, target_dist=dist, initial_dist=initial_dist)
         return dataset.map(take_second)
 

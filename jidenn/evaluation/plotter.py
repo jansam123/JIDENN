@@ -373,10 +373,11 @@ def plot_single_dist(df: pd.DataFrame,
                      ylim: Optional[Tuple[float, float]] = None,
                      xlabel: Optional[str] = None,
                      hue_order: Optional[List[str]] = None,
-                     badge_text: Optional[str] = None,  
+                     badge_text: Optional[str] = None,
+                     weight_var: Optional[str] = None,
                      save_path: str = 'figs.png') -> None:
 
-    sns.histplot(data=df, x=variable, hue=hue_var,
+    sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
                  stat='count', element="step", fill=True,
                  palette='Set1', common_norm=False, hue_order=hue_order, bins=bins)
     plt.ylim(ylim) if ylim is not None else None
@@ -384,10 +385,10 @@ def plot_single_dist(df: pd.DataFrame,
     plt.yscale('log') if ylog else plt.yscale('linear')
     plt.xscale('log') if xlog else plt.xscale('linear')
     plt.xlabel(xlabel if xlabel is not None else variable)
-    atlasify.atlasify(subtext=f"Simulation Internal \n {badge_text}" if badge_text is not None else "Simulation Internal")
+    atlasify.atlasify(
+        subtext=f"Simulation Internal \n {badge_text}" if badge_text is not None else "Simulation Internal")
     plt.savefig(save_path, dpi=400, bbox_inches='tight')
     plt.close()
-
 
 
 def plot_var_dependence(dfs: List[pd.DataFrame],
