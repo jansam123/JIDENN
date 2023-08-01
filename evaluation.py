@@ -31,7 +31,7 @@ cs = ConfigStore.instance()
 cs.store(name="args", node=eval_config.EvalConfig)
 
 
-@hydra.main(version_base="1.2", config_path="jidenn/config", config_name="eval_config")
+@hydra.main(version_base="1.2", config_path="jidenn/yaml_config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
 
@@ -69,8 +69,10 @@ def main(args: eval_config.EvalConfig) -> None:
     df = full_dataset.to_pandas(variables=variables)
 
     if args.binning.log_bin_base is not None:
-        bins = np.logspace(np.log10(args.binning.min_bin), np.log10(args.binning.max_bin),
-                           args.binning.bins + 1, base=args.binning.log_bin_base)
+        min_val = np.log(args.binning.min_bin) / np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.min_bin)
+        max_val = np.log(args.binning.max_bin) / np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.max_bin)
+        bins = np.logspace(min_val, max_val,
+                           args.binning.bins + 1, base=args.binning.log_bin_base if args.binning.log_bin_base != 0 else np.e)
     else:
         bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins + 1)
 

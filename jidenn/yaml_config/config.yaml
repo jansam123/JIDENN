@@ -31,7 +31,7 @@ optimizer:
   warmup_steps: 100 # Number of steps, when learning rate is increased linearly.
   learning_rate: 0.001 # Learning rate.
   min_learning_rate: 0.01 # Minimal learning rate as a fraction of the initial learning rate.
-  decay_steps: # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps
+  decay_steps: 70416 # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
   clipnorm: # Gradient clipping (maximal norm of the gradient).
   weight_decay: # Weight decay (L2 regularization).
   beta_1: # Adam beta_1 (optimizer parameter).
@@ -40,12 +40,12 @@ optimizer:
   epsilon: #part : 0.0001
 
 dataset:
-  epochs: 6 # Number of epochs.
-  take: 10_000_000 # Length of data to use.
+  epochs: 10 # Number of epochs.
+  take: # Length of data to use.
   batch_size: 512 # Batch size.
   dev_size: 0.05 # Size of dev dataset.
   test_size: 0.1 # Size of test dataset.
-  shuffle_buffer: 1000 # Size of shuffler buffer.
+  shuffle_buffer: 100_000 # Size of shuffler buffer.
 
 preprocess:
   normalization_size: 500 # Size of normalization dataset (if normalize is True).
@@ -127,7 +127,7 @@ models:
     train_input: constituents
 
   bdt:
-    num_trees: 500 #  Number of trees in the forest.
+    num_trees: 300 #  Number of trees in the forest.
     growing_strategy: BEST_FIRST_GLOBAL #  Growing strategy.
     max_depth: 30 #  Maximum depth of the tree.
     split_axis: SPARSE_OBLIQUE #  Split axis.

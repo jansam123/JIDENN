@@ -21,7 +21,7 @@ cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
 
 
-@hydra.main(version_base="1.2", config_path="jidenn/config", config_name="config")
+@hydra.main(version_base="1.2", config_path="jidenn/yaml_config", config_name="config")
 def main(args: config.JIDENNConfig) -> None:
     log = logging.getLogger(__name__)
 
@@ -72,11 +72,11 @@ def main(args: config.JIDENNConfig) -> None:
     # create 3 lists containing lists of file names for train, dev, test datasets separately
     # each subfolder must contain train, dev, test subfolder
     files_per_subfolder = []
-    for name in ["train", "test", "dev"]:
+    for name in ["train", "dev"]:
         file = [f'{args.data.path}/{sub_folder}/{name}' for sub_folder in args.data.subfolders] if args.data.subfolders is not None else [f'{args.data.path}/{name}']
         files_per_subfolder.append(file)
 
-    train, test, dev = [get_preprocessed_dataset(
+    train, dev = [get_preprocessed_dataset(
         file, args.data) for file in files_per_subfolder]
 
     # pick input variables according to model
@@ -90,7 +90,7 @@ def main(args: config.JIDENNConfig) -> None:
     # construct input variables
     train = train.create_train_input(model_input)
     dev = dev.create_train_input(model_input)
-    test = test.create_train_input(model_input)
+    # test = test.create_train_input(model_input)
 
     try:
         restoring_from_backup = len(os.listdir(os.path.join(
@@ -115,10 +115,10 @@ def main(args: config.JIDENNConfig) -> None:
 
     # get proper dataset size based on the config
     if args.dataset.take is not None:
-        train_size = 1 - args.dataset.dev_size + args.dataset.test_size
+        train_size = 1 - args.dataset.dev_size - args.dataset.test_size
         train_size = int(train_size * args.dataset.take)
         dev_size = int(args.dataset.dev_size * args.dataset.take)
-        test_size = int(args.dataset.test_size * args.dataset.take)
+        # test_size = int(args.dataset.test_size * args.dataset.take)
     else:
         train_size, dev_size, test_size = None, None, None
 
@@ -129,15 +129,15 @@ def main(args: config.JIDENNConfig) -> None:
                                        assert_length=True)
     dev = dev.get_prepared_dataset(batch_size=args.dataset.batch_size,
                                    take=dev_size)
-    test = test.get_prepared_dataset(batch_size=args.dataset.batch_size,
-                                     take=test_size)
+    # test = test.get_prepared_dataset(batch_size=args.dataset.batch_size,
+    #                                  take=test_size)
 
     # this is only to get rid of some warnings
     options = tf.data.Options()
     options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
     train = train.with_options(options)
     dev = dev.with_options(options)
-    test = test.with_options(options)
+    # test = test.with_options(options)
 
     # build model, gpu_strategy is based on the number of gpus available
     @gpu_strategy
@@ -212,13 +212,13 @@ def main(args: config.JIDENNConfig) -> None:
             plot_train_history(
                 {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.dataset.epochs)
 
-    if test is None:
-        log.error("No test dataset, skipping evaluation.")
-        log.info("Done!")
-        return
+    # if test is None:
+    #     log.error("No test dataset, skipping evaluation.")
+    #     log.info("Done!")
+    #     return
 
     # run simple evaluation
-    log.info(model.evaluate(test, return_dict=True))
+    log.info(model.evaluate(dev, return_dict=True))
 
     # if model is bdt, plot feature importances
     if args.general.model == 'bdt':

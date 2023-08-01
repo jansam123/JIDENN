@@ -20,7 +20,8 @@ class Binning:
         bins (int): Number of bins to use.
         max_bin (Union[float, int]): Maximum value of the variable. Values above this will be put in the last bin.
         min_bin (Union[float, int]): Minimum value of the variable. Values below this will be put in the first bin.
-        log_bin_base (Optional[int]): If not `None`, use logarithmic binning with the specified base.
+        log_bin_base (Optional[int]): If not `None`, use logarithmic binning with the given base. 
+            Use `0` for natural logarithm.
     """
     variable: str
     bins: int
