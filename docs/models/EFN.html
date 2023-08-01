@@ -143,18 +143,19 @@ class EFNModel(tf.keras.Model):
 
         input = tf.keras.layers.Input(shape=input_shape, ragged=True)
 
-        angular = input[:, :, 6:]
-        energy = input[:, :, :6].to_tensor()
+        if preprocess is not None:
+            input = preprocess(input)
 
+        angular = input[:, :, 6:]
         row_lengths = angular.row_lengths()
         mask = tf.sequence_mask(row_lengths)
-        angular = angular.to_tensor()
 
-        if preprocess is not None:
-            angular = preprocess(angular)
+        energy = input[:, :, :6].to_tensor()
+        angular = angular.to_tensor()
 
         if batch_norm:
             angular = tf.keras.layers.BatchNormalization()(angular)
+            energy = tf.keras.layers.BatchNormalization()(energy)
 
         if Phi_backbone == &#34;cnn&#34;:
             angular = self.cnn_Phi(angular)
@@ -317,18 +318,19 @@ might violate the Infrared and Collinear safety of the model.</dd>
 
         input = tf.keras.layers.Input(shape=input_shape, ragged=True)
 
-        angular = input[:, :, 6:]
-        energy = input[:, :, :6].to_tensor()
+        if preprocess is not None:
+            input = preprocess(input)
 
+        angular = input[:, :, 6:]
         row_lengths = angular.row_lengths()
         mask = tf.sequence_mask(row_lengths)
-        angular = angular.to_tensor()
 
-        if preprocess is not None:
-            angular = preprocess(angular)
+        energy = input[:, :, :6].to_tensor()
+        angular = angular.to_tensor()
 
         if batch_norm:
             angular = tf.keras.layers.BatchNormalization()(angular)
+            energy = tf.keras.layers.BatchNormalization()(energy)
 
         if Phi_backbone == &#34;cnn&#34;:
             angular = self.cnn_Phi(angular)

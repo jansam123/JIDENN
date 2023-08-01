@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
-<title>jidenn API documentation</title>
-<meta name="description" content="This package contains the code for the JIDENN project.
-It contains all the necessary code to train and evaluate the models used for jet identification …" />
+<title>jidenn.preprocess API documentation</title>
+<meta name="description" content="" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -16,98 +15,34 @@ It contains all the necessary code to train and evaluate the models used for jet
 <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS_CHTML" integrity="sha256-kZafAc6mZvK3W3v1pHOcUix30OHQN6pU/NO2oFkqZVw=" crossorigin></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
 <script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
-<link rel="canonical" href="http://jansam.wieno.sk/JIDENN/jidenn/">
+<link rel="canonical" href="http://jansam.wieno.sk/JIDENN/jidenn/preprocess/">
 <link rel="icon" href="images/q_g_tagging.jpeg">
 </head>
 <body>
 <main>
 <article id="content">
 <header>
-<h1 class="title">Package <code>jidenn</code></h1>
+<h1 class="title">Namespace <code>jidenn.preprocess</code></h1>
 </header>
 <section id="section-intro">
-<p>This package contains the code for the JIDENN project.
-It contains all the necessary code to train and evaluate the models used for jet identification.</p>
-<p>The process starts with the <code><a title="jidenn.data" href="data/index.html">jidenn.data</a></code> package, which contains the code to load the data,
-preprocess it, and create the datasets used for training and evaluation. It is recommended to
-convert the ROOT file to saved <code>tf.data.Dataset</code> objects, as this is much faster than loading directly.
-On top of that it provides an easy way to create own training inputs, with the
-<code><a title="jidenn.data.TrainInput" href="data/TrainInput.html">jidenn.data.TrainInput</a></code> module.</p>
-<p>The models are defined in the <code><a title="jidenn.models" href="models/index.html">jidenn.models</a></code> package. There are both, models that take the
-jet constituents as input, and models that take the high-level jet variables already present in the
-ROOT file as input. </p>
-<p>The model creation is done with the <code><a title="jidenn.model_builders" href="model_builders/index.html">jidenn.model_builders</a></code> module. This module contains
-multiple facades for the model creation, separating individual steps to make it easier to
-extend the code at any point. </p>
-<p>All configuration is done with the <code>hydra</code> package. The configuration files are located in the
-<code>jidenn/config</code> folder. The <code><a title="jidenn.config" href="config/index.html">jidenn.config</a></code> module contains the dataclasses that connect the
-<code>*.yaml</code> files to the code.</p>
-<p>Evaluation is done with the <code><a title="jidenn.evaluation" href="evaluation/index.html">jidenn.evaluation</a></code> module. This module contains the code to evaluate
-custom metrics, and to plot the results.</p>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">&#34;&#34;&#34;
-This package contains the code for the JIDENN project.
-It contains all the necessary code to train and evaluate the models used for jet identification.
-
-The process starts with the `jidenn.data` package, which contains the code to load the data,
-preprocess it, and create the datasets used for training and evaluation. It is recommended to
-convert the ROOT file to saved `tf.data.Dataset` objects, as this is much faster than loading directly.
-On top of that it provides an easy way to create own training inputs, with the 
-`jidenn.data.TrainInput` module.
-
-The models are defined in the `jidenn.models` package. There are both, models that take the 
-jet constituents as input, and models that take the high-level jet variables already present in the
-ROOT file as input. 
-
-The model creation is done with the `jidenn.model_builders` module. This module contains 
-multiple facades for the model creation, separating individual steps to make it easier to
-extend the code at any point. 
-
-All configuration is done with the `hydra` package. The configuration files are located in the
-`jidenn/config` folder. The `jidenn.config` module contains the dataclasses that connect the 
-`*.yaml` files to the code.
-
-Evaluation is done with the `jidenn.evaluation` module. This module contains the code to evaluate
-custom metrics, and to plot the results. 
-
-&#34;&#34;&#34;</code></pre>
-</details>
 </section>
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt><code class="name"><a title="jidenn.config" href="config/index.html">jidenn.config</a></code></dt>
-<dd>
-<div class="desc"><p>This module to fully configure the data preparation, training and evaulation.
-The configuration is done using the hydra package …</p></div>
-</dd>
-<dt><code class="name"><a title="jidenn.const" href="const.html">jidenn.const</a></code></dt>
+<dt><code class="name"><a title="jidenn.preprocess.dataset_ops" href="dataset_ops.html">jidenn.preprocess.dataset_ops</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="jidenn.data" href="data/index.html">jidenn.data</a></code></dt>
+<dt><code class="name"><a title="jidenn.preprocess.flatten_dataset" href="flatten_dataset.html">jidenn.preprocess.flatten_dataset</a></code></dt>
 <dd>
-<div class="desc"><p>This module contains all the necessary toolkit to: …</p></div>
+<div class="desc"><p>Set of functions to flatten a dataset. The flattening is done by the reference variable, which is assumed to be a
+tf.RaggedTensor. The shape of the …</p></div>
 </dd>
-<dt><code class="name"><a title="jidenn.evaluation" href="evaluation/index.html">jidenn.evaluation</a></code></dt>
+<dt><code class="name"><a title="jidenn.preprocess.plotter" href="plotter.html">jidenn.preprocess.plotter</a></code></dt>
 <dd>
-<div class="desc"><p>Module for evaluating models. The evalutaion consists of: calculating metrics and plotting the results.
-Custom metrics are defined in …</p></div>
+<div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="jidenn.model_builders" href="model_builders/index.html">jidenn.model_builders</a></code></dt>
-<dd>
-<div class="desc"><p>Module for building models. It separates the model building process into two parts: model initialization
-and model building with output layer, …</p></div>
-</dd>
-<dt><code class="name"><a title="jidenn.models" href="models/index.html">jidenn.models</a></code></dt>
-<dd>
-<div class="desc"><p>This module contains all the models used for the experiments on jet identification.
-They can be basicaly clustered into three categories: …</p></div>
-</dd>
-<dt><code class="name"><a title="jidenn.preprocess" href="preprocess/index.html">jidenn.preprocess</a></code></dt>
+<dt><code class="name"><a title="jidenn.preprocess.resampling" href="resampling.html">jidenn.preprocess.resampling</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -131,15 +66,17 @@ They can be basicaly clustered into three categories: …</p></div>
 <ul></ul>
 </div>
 <ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="jidenn" href="../index.html">jidenn</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li><code><a title="jidenn.config" href="config/index.html">jidenn.config</a></code></li>
-<li><code><a title="jidenn.const" href="const.html">jidenn.const</a></code></li>
-<li><code><a title="jidenn.data" href="data/index.html">jidenn.data</a></code></li>
-<li><code><a title="jidenn.evaluation" href="evaluation/index.html">jidenn.evaluation</a></code></li>
-<li><code><a title="jidenn.model_builders" href="model_builders/index.html">jidenn.model_builders</a></code></li>
-<li><code><a title="jidenn.models" href="models/index.html">jidenn.models</a></code></li>
-<li><code><a title="jidenn.preprocess" href="preprocess/index.html">jidenn.preprocess</a></code></li>
+<li><code><a title="jidenn.preprocess.dataset_ops" href="dataset_ops.html">jidenn.preprocess.dataset_ops</a></code></li>
+<li><code><a title="jidenn.preprocess.flatten_dataset" href="flatten_dataset.html">jidenn.preprocess.flatten_dataset</a></code></li>
+<li><code><a title="jidenn.preprocess.plotter" href="plotter.html">jidenn.preprocess.plotter</a></code></li>
+<li><code><a title="jidenn.preprocess.resampling" href="resampling.html">jidenn.preprocess.resampling</a></code></li>
 </ul>
 </li>
 </ul>

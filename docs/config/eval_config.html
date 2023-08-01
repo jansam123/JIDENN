@@ -44,78 +44,79 @@ They are specified by different cuts on the test data, such as the `jets_pt` or 
 These binning based on cuts are specified in the `jidenn.config.eval_config.Binning` configuration.
 &#34;&#34;&#34;
 from dataclasses import dataclass
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Tuple, Union
 
 from .config import Data
 
 
 @dataclass
 class Binning:
-    &#34;&#34;&#34;Configuration for binning of test data.
-    Each bin is defined by a cut on the test data.
+    &#34;&#34;&#34;Configuration for binning a continuous variable.
 
     Args:
-        cuts (List[str]): Cuts on the test data performing the binning. 
-            See `jidenn.data.string_conversions.Cut` for more details.
-        cut_names (List[str]): Names of the cuts displayed in the plots and subfolders.
-        type (str): Type of variable on which the cuts are applied. One of: &#39;perJet&#39;, &#39;perJetTuple&#39;, &#39;perEvent&#39;.
+        variable (str): Name of the variable to bin.
+        bins (int): Number of bins to use.
+        max_bin (Union[float, int]): Maximum value of the variable. Values above this will be put in the last bin.
+        min_bin (Union[float, int]): Minimum value of the variable. Values below this will be put in the first bin.
+        log_bin_base (Optional[int]): If not `None`, use logarithmic binning with the specified base.
     &#34;&#34;&#34;
-    cuts: List[str]
-    cut_names: List[str]
-    type: Literal[&#34;perJet&#34;, &#34;perJetTuple&#34;, &#34;perEvent&#34;]
+    variable: str
+    bins: int
+    max_bin: Union[float, int]
+    min_bin: Union[float, int]
+    log_bin_base: Optional[int]
 
 
 @dataclass
 class EvalConfig:
-    &#34;&#34;&#34;Configuration for evaluation of a model.
-    
+    &#34;&#34;&#34;Configuration for evaluating a machine learning model.
+
     Args:
-        base_logdir (str): Base path to the log directory of the training. 
-        eval_logs (str): Subfolder of the base log directory for the evaluation.
-        logdir (str): Path to the log directory of the evaluation. Could be set manually,
-            but using `${base_logdir}/${eval_logs}` is recommended, 
-            as it creates a unique folder for each training session inside the `base_logdir`.
-        data (jidenn.config.config.Data): Configuration for the test data.
+        data (jidenn.config.config.Data): Configuration for the data.
+        logdir (str): Path to the log directory of the evaluation. 
+        models_path (str): Path to the directory where the models to evaluate are saved. 
+            Inside this directory, there should be a subdirectory for each model with 
+            the same name as in the `model_names` list. Each of these subdirectories must
+            include a subdirectory `model` containing the saved model.
+        model_names (List[str]): List of names of the models to evaluate.
+        model_input_types (List[str]): List of types of input data expected by the models.
         seed (int): Seed for reproducibility.
-        draw_distribution (int, optional): Draw the distribution of the train input variables 
-            for the first `draw_distribution` events. If `None`, no distribution is drawn.
-        test_subfolder (str): Subfolder of the data folder to use, One of &#39;test&#39;, &#39;train&#39;, &#39;dev&#39;.
-        model_dir (str): Path to the saved model directory, using `tf.keras.Model.save`.
+        draw_distribution (int, optional): If not `None`, draw the distribution of the train input
+            variables for the first `draw_distribution` events.
+        test_subfolder (str): Subfolder of the data folder to use for evaluation. 
+            One of &#39;test&#39;, &#39;train&#39;, &#39;dev&#39;.
         batch_size (int): Batch size for evaluation.
         take (int): Number of data samples to use for evaluation. 
-        feature_importance (bool): If `True`, compute the feature importance of the model.
-        model (str): Model to use, options: `fc`, `highway`, `pfn`, `efn`, `transformer`, 
-            `part`, `depart`, `bdt`.
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
-        threshold (float): Threshold for distinguishing quarks and gluons.
-        include_base (bool): If `False`, and the binning is applied, the evaluation without
-            binning is not performed.
-        input_type (str): Input type of the model. One of: &#39;highlevel&#39;, &#39;highlevel_constituents&#39;,
-            &#39;constituents&#39;, &#39;relative_constituents&#39;, &#39;interaction_constituents&#39;.
-        
-            
-    
+        working_point_path (Optional[str]): Path to a folder where for each model there is a subfolder with the name of the model.
+            contains a csv file with the name `threshold_file_name` containing a column with the name `threshold_var_name`.
+            Folder structure: `threshold_path`/`model_name`/`threshold_file_name`.
+        working_point_file_name (Optional[str]): Name of the threshold file.
+        metrics_to_plot (List[str]): List of metrics to plot. See `jidenn.evaluation.evaluation_metrics.get_metrics` for options.
+        ylims (List[List[float]]): List of y-axis limits for each metric plot.
+        reference_model (str): Name of the model to use as reference for ratio plots.
+        threads (Optional[int]): Number of threads to use for evaluation. If `None`, single-threaded evaluation is used.
+        validation_plots_in_bins (bool): If `True`, create validation plots for each bin in the binning.
     &#34;&#34;&#34;
-    logdir: str
-    base_logdir: str
     data: Data
+    logdir: str
+    models_path: str
+    model_names: List[str]
+    model_input_types: List[str]
+    save_path: str
     seed: int
     draw_distribution: Optional[int]
     test_subfolder: str
-    model_dir: str
     batch_size: int
     take: int
-    feature_importance: bool
-    model: Literal[&#39;fc&#39;, &#39;highway&#39;, &#39;pfn&#39;,
-                   &#39;efn&#39;, &#39;transformer&#39;, &#39;part&#39;, &#39;depart&#39;, &#39;bdt&#39;]
     binning: Binning
-    threshold: float
-    include_base: bool
-    input_type = Literal[&#39;highlevel&#39;,
-                         &#39;highlevel_constituents&#39;,
-                         &#39;constituents&#39;,
-                         &#39;relative_constituents&#39;,
-                         &#39;interaction_constituents&#39;]</code></pre>
+    working_point_path: Optional[str]
+    working_point_file_name: Optional[str]
+    metrics_to_plot: List[str]
+    reference_model: str
+    ylims: List[List[float]]
+    threads: Optional[int]
+    validation_plots_in_bins: bool</code></pre>
 </details>
 </section>
 <section>
@@ -129,20 +130,22 @@ class EvalConfig:
 <dl>
 <dt id="jidenn.config.eval_config.Binning"><code class="flex name class">
 <span>class <span class="ident">Binning</span></span>
-<span>(</span><span>cuts: List[str], cut_names: List[str], type: Literal['perJet', 'perJetTuple', 'perEvent'])</span>
+<span>(</span><span>variable: str, bins: int, max_bin: Union[float, int], min_bin: Union[float, int], log_bin_base: Optional[int])</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Configuration for binning of test data.
-Each bin is defined by a cut on the test data.</p>
+<div class="desc"><p>Configuration for binning a continuous variable.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>cuts</code></strong> :&ensp;<code>List[str]</code></dt>
-<dd>Cuts on the test data performing the binning.
-See <code><a title="jidenn.data.string_conversions.Cut" href="../data/string_conversions.html#jidenn.data.string_conversions.Cut">Cut</a></code> for more details.</dd>
-<dt><strong><code>cut_names</code></strong> :&ensp;<code>List[str]</code></dt>
-<dd>Names of the cuts displayed in the plots and subfolders.</dd>
-<dt><strong><code>type</code></strong> :&ensp;<code>str</code></dt>
-<dd>Type of variable on which the cuts are applied. One of: 'perJet', 'perJetTuple', 'perEvent'.</dd>
+<dt><strong><code>variable</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the variable to bin.</dd>
+<dt><strong><code>bins</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of bins to use.</dd>
+<dt><strong><code>max_bin</code></strong> :&ensp;<code>Union[float, int]</code></dt>
+<dd>Maximum value of the variable. Values above this will be put in the last bin.</dd>
+<dt><strong><code>min_bin</code></strong> :&ensp;<code>Union[float, int]</code></dt>
+<dd>Minimum value of the variable. Values below this will be put in the first bin.</dd>
+<dt><strong><code>log_bin_base</code></strong> :&ensp;<code>Optional[int]</code></dt>
+<dd>If not <code>None</code>, use logarithmic binning with the specified base.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -150,30 +153,40 @@ See <code><a title="jidenn.data.string_conversions.Cut" href="../data/string_con
 </summary>
 <pre><code class="python">@dataclass
 class Binning:
-    &#34;&#34;&#34;Configuration for binning of test data.
-    Each bin is defined by a cut on the test data.
+    &#34;&#34;&#34;Configuration for binning a continuous variable.
 
     Args:
-        cuts (List[str]): Cuts on the test data performing the binning. 
-            See `jidenn.data.string_conversions.Cut` for more details.
-        cut_names (List[str]): Names of the cuts displayed in the plots and subfolders.
-        type (str): Type of variable on which the cuts are applied. One of: &#39;perJet&#39;, &#39;perJetTuple&#39;, &#39;perEvent&#39;.
+        variable (str): Name of the variable to bin.
+        bins (int): Number of bins to use.
+        max_bin (Union[float, int]): Maximum value of the variable. Values above this will be put in the last bin.
+        min_bin (Union[float, int]): Minimum value of the variable. Values below this will be put in the first bin.
+        log_bin_base (Optional[int]): If not `None`, use logarithmic binning with the specified base.
     &#34;&#34;&#34;
-    cuts: List[str]
-    cut_names: List[str]
-    type: Literal[&#34;perJet&#34;, &#34;perJetTuple&#34;, &#34;perEvent&#34;]</code></pre>
+    variable: str
+    bins: int
+    max_bin: Union[float, int]
+    min_bin: Union[float, int]
+    log_bin_base: Optional[int]</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
-<dt id="jidenn.config.eval_config.Binning.cut_names"><code class="name">var <span class="ident">cut_names</span> : List[str]</code></dt>
+<dt id="jidenn.config.eval_config.Binning.bins"><code class="name">var <span class="ident">bins</span> : int</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.eval_config.Binning.cuts"><code class="name">var <span class="ident">cuts</span> : List[str]</code></dt>
+<dt id="jidenn.config.eval_config.Binning.log_bin_base"><code class="name">var <span class="ident">log_bin_base</span> : Optional[int]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.eval_config.Binning.type"><code class="name">var <span class="ident">type</span> : Literal['perJet', 'perJetTuple', 'perEvent']</code></dt>
+<dt id="jidenn.config.eval_config.Binning.max_bin"><code class="name">var <span class="ident">max_bin</span> : Union[float, int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.Binning.min_bin"><code class="name">var <span class="ident">min_bin</span> : Union[float, int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.Binning.variable"><code class="name">var <span class="ident">variable</span> : str</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -181,50 +194,55 @@ class Binning:
 </dd>
 <dt id="jidenn.config.eval_config.EvalConfig"><code class="flex name class">
 <span>class <span class="ident">EvalConfig</span></span>
-<span>(</span><span>logdir: str, base_logdir: str, data: <a title="jidenn.config.config.Data" href="config.html#jidenn.config.config.Data">Data</a>, seed: int, draw_distribution: Optional[int], test_subfolder: str, model_dir: str, batch_size: int, take: int, feature_importance: bool, model: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'], binning: <a title="jidenn.config.eval_config.Binning" href="#jidenn.config.eval_config.Binning">Binning</a>, threshold: float, include_base: bool)</span>
+<span>(</span><span>data: <a title="jidenn.config.config.Data" href="config.html#jidenn.config.config.Data">Data</a>, logdir: str, models_path: str, model_names: List[str], model_input_types: List[str], save_path: str, seed: int, draw_distribution: Optional[int], test_subfolder: str, batch_size: int, take: int, binning: <a title="jidenn.config.eval_config.Binning" href="#jidenn.config.eval_config.Binning">Binning</a>, working_point_path: Optional[str], working_point_file_name: Optional[str], metrics_to_plot: List[str], reference_model: str, ylims: List[List[float]], threads: Optional[int], validation_plots_in_bins: bool)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Configuration for evaluation of a model.</p>
+<div class="desc"><p>Configuration for evaluating a machine learning model.</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>base_logdir</code></strong> :&ensp;<code>str</code></dt>
-<dd>Base path to the log directory of the training. </dd>
-<dt><strong><code>eval_logs</code></strong> :&ensp;<code>str</code></dt>
-<dd>Subfolder of the base log directory for the evaluation.</dd>
-<dt><strong><code>logdir</code></strong> :&ensp;<code>str</code></dt>
-<dd>Path to the log directory of the evaluation. Could be set manually,
-but using <code>${base_logdir}/${eval_logs}</code> is recommended,
-as it creates a unique folder for each training session inside the <code>base_logdir</code>.</dd>
 <dt><strong><code>data</code></strong> :&ensp;<code><a title="jidenn.config.config.Data" href="config.html#jidenn.config.config.Data">Data</a></code></dt>
-<dd>Configuration for the test data.</dd>
+<dd>Configuration for the data.</dd>
+<dt><strong><code>logdir</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to the log directory of the evaluation. </dd>
+<dt><strong><code>models_path</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to the directory where the models to evaluate are saved.
+Inside this directory, there should be a subdirectory for each model with
+the same name as in the <code>model_names</code> list. Each of these subdirectories must
+include a subdirectory <code>model</code> containing the saved model.</dd>
+<dt><strong><code>model_names</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>List of names of the models to evaluate.</dd>
+<dt><strong><code>model_input_types</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>List of types of input data expected by the models.</dd>
 <dt><strong><code>seed</code></strong> :&ensp;<code>int</code></dt>
 <dd>Seed for reproducibility.</dd>
 <dt><strong><code>draw_distribution</code></strong> :&ensp;<code>int</code>, optional</dt>
-<dd>Draw the distribution of the train input variables
-for the first <code>draw_distribution</code> events. If <code>None</code>, no distribution is drawn.</dd>
+<dd>If not <code>None</code>, draw the distribution of the train input
+variables for the first <code>draw_distribution</code> events.</dd>
 <dt><strong><code>test_subfolder</code></strong> :&ensp;<code>str</code></dt>
-<dd>Subfolder of the data folder to use, One of 'test', 'train', 'dev'.</dd>
-<dt><strong><code>model_dir</code></strong> :&ensp;<code>str</code></dt>
-<dd>Path to the saved model directory, using <code>tf.keras.Model.save</code>.</dd>
+<dd>Subfolder of the data folder to use for evaluation.
+One of 'test', 'train', 'dev'.</dd>
 <dt><strong><code>batch_size</code></strong> :&ensp;<code>int</code></dt>
 <dd>Batch size for evaluation.</dd>
 <dt><strong><code>take</code></strong> :&ensp;<code>int</code></dt>
 <dd>Number of data samples to use for evaluation. </dd>
-<dt><strong><code>feature_importance</code></strong> :&ensp;<code>bool</code></dt>
-<dd>If <code>True</code>, compute the feature importance of the model.</dd>
-<dt><strong><code>model</code></strong> :&ensp;<code>str</code></dt>
-<dd>Model to use, options: <code>fc</code>, <code>highway</code>, <code>pfn</code>, <code>efn</code>, <code>transformer</code>,
-<code>part</code>, <code>depart</code>, <code>bdt</code>.</dd>
 <dt><strong><code>binning</code></strong> :&ensp;<code><a title="jidenn.config.eval_config.Binning" href="#jidenn.config.eval_config.Binning">Binning</a></code></dt>
 <dd>Configuration for binning of test data.</dd>
-<dt><strong><code>threshold</code></strong> :&ensp;<code>float</code></dt>
-<dd>Threshold for distinguishing quarks and gluons.</dd>
-<dt><strong><code>include_base</code></strong> :&ensp;<code>bool</code></dt>
-<dd>If <code>False</code>, and the binning is applied, the evaluation without
-binning is not performed.</dd>
-<dt><strong><code>input_type</code></strong> :&ensp;<code>str</code></dt>
-<dd>Input type of the model. One of: 'highlevel', 'highlevel_constituents',
-'constituents', 'relative_constituents', 'interaction_constituents'.</dd>
+<dt><strong><code>working_point_path</code></strong> :&ensp;<code>Optional[str]</code></dt>
+<dd>Path to a folder where for each model there is a subfolder with the name of the model.
+contains a csv file with the name <code>threshold_file_name</code> containing a column with the name <code>threshold_var_name</code>.
+Folder structure: <code>threshold_path</code>/<code>model_name</code>/<code>threshold_file_name</code>.</dd>
+<dt><strong><code>working_point_file_name</code></strong> :&ensp;<code>Optional[str]</code></dt>
+<dd>Name of the threshold file.</dd>
+<dt><strong><code>metrics_to_plot</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>List of metrics to plot. See <code><a title="jidenn.evaluation.evaluation_metrics.get_metrics" href="../evaluation/evaluation_metrics.html#jidenn.evaluation.evaluation_metrics.get_metrics">get_metrics()</a></code> for options.</dd>
+<dt><strong><code>ylims</code></strong> :&ensp;<code>List[List[float]]</code></dt>
+<dd>List of y-axis limits for each metric plot.</dd>
+<dt><strong><code>reference_model</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the model to use as reference for ratio plots.</dd>
+<dt><strong><code>threads</code></strong> :&ensp;<code>Optional[int]</code></dt>
+<dd>Number of threads to use for evaluation. If <code>None</code>, single-threaded evaluation is used.</dd>
+<dt><strong><code>validation_plots_in_bins</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If <code>True</code>, create validation plots for each bin in the binning.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -232,62 +250,57 @@ binning is not performed.</dd>
 </summary>
 <pre><code class="python">@dataclass
 class EvalConfig:
-    &#34;&#34;&#34;Configuration for evaluation of a model.
-    
+    &#34;&#34;&#34;Configuration for evaluating a machine learning model.
+
     Args:
-        base_logdir (str): Base path to the log directory of the training. 
-        eval_logs (str): Subfolder of the base log directory for the evaluation.
-        logdir (str): Path to the log directory of the evaluation. Could be set manually,
-            but using `${base_logdir}/${eval_logs}` is recommended, 
-            as it creates a unique folder for each training session inside the `base_logdir`.
-        data (jidenn.config.config.Data): Configuration for the test data.
+        data (jidenn.config.config.Data): Configuration for the data.
+        logdir (str): Path to the log directory of the evaluation. 
+        models_path (str): Path to the directory where the models to evaluate are saved. 
+            Inside this directory, there should be a subdirectory for each model with 
+            the same name as in the `model_names` list. Each of these subdirectories must
+            include a subdirectory `model` containing the saved model.
+        model_names (List[str]): List of names of the models to evaluate.
+        model_input_types (List[str]): List of types of input data expected by the models.
         seed (int): Seed for reproducibility.
-        draw_distribution (int, optional): Draw the distribution of the train input variables 
-            for the first `draw_distribution` events. If `None`, no distribution is drawn.
-        test_subfolder (str): Subfolder of the data folder to use, One of &#39;test&#39;, &#39;train&#39;, &#39;dev&#39;.
-        model_dir (str): Path to the saved model directory, using `tf.keras.Model.save`.
+        draw_distribution (int, optional): If not `None`, draw the distribution of the train input
+            variables for the first `draw_distribution` events.
+        test_subfolder (str): Subfolder of the data folder to use for evaluation. 
+            One of &#39;test&#39;, &#39;train&#39;, &#39;dev&#39;.
         batch_size (int): Batch size for evaluation.
         take (int): Number of data samples to use for evaluation. 
-        feature_importance (bool): If `True`, compute the feature importance of the model.
-        model (str): Model to use, options: `fc`, `highway`, `pfn`, `efn`, `transformer`, 
-            `part`, `depart`, `bdt`.
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
-        threshold (float): Threshold for distinguishing quarks and gluons.
-        include_base (bool): If `False`, and the binning is applied, the evaluation without
-            binning is not performed.
-        input_type (str): Input type of the model. One of: &#39;highlevel&#39;, &#39;highlevel_constituents&#39;,
-            &#39;constituents&#39;, &#39;relative_constituents&#39;, &#39;interaction_constituents&#39;.
-        
-            
-    
+        working_point_path (Optional[str]): Path to a folder where for each model there is a subfolder with the name of the model.
+            contains a csv file with the name `threshold_file_name` containing a column with the name `threshold_var_name`.
+            Folder structure: `threshold_path`/`model_name`/`threshold_file_name`.
+        working_point_file_name (Optional[str]): Name of the threshold file.
+        metrics_to_plot (List[str]): List of metrics to plot. See `jidenn.evaluation.evaluation_metrics.get_metrics` for options.
+        ylims (List[List[float]]): List of y-axis limits for each metric plot.
+        reference_model (str): Name of the model to use as reference for ratio plots.
+        threads (Optional[int]): Number of threads to use for evaluation. If `None`, single-threaded evaluation is used.
+        validation_plots_in_bins (bool): If `True`, create validation plots for each bin in the binning.
     &#34;&#34;&#34;
-    logdir: str
-    base_logdir: str
     data: Data
+    logdir: str
+    models_path: str
+    model_names: List[str]
+    model_input_types: List[str]
+    save_path: str
     seed: int
     draw_distribution: Optional[int]
     test_subfolder: str
-    model_dir: str
     batch_size: int
     take: int
-    feature_importance: bool
-    model: Literal[&#39;fc&#39;, &#39;highway&#39;, &#39;pfn&#39;,
-                   &#39;efn&#39;, &#39;transformer&#39;, &#39;part&#39;, &#39;depart&#39;, &#39;bdt&#39;]
     binning: Binning
-    threshold: float
-    include_base: bool
-    input_type = Literal[&#39;highlevel&#39;,
-                         &#39;highlevel_constituents&#39;,
-                         &#39;constituents&#39;,
-                         &#39;relative_constituents&#39;,
-                         &#39;interaction_constituents&#39;]</code></pre>
+    working_point_path: Optional[str]
+    working_point_file_name: Optional[str]
+    metrics_to_plot: List[str]
+    reference_model: str
+    ylims: List[List[float]]
+    threads: Optional[int]
+    validation_plots_in_bins: bool</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
-<dt id="jidenn.config.eval_config.EvalConfig.base_logdir"><code class="name">var <span class="ident">base_logdir</span> : str</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
 <dt id="jidenn.config.eval_config.EvalConfig.batch_size"><code class="name">var <span class="ident">batch_size</span> : int</code></dt>
 <dd>
 <div class="desc"></div>
@@ -304,27 +317,31 @@ class EvalConfig:
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.eval_config.EvalConfig.feature_importance"><code class="name">var <span class="ident">feature_importance</span> : bool</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="jidenn.config.eval_config.EvalConfig.include_base"><code class="name">var <span class="ident">include_base</span> : bool</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="jidenn.config.eval_config.EvalConfig.input_type"><code class="name">var <span class="ident">input_type</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
 <dt id="jidenn.config.eval_config.EvalConfig.logdir"><code class="name">var <span class="ident">logdir</span> : str</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.eval_config.EvalConfig.model"><code class="name">var <span class="ident">model</span> : Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']</code></dt>
+<dt id="jidenn.config.eval_config.EvalConfig.metrics_to_plot"><code class="name">var <span class="ident">metrics_to_plot</span> : List[str]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.eval_config.EvalConfig.model_dir"><code class="name">var <span class="ident">model_dir</span> : str</code></dt>
+<dt id="jidenn.config.eval_config.EvalConfig.model_input_types"><code class="name">var <span class="ident">model_input_types</span> : List[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.model_names"><code class="name">var <span class="ident">model_names</span> : List[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.models_path"><code class="name">var <span class="ident">models_path</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.reference_model"><code class="name">var <span class="ident">reference_model</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.save_path"><code class="name">var <span class="ident">save_path</span> : str</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -340,7 +357,23 @@ class EvalConfig:
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.eval_config.EvalConfig.threshold"><code class="name">var <span class="ident">threshold</span> : float</code></dt>
+<dt id="jidenn.config.eval_config.EvalConfig.threads"><code class="name">var <span class="ident">threads</span> : Optional[int]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.validation_plots_in_bins"><code class="name">var <span class="ident">validation_plots_in_bins</span> : bool</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.working_point_file_name"><code class="name">var <span class="ident">working_point_file_name</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.working_point_path"><code class="name">var <span class="ident">working_point_path</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.eval_config.EvalConfig.ylims"><code class="name">var <span class="ident">ylims</span> : List[List[float]]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -370,29 +403,35 @@ class EvalConfig:
 <li>
 <h4><code><a title="jidenn.config.eval_config.Binning" href="#jidenn.config.eval_config.Binning">Binning</a></code></h4>
 <ul class="">
-<li><code><a title="jidenn.config.eval_config.Binning.cut_names" href="#jidenn.config.eval_config.Binning.cut_names">cut_names</a></code></li>
-<li><code><a title="jidenn.config.eval_config.Binning.cuts" href="#jidenn.config.eval_config.Binning.cuts">cuts</a></code></li>
-<li><code><a title="jidenn.config.eval_config.Binning.type" href="#jidenn.config.eval_config.Binning.type">type</a></code></li>
+<li><code><a title="jidenn.config.eval_config.Binning.bins" href="#jidenn.config.eval_config.Binning.bins">bins</a></code></li>
+<li><code><a title="jidenn.config.eval_config.Binning.log_bin_base" href="#jidenn.config.eval_config.Binning.log_bin_base">log_bin_base</a></code></li>
+<li><code><a title="jidenn.config.eval_config.Binning.max_bin" href="#jidenn.config.eval_config.Binning.max_bin">max_bin</a></code></li>
+<li><code><a title="jidenn.config.eval_config.Binning.min_bin" href="#jidenn.config.eval_config.Binning.min_bin">min_bin</a></code></li>
+<li><code><a title="jidenn.config.eval_config.Binning.variable" href="#jidenn.config.eval_config.Binning.variable">variable</a></code></li>
 </ul>
 </li>
 <li>
 <h4><code><a title="jidenn.config.eval_config.EvalConfig" href="#jidenn.config.eval_config.EvalConfig">EvalConfig</a></code></h4>
-<ul class="two-column">
-<li><code><a title="jidenn.config.eval_config.EvalConfig.base_logdir" href="#jidenn.config.eval_config.EvalConfig.base_logdir">base_logdir</a></code></li>
+<ul class="">
 <li><code><a title="jidenn.config.eval_config.EvalConfig.batch_size" href="#jidenn.config.eval_config.EvalConfig.batch_size">batch_size</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.binning" href="#jidenn.config.eval_config.EvalConfig.binning">binning</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.data" href="#jidenn.config.eval_config.EvalConfig.data">data</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.draw_distribution" href="#jidenn.config.eval_config.EvalConfig.draw_distribution">draw_distribution</a></code></li>
-<li><code><a title="jidenn.config.eval_config.EvalConfig.feature_importance" href="#jidenn.config.eval_config.EvalConfig.feature_importance">feature_importance</a></code></li>
-<li><code><a title="jidenn.config.eval_config.EvalConfig.include_base" href="#jidenn.config.eval_config.EvalConfig.include_base">include_base</a></code></li>
-<li><code><a title="jidenn.config.eval_config.EvalConfig.input_type" href="#jidenn.config.eval_config.EvalConfig.input_type">input_type</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.logdir" href="#jidenn.config.eval_config.EvalConfig.logdir">logdir</a></code></li>
-<li><code><a title="jidenn.config.eval_config.EvalConfig.model" href="#jidenn.config.eval_config.EvalConfig.model">model</a></code></li>
-<li><code><a title="jidenn.config.eval_config.EvalConfig.model_dir" href="#jidenn.config.eval_config.EvalConfig.model_dir">model_dir</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.metrics_to_plot" href="#jidenn.config.eval_config.EvalConfig.metrics_to_plot">metrics_to_plot</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.model_input_types" href="#jidenn.config.eval_config.EvalConfig.model_input_types">model_input_types</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.model_names" href="#jidenn.config.eval_config.EvalConfig.model_names">model_names</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.models_path" href="#jidenn.config.eval_config.EvalConfig.models_path">models_path</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.reference_model" href="#jidenn.config.eval_config.EvalConfig.reference_model">reference_model</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.save_path" href="#jidenn.config.eval_config.EvalConfig.save_path">save_path</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.seed" href="#jidenn.config.eval_config.EvalConfig.seed">seed</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.take" href="#jidenn.config.eval_config.EvalConfig.take">take</a></code></li>
 <li><code><a title="jidenn.config.eval_config.EvalConfig.test_subfolder" href="#jidenn.config.eval_config.EvalConfig.test_subfolder">test_subfolder</a></code></li>
-<li><code><a title="jidenn.config.eval_config.EvalConfig.threshold" href="#jidenn.config.eval_config.EvalConfig.threshold">threshold</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.threads" href="#jidenn.config.eval_config.EvalConfig.threads">threads</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.validation_plots_in_bins" href="#jidenn.config.eval_config.EvalConfig.validation_plots_in_bins">validation_plots_in_bins</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.working_point_file_name" href="#jidenn.config.eval_config.EvalConfig.working_point_file_name">working_point_file_name</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.working_point_path" href="#jidenn.config.eval_config.EvalConfig.working_point_path">working_point_path</a></code></li>
+<li><code><a title="jidenn.config.eval_config.EvalConfig.ylims" href="#jidenn.config.eval_config.EvalConfig.ylims">ylims</a></code></li>
 </ul>
 </li>
 </ul>

@@ -202,6 +202,7 @@ def main(args: config.JIDENNConfig) -> None:
     model_dir = os.path.join(args.general.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir, save_format='tf')
+    
 
     # save the training history and plot it
     if args.general.model != 'bdt':

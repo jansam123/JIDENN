@@ -105,48 +105,6 @@ from typing import List, Optional, Literal
 from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN
 
 
-@dataclass
-class Variables:
-    &#34;&#34;&#34;Variable names loaded from the saved `tf.data.Dataset`s. The `element_spec` of the loaded dataset
-    is expected to be `Dict[str, Union[tf.Tensor, tf.RaggedTensor]]` where the keys are the variable names.
-    From these variables, only variables defined in `per_jet` and `per_jet_tuple` and `per_event` are used.
-    They are then clustered into a dictionary of the following structure 
-    `Dict[Literal[&#39;perEvent&#39;,&#39;perJet&#39;,&#39;perJetTuple&#39;], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]`.
-    Example:
-    ```python
-    # element_spec of the loaded dataset, ROOTDataset
-    element_spec_before = {
-        &#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
-        &#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)
-        &#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None),
-    }
-    # element_spec after processing with JIDENNDataset
-    element_spec_after = {
-        &#39;perEvent&#39;: {&#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None)},
-        &#39;perJet&#39;: {&#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)}
-        &#39;perJetTuple&#39;: {&#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
-    }
-    ```
-    Optionally, the string may be expression which combine multiple variables, or slice them.
-    See the `jidenn.data.string_conversions.Expression` documentation for more information. 
-
-    These variables are then used to construct the model inputs with the `jidenn.data.TrainInput` class.
-
-    Args:
-        per_jet (List[str]): Variables to be loaded from the dataset and clustered into `perJet`.
-            Each variable is expected to have single input per jet, e.g. `jets_pt` 
-            which is a single value for the jet transverse momentum.
-        per_jet_tuple (List[str]): Variables to be loaded from the dataset and clustered into `perJetTuple`.
-            Each variable is expecetd to have multiple inputs per jet, e.g. `jets_PFO_m` which is a list of
-            masses of the constituents of the jet.
-        per_event (List[str]): Variables to be loaded from the dataset and clustered into `perEvent`.
-            Each variable is expected to have only one input per event, which is the same for all jets in the event.
-            It is tiled to the number of jets in the event.
-    &#34;&#34;&#34;
-    per_jet: List[str]
-    per_jet_tuple: List[str]
-    per_event: List[str]
-
 
 @dataclass
 class Data:
@@ -176,9 +134,10 @@ class Data:
         variable_unknown_labels (List[int]): List of unknown labels corresponding to undefined `target` (e.q. `[-1, -999]`). 
             These will be omiited from the dataset.
 
-        variables (Variables): Variables to loaded from the dataset separated into `per_jet` and `per_event` and `per_jet_tuple` 
-            using the `Variables` dataclass. The actual variables used as a training input are defined 
-            from these in `jidenn.data.TrainInput`.
+        resample (List[float], optional): Resampling weights for each label. The list is the same length as `target_labels` 
+            giving each label a weight (`[0.5, 0.5]` means equal size of both labels). If `None`, no resampling is applied.
+
+        variables (List[str]): Names of the variables loaded from the saved `tf.data.Dataset`s.
 
         weight (Optional[str]): Name of the weight variable inside the saved `tf.data.Dataset`s. If `None`, 
             no weights are used otherwise the weights are passed as a third input to the model.
@@ -204,7 +163,8 @@ class Data:
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
     variable_unknown_labels: List[int]
-    variables: Variables
+    resample_labels: Optional[List[float]]
+    variables: List[str]
     weight: Optional[str]
     cut: Optional[str]
     subfolders: Optional[List[str]]   # Slices of JZ to use.
@@ -247,10 +207,12 @@ class General:
         debug (bool): Debug mode. If `True`, tensorflow uses the `Eager` mode.
         base_logdir (str): Path to log directory where subfolders are created for each training session.
         logdir (str): Path to log directory of a given training session. Could be set manually,
-            but using `${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
+            but using `${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
             as it creates a unique folder for each training session inside the `base_logdir`.
         checkpoint (str, optional): Path to a checkpoint inside `logdir` checkpoint. If `None`, no checkpoint is made.
         backup (str, optional): Path to a backup of the model inside `logdir` checkpoint. If `None`, no backup is made.
+        backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session.
+            If None, backups will only be saved at the end of each epoch.
         load_checkpoint_path (str, optional): Path to a checkpoint to load. If `None`, no checkpoint is loaded.
     &#34;&#34;&#34;
     model: Literal[&#39;fc&#39;, &#39;highway&#39;, &#39;pfn&#39;,
@@ -262,6 +224,7 @@ class General:
     logdir: str   # Path to log directory.
     checkpoint: Optional[str]   # Make checkpoint.
     backup: Optional[str]   # Backup model.
+    backup_freq: Optional[int]   # Backup frequency.
     load_checkpoint_path: Optional[str]   # Path to checkpoint to load.
 
 
@@ -291,6 +254,8 @@ class Optimizer:
         label_smoothing (float, optional): Label smoothing.
         decay_steps (int, optional): Number of steps to decay the learning rate with cosine decay. 
             If `None`, decay is calculated automatically as `decay_steps = epochs * take / batch_size - warmup_steps`.
+        min_learning_rate (float, optional): Minimum learning rate as a fraction of `learning_rate`. 
+            If `None`, no minimum learning rate is used, i.e. `min_learning_rate = 0.0`.
         warmup_steps (int, optional): Number of steps to warmup the learning rate with linear warmup.
         beta_1 (float, optional): Beta 1 for Adam and LAMB, default is 0.9.
         beta_2 (float, optional): Beta 2 for Adam and LAMB, default is 0.999.
@@ -298,10 +263,11 @@ class Optimizer:
         clipnorm (float, optional): Clipnorm for Adam and LAMB. If `None`, no clipping is done. Default is `None`.
         weight_decay (float, optional): Weight decay for LAMB and Adam, default is 0.0.
     &#34;&#34;&#34;
-    name: Literal[&#39;LAMB&#39;, &#39;Adam&#39;]
+    name: Literal[&#39;LAMB&#39;, &#39;Adam&#39;, &#39;Lion&#39;]
     learning_rate: float
     label_smoothing: Optional[float]
     decay_steps: Optional[int]
+    min_learning_rate: Optional[float]
     warmup_steps: Optional[int]
     beta_1: Optional[float]
     beta_2: Optional[float]
@@ -344,7 +310,7 @@ class JIDENNConfig:
 <dl>
 <dt id="jidenn.config.config.Data"><code class="flex name class">
 <span>class <span class="ident">Data</span></span>
-<span>(</span><span>path: str, target: str, target_labels: List[List[int]], labels: List[str], variable_unknown_labels: List[int], variables: <a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a>, weight: Optional[str], cut: Optional[str], subfolders: Optional[List[str]], subfolder_cut: Optional[List[str]], subfolder_weights: Optional[List[float]], cached: Optional[str])</span>
+<span>(</span><span>path: str, target: str, target_labels: List[List[int]], labels: List[str], variable_unknown_labels: List[int], resample_labels: Optional[List[float]], variables: List[str], weight: Optional[str], cut: Optional[str], subfolders: Optional[List[str]], subfolder_cut: Optional[List[str]], subfolder_weights: Optional[List[float]], cached: Optional[str])</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Data configuration for loading the data, constructing a <code>tf.data.Dataset</code> and
@@ -373,10 +339,11 @@ and all jets with <code>target in [1, 2, 3, 4, 5, 6]</code> into the second labe
 <dt><strong><code>variable_unknown_labels</code></strong> :&ensp;<code>List[int]</code></dt>
 <dd>List of unknown labels corresponding to undefined <code>target</code> (e.q. <code>[-1, -999]</code>).
 These will be omiited from the dataset.</dd>
-<dt><strong><code>variables</code></strong> :&ensp;<code><a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code></dt>
-<dd>Variables to loaded from the dataset separated into <code>per_jet</code> and <code>per_event</code> and <code>per_jet_tuple</code>
-using the <code><a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code> dataclass. The actual variables used as a training input are defined
-from these in <code><a title="jidenn.data.TrainInput" href="../data/TrainInput.html">jidenn.data.TrainInput</a></code>.</dd>
+<dt><strong><code>resample</code></strong> :&ensp;<code>List[float]</code>, optional</dt>
+<dd>Resampling weights for each label. The list is the same length as <code>target_labels</code>
+giving each label a weight (<code>[0.5, 0.5]</code> means equal size of both labels). If <code>None</code>, no resampling is applied.</dd>
+<dt><strong><code>variables</code></strong> :&ensp;<code>List[str]</code></dt>
+<dd>Names of the variables loaded from the saved <code>tf.data.Dataset</code>s.</dd>
 <dt><strong><code>weight</code></strong> :&ensp;<code>Optional[str]</code></dt>
 <dd>Name of the weight variable inside the saved <code>tf.data.Dataset</code>s. If <code>None</code>,
 no weights are used otherwise the weights are passed as a third input to the model.</dd>
@@ -429,9 +396,10 @@ class Data:
         variable_unknown_labels (List[int]): List of unknown labels corresponding to undefined `target` (e.q. `[-1, -999]`). 
             These will be omiited from the dataset.
 
-        variables (Variables): Variables to loaded from the dataset separated into `per_jet` and `per_event` and `per_jet_tuple` 
-            using the `Variables` dataclass. The actual variables used as a training input are defined 
-            from these in `jidenn.data.TrainInput`.
+        resample (List[float], optional): Resampling weights for each label. The list is the same length as `target_labels` 
+            giving each label a weight (`[0.5, 0.5]` means equal size of both labels). If `None`, no resampling is applied.
+
+        variables (List[str]): Names of the variables loaded from the saved `tf.data.Dataset`s.
 
         weight (Optional[str]): Name of the weight variable inside the saved `tf.data.Dataset`s. If `None`, 
             no weights are used otherwise the weights are passed as a third input to the model.
@@ -457,7 +425,8 @@ class Data:
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
     variable_unknown_labels: List[int]
-    variables: Variables
+    resample_labels: Optional[List[float]]
+    variables: List[str]
     weight: Optional[str]
     cut: Optional[str]
     subfolders: Optional[List[str]]   # Slices of JZ to use.
@@ -480,6 +449,10 @@ class Data:
 <div class="desc"></div>
 </dd>
 <dt id="jidenn.config.config.Data.path"><code class="name">var <span class="ident">path</span> : str</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Data.resample_labels"><code class="name">var <span class="ident">resample_labels</span> : Optional[List[float]]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -507,7 +480,7 @@ class Data:
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.config.Data.variables"><code class="name">var <span class="ident">variables</span> : <a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code></dt>
+<dt id="jidenn.config.config.Data.variables"><code class="name">var <span class="ident">variables</span> : List[str]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -598,7 +571,7 @@ class Dataset:
 </dd>
 <dt id="jidenn.config.config.General"><code class="flex name class">
 <span>class <span class="ident">General</span></span>
-<span>(</span><span>model: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'], base_logdir: str, seed: int, threads: Optional[int], debug: bool, logdir: str, checkpoint: Optional[str], backup: Optional[str], load_checkpoint_path: Optional[str])</span>
+<span>(</span><span>model: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'], base_logdir: str, seed: int, threads: Optional[int], debug: bool, logdir: str, checkpoint: Optional[str], backup: Optional[str], backup_freq: Optional[int], load_checkpoint_path: Optional[str])</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Basic configuration for the training.</p>
@@ -616,12 +589,15 @@ class Dataset:
 <dd>Path to log directory where subfolders are created for each training session.</dd>
 <dt><strong><code>logdir</code></strong> :&ensp;<code>str</code></dt>
 <dd>Path to log directory of a given training session. Could be set manually,
-but using <code>${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}</code> is recommended,
+but using <code>${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}</code> is recommended,
 as it creates a unique folder for each training session inside the <code>base_logdir</code>.</dd>
 <dt><strong><code>checkpoint</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Path to a checkpoint inside <code>logdir</code> checkpoint. If <code>None</code>, no checkpoint is made.</dd>
 <dt><strong><code>backup</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Path to a backup of the model inside <code>logdir</code> checkpoint. If <code>None</code>, no backup is made.</dd>
+<dt><strong><code>backup_freq</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The frequency (in batches) at which to save backups of the training session.
+If None, backups will only be saved at the end of each epoch.</dd>
 <dt><strong><code>load_checkpoint_path</code></strong> :&ensp;<code>str</code>, optional</dt>
 <dd>Path to a checkpoint to load. If <code>None</code>, no checkpoint is loaded.</dd>
 </dl></div>
@@ -640,10 +616,12 @@ class General:
         debug (bool): Debug mode. If `True`, tensorflow uses the `Eager` mode.
         base_logdir (str): Path to log directory where subfolders are created for each training session.
         logdir (str): Path to log directory of a given training session. Could be set manually,
-            but using `${params.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
+            but using `${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S}` is recommended, 
             as it creates a unique folder for each training session inside the `base_logdir`.
         checkpoint (str, optional): Path to a checkpoint inside `logdir` checkpoint. If `None`, no checkpoint is made.
         backup (str, optional): Path to a backup of the model inside `logdir` checkpoint. If `None`, no backup is made.
+        backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session.
+            If None, backups will only be saved at the end of each epoch.
         load_checkpoint_path (str, optional): Path to a checkpoint to load. If `None`, no checkpoint is loaded.
     &#34;&#34;&#34;
     model: Literal[&#39;fc&#39;, &#39;highway&#39;, &#39;pfn&#39;,
@@ -655,11 +633,16 @@ class General:
     logdir: str   # Path to log directory.
     checkpoint: Optional[str]   # Make checkpoint.
     backup: Optional[str]   # Backup model.
+    backup_freq: Optional[int]   # Backup frequency.
     load_checkpoint_path: Optional[str]   # Path to checkpoint to load.</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
 <dt id="jidenn.config.config.General.backup"><code class="name">var <span class="ident">backup</span> : Optional[str]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.General.backup_freq"><code class="name">var <span class="ident">backup_freq</span> : Optional[int]</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -800,7 +783,7 @@ class Models:
 </dd>
 <dt id="jidenn.config.config.Optimizer"><code class="flex name class">
 <span>class <span class="ident">Optimizer</span></span>
-<span>(</span><span>name: Literal['LAMB', 'Adam'], learning_rate: float, label_smoothing: Optional[float], decay_steps: Optional[int], warmup_steps: Optional[int], beta_1: Optional[float], beta_2: Optional[float], epsilon: Optional[float], clipnorm: Optional[float], weight_decay: Optional[float])</span>
+<span>(</span><span>name: Literal['LAMB', 'Adam', 'Lion'], learning_rate: float, label_smoothing: Optional[float], decay_steps: Optional[int], min_learning_rate: Optional[float], warmup_steps: Optional[int], beta_1: Optional[float], beta_2: Optional[float], epsilon: Optional[float], clipnorm: Optional[float], weight_decay: Optional[float])</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Settings for the optimizer.</p>
@@ -815,6 +798,9 @@ class Models:
 <dt><strong><code>decay_steps</code></strong> :&ensp;<code>int</code>, optional</dt>
 <dd>Number of steps to decay the learning rate with cosine decay.
 If <code>None</code>, decay is calculated automatically as <code>decay_steps = epochs * take / batch_size - warmup_steps</code>.</dd>
+<dt><strong><code>min_learning_rate</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Minimum learning rate as a fraction of <code>learning_rate</code>.
+If <code>None</code>, no minimum learning rate is used, i.e. <code>min_learning_rate = 0.0</code>.</dd>
 <dt><strong><code>warmup_steps</code></strong> :&ensp;<code>int</code>, optional</dt>
 <dd>Number of steps to warmup the learning rate with linear warmup.</dd>
 <dt><strong><code>beta_1</code></strong> :&ensp;<code>float</code>, optional</dt>
@@ -842,6 +828,8 @@ class Optimizer:
         label_smoothing (float, optional): Label smoothing.
         decay_steps (int, optional): Number of steps to decay the learning rate with cosine decay. 
             If `None`, decay is calculated automatically as `decay_steps = epochs * take / batch_size - warmup_steps`.
+        min_learning_rate (float, optional): Minimum learning rate as a fraction of `learning_rate`. 
+            If `None`, no minimum learning rate is used, i.e. `min_learning_rate = 0.0`.
         warmup_steps (int, optional): Number of steps to warmup the learning rate with linear warmup.
         beta_1 (float, optional): Beta 1 for Adam and LAMB, default is 0.9.
         beta_2 (float, optional): Beta 2 for Adam and LAMB, default is 0.999.
@@ -849,10 +837,11 @@ class Optimizer:
         clipnorm (float, optional): Clipnorm for Adam and LAMB. If `None`, no clipping is done. Default is `None`.
         weight_decay (float, optional): Weight decay for LAMB and Adam, default is 0.0.
     &#34;&#34;&#34;
-    name: Literal[&#39;LAMB&#39;, &#39;Adam&#39;]
+    name: Literal[&#39;LAMB&#39;, &#39;Adam&#39;, &#39;Lion&#39;]
     learning_rate: float
     label_smoothing: Optional[float]
     decay_steps: Optional[int]
+    min_learning_rate: Optional[float]
     warmup_steps: Optional[int]
     beta_1: Optional[float]
     beta_2: Optional[float]
@@ -890,7 +879,11 @@ class Optimizer:
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="jidenn.config.config.Optimizer.name"><code class="name">var <span class="ident">name</span> : Literal['LAMB', 'Adam']</code></dt>
+<dt id="jidenn.config.config.Optimizer.min_learning_rate"><code class="name">var <span class="ident">min_learning_rate</span> : Optional[float]</code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="jidenn.config.config.Optimizer.name"><code class="name">var <span class="ident">name</span> : Literal['LAMB', 'Adam', 'Lion']</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -952,110 +945,6 @@ class Preprocess:
 </dd>
 </dl>
 </dd>
-<dt id="jidenn.config.config.Variables"><code class="flex name class">
-<span>class <span class="ident">Variables</span></span>
-<span>(</span><span>per_jet: List[str], per_jet_tuple: List[str], per_event: List[str])</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Variable names loaded from the saved <code>tf.data.Dataset</code>s. The <code>element_spec</code> of the loaded dataset
-is expected to be <code>Dict[str, Union[tf.Tensor, tf.RaggedTensor]]</code> where the keys are the variable names.
-From these variables, only variables defined in <code>per_jet</code> and <code>per_jet_tuple</code> and <code>per_event</code> are used.
-They are then clustered into a dictionary of the following structure
-<code>Dict[Literal['perEvent','perJet','perJetTuple'], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]</code>.
-Example:</p>
-<pre><code class="language-python"># element_spec of the loaded dataset, ROOTDataset
-element_spec_before = {
-    'jets_PFO_m': RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
-    'jets_pt': TensorSpec(shape=(), dtype=tf.float32, name=None)
-    'HLT_j60': TensorSpec(shape=(), dtype=tf.bool, name=None),
-}
-# element_spec after processing with JIDENNDataset
-element_spec_after = {
-    'perEvent': {'HLT_j60': TensorSpec(shape=(), dtype=tf.bool, name=None)},
-    'perJet': {'jets_pt': TensorSpec(shape=(), dtype=tf.float32, name=None)}
-    'perJetTuple': {'jets_PFO_m': RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
-}
-</code></pre>
-<p>Optionally, the string may be expression which combine multiple variables, or slice them.
-See the <code><a title="jidenn.data.string_conversions.Expression" href="../data/string_conversions.html#jidenn.data.string_conversions.Expression">Expression</a></code> documentation for more information. </p>
-<p>These variables are then used to construct the model inputs with the <code><a title="jidenn.data.TrainInput" href="../data/TrainInput.html">jidenn.data.TrainInput</a></code> class.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>per_jet</code></strong> :&ensp;<code>List[str]</code></dt>
-<dd>Variables to be loaded from the dataset and clustered into <code>perJet</code>.
-Each variable is expected to have single input per jet, e.g. <code>jets_pt</code>
-which is a single value for the jet transverse momentum.</dd>
-<dt><strong><code>per_jet_tuple</code></strong> :&ensp;<code>List[str]</code></dt>
-<dd>Variables to be loaded from the dataset and clustered into <code>perJetTuple</code>.
-Each variable is expecetd to have multiple inputs per jet, e.g. <code>jets_PFO_m</code> which is a list of
-masses of the constituents of the jet.</dd>
-<dt><strong><code>per_event</code></strong> :&ensp;<code>List[str]</code></dt>
-<dd>Variables to be loaded from the dataset and clustered into <code>perEvent</code>.
-Each variable is expected to have only one input per event, which is the same for all jets in the event.
-It is tiled to the number of jets in the event.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@dataclass
-class Variables:
-    &#34;&#34;&#34;Variable names loaded from the saved `tf.data.Dataset`s. The `element_spec` of the loaded dataset
-    is expected to be `Dict[str, Union[tf.Tensor, tf.RaggedTensor]]` where the keys are the variable names.
-    From these variables, only variables defined in `per_jet` and `per_jet_tuple` and `per_event` are used.
-    They are then clustered into a dictionary of the following structure 
-    `Dict[Literal[&#39;perEvent&#39;,&#39;perJet&#39;,&#39;perJetTuple&#39;], Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]`.
-    Example:
-    ```python
-    # element_spec of the loaded dataset, ROOTDataset
-    element_spec_before = {
-        &#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64),
-        &#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)
-        &#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None),
-    }
-    # element_spec after processing with JIDENNDataset
-    element_spec_after = {
-        &#39;perEvent&#39;: {&#39;HLT_j60&#39;: TensorSpec(shape=(), dtype=tf.bool, name=None)},
-        &#39;perJet&#39;: {&#39;jets_pt&#39;: TensorSpec(shape=(), dtype=tf.float32, name=None)}
-        &#39;perJetTuple&#39;: {&#39;jets_PFO_m&#39;: RaggedTensorSpec(TensorShape([None]), tf.float32, 0, tf.int64)},
-    }
-    ```
-    Optionally, the string may be expression which combine multiple variables, or slice them.
-    See the `jidenn.data.string_conversions.Expression` documentation for more information. 
-
-    These variables are then used to construct the model inputs with the `jidenn.data.TrainInput` class.
-
-    Args:
-        per_jet (List[str]): Variables to be loaded from the dataset and clustered into `perJet`.
-            Each variable is expected to have single input per jet, e.g. `jets_pt` 
-            which is a single value for the jet transverse momentum.
-        per_jet_tuple (List[str]): Variables to be loaded from the dataset and clustered into `perJetTuple`.
-            Each variable is expecetd to have multiple inputs per jet, e.g. `jets_PFO_m` which is a list of
-            masses of the constituents of the jet.
-        per_event (List[str]): Variables to be loaded from the dataset and clustered into `perEvent`.
-            Each variable is expected to have only one input per event, which is the same for all jets in the event.
-            It is tiled to the number of jets in the event.
-    &#34;&#34;&#34;
-    per_jet: List[str]
-    per_jet_tuple: List[str]
-    per_event: List[str]</code></pre>
-</details>
-<h3>Class variables</h3>
-<dl>
-<dt id="jidenn.config.config.Variables.per_event"><code class="name">var <span class="ident">per_event</span> : List[str]</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="jidenn.config.config.Variables.per_jet"><code class="name">var <span class="ident">per_jet</span> : List[str]</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="jidenn.config.config.Variables.per_jet_tuple"><code class="name">var <span class="ident">per_jet_tuple</span> : List[str]</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-</dl>
-</dd>
 </dl>
 </section>
 </article>
@@ -1084,6 +973,7 @@ class Variables:
 <li><code><a title="jidenn.config.config.Data.cut" href="#jidenn.config.config.Data.cut">cut</a></code></li>
 <li><code><a title="jidenn.config.config.Data.labels" href="#jidenn.config.config.Data.labels">labels</a></code></li>
 <li><code><a title="jidenn.config.config.Data.path" href="#jidenn.config.config.Data.path">path</a></code></li>
+<li><code><a title="jidenn.config.config.Data.resample_labels" href="#jidenn.config.config.Data.resample_labels">resample_labels</a></code></li>
 <li><code><a title="jidenn.config.config.Data.subfolder_cut" href="#jidenn.config.config.Data.subfolder_cut">subfolder_cut</a></code></li>
 <li><code><a title="jidenn.config.config.Data.subfolder_weights" href="#jidenn.config.config.Data.subfolder_weights">subfolder_weights</a></code></li>
 <li><code><a title="jidenn.config.config.Data.subfolders" href="#jidenn.config.config.Data.subfolders">subfolders</a></code></li>
@@ -1109,6 +999,7 @@ class Variables:
 <h4><code><a title="jidenn.config.config.General" href="#jidenn.config.config.General">General</a></code></h4>
 <ul class="">
 <li><code><a title="jidenn.config.config.General.backup" href="#jidenn.config.config.General.backup">backup</a></code></li>
+<li><code><a title="jidenn.config.config.General.backup_freq" href="#jidenn.config.config.General.backup_freq">backup_freq</a></code></li>
 <li><code><a title="jidenn.config.config.General.base_logdir" href="#jidenn.config.config.General.base_logdir">base_logdir</a></code></li>
 <li><code><a title="jidenn.config.config.General.checkpoint" href="#jidenn.config.config.General.checkpoint">checkpoint</a></code></li>
 <li><code><a title="jidenn.config.config.General.debug" href="#jidenn.config.config.General.debug">debug</a></code></li>
@@ -1152,6 +1043,7 @@ class Variables:
 <li><code><a title="jidenn.config.config.Optimizer.epsilon" href="#jidenn.config.config.Optimizer.epsilon">epsilon</a></code></li>
 <li><code><a title="jidenn.config.config.Optimizer.label_smoothing" href="#jidenn.config.config.Optimizer.label_smoothing">label_smoothing</a></code></li>
 <li><code><a title="jidenn.config.config.Optimizer.learning_rate" href="#jidenn.config.config.Optimizer.learning_rate">learning_rate</a></code></li>
+<li><code><a title="jidenn.config.config.Optimizer.min_learning_rate" href="#jidenn.config.config.Optimizer.min_learning_rate">min_learning_rate</a></code></li>
 <li><code><a title="jidenn.config.config.Optimizer.name" href="#jidenn.config.config.Optimizer.name">name</a></code></li>
 <li><code><a title="jidenn.config.config.Optimizer.warmup_steps" href="#jidenn.config.config.Optimizer.warmup_steps">warmup_steps</a></code></li>
 <li><code><a title="jidenn.config.config.Optimizer.weight_decay" href="#jidenn.config.config.Optimizer.weight_decay">weight_decay</a></code></li>
@@ -1162,14 +1054,6 @@ class Variables:
 <ul class="">
 <li><code><a title="jidenn.config.config.Preprocess.draw_distribution" href="#jidenn.config.config.Preprocess.draw_distribution">draw_distribution</a></code></li>
 <li><code><a title="jidenn.config.config.Preprocess.normalization_size" href="#jidenn.config.config.Preprocess.normalization_size">normalization_size</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="jidenn.config.config.Variables" href="#jidenn.config.config.Variables">Variables</a></code></h4>
-<ul class="">
-<li><code><a title="jidenn.config.config.Variables.per_event" href="#jidenn.config.config.Variables.per_event">per_event</a></code></li>
-<li><code><a title="jidenn.config.config.Variables.per_jet" href="#jidenn.config.config.Variables.per_jet">per_jet</a></code></li>
-<li><code><a title="jidenn.config.config.Variables.per_jet_tuple" href="#jidenn.config.config.Variables.per_jet_tuple">per_jet_tuple</a></code></li>
 </ul>
 </li>
 </ul>

@@ -141,12 +141,12 @@ def read_ttree(tree: uproot.TTree, backend: Literal[&#39;pd&#39;, &#39;ak&#39;] 
     output = {}
     for var in variables:
         var_branch = tree[var].array(library=&#34;ak&#34;)
-        if ak.size(ak.flatten(var_branch, axis=None)) == 0:
+        if ak.num(ak.flatten(var_branch, axis=None), axis=0) == 0:
             continue
         if backend == &#39;ak&#39;:
             tensor = awkward_to_tensor(var_branch)
         elif backend == &#39;pd&#39;:
-            var_branch = ak.to_pandas(var_branch)
+            var_branch = ak.to_dataframe(var_branch)
             if var_branch.empty:
                 continue
             tensor = pandas_to_tensor(var_branch[&#39;values&#39;])
@@ -312,7 +312,7 @@ class ROOTDataset:
             file, &#39;element_spec&#39;) if element_spec_path is None else element_spec_path
         with open(element_spec_path, &#39;rb&#39;) as f:
             element_spec = pickle.load(f)
-        dataset = tf.data.experimental.load(
+        dataset = tf.data.Dataset.load(
             file, compression=&#39;GZIP&#39;, element_spec=element_spec)
         return cls(dataset, list(element_spec.keys()))
 
@@ -332,10 +332,23 @@ class ROOTDataset:
         element_spec_path = os.path.join(
             save_path, &#39;element_spec&#39;) if element_spec_path is None else element_spec_path
         element_spec = self._dataset.element_spec
-        tf.data.experimental.save(
-            self._dataset, save_path, compression=&#39;GZIP&#39;, shard_func=shard_func)
+        self._dataset.save(save_path, compression=&#39;GZIP&#39;, shard_func=shard_func)
         with open(element_spec_path, &#39;wb&#39;) as f:
-            pickle.dump(element_spec, f)</code></pre>
+            pickle.dump(element_spec, f)
+
+    def map(self, func: Callable[[ROOTVariables], ROOTVariables]) -&gt; ROOTDataset:
+        &#34;&#34;&#34;Maps a function to the dataset. The function should take a `ROOTVariables` object as input and return a `ROOTVariables` object as output.
+
+        Args:
+            func (Callable): Function to be mapped.
+            num_parallel_calls (int, optional): Number of parallel calls to use. Defaults to `None`.
+
+        Returns:
+            ROOTDataset: Mapped `ROOTDataset` object.
+        &#34;&#34;&#34;
+        new_ds = self.dataset.map(func)
+        new_ds = new_ds.prefetch(tf.data.AUTOTUNE)
+        return ROOTDataset(new_ds, list(new_ds.element_spec.keys()))</code></pre>
 </details>
 </section>
 <section>
@@ -505,12 +518,12 @@ the variable names and the values read from the TTree. Converting the TTree is d
     output = {}
     for var in variables:
         var_branch = tree[var].array(library=&#34;ak&#34;)
-        if ak.size(ak.flatten(var_branch, axis=None)) == 0:
+        if ak.num(ak.flatten(var_branch, axis=None), axis=0) == 0:
             continue
         if backend == &#39;ak&#39;:
             tensor = awkward_to_tensor(var_branch)
         elif backend == &#39;pd&#39;:
-            var_branch = ak.to_pandas(var_branch)
+            var_branch = ak.to_dataframe(var_branch)
             if var_branch.empty:
                 continue
             tensor = pandas_to_tensor(var_branch[&#39;values&#39;])
@@ -717,7 +730,7 @@ methods should be used for creating a <code><a title="jidenn.data.ROOTDataset.RO
             file, &#39;element_spec&#39;) if element_spec_path is None else element_spec_path
         with open(element_spec_path, &#39;rb&#39;) as f:
             element_spec = pickle.load(f)
-        dataset = tf.data.experimental.load(
+        dataset = tf.data.Dataset.load(
             file, compression=&#39;GZIP&#39;, element_spec=element_spec)
         return cls(dataset, list(element_spec.keys()))
 
@@ -737,10 +750,23 @@ methods should be used for creating a <code><a title="jidenn.data.ROOTDataset.RO
         element_spec_path = os.path.join(
             save_path, &#39;element_spec&#39;) if element_spec_path is None else element_spec_path
         element_spec = self._dataset.element_spec
-        tf.data.experimental.save(
-            self._dataset, save_path, compression=&#39;GZIP&#39;, shard_func=shard_func)
+        self._dataset.save(save_path, compression=&#39;GZIP&#39;, shard_func=shard_func)
         with open(element_spec_path, &#39;wb&#39;) as f:
-            pickle.dump(element_spec, f)</code></pre>
+            pickle.dump(element_spec, f)
+
+    def map(self, func: Callable[[ROOTVariables], ROOTVariables]) -&gt; ROOTDataset:
+        &#34;&#34;&#34;Maps a function to the dataset. The function should take a `ROOTVariables` object as input and return a `ROOTVariables` object as output.
+
+        Args:
+            func (Callable): Function to be mapped.
+            num_parallel_calls (int, optional): Number of parallel calls to use. Defaults to `None`.
+
+        Returns:
+            ROOTDataset: Mapped `ROOTDataset` object.
+        &#34;&#34;&#34;
+        new_ds = self.dataset.map(func)
+        new_ds = new_ds.prefetch(tf.data.AUTOTUNE)
+        return ROOTDataset(new_ds, list(new_ds.element_spec.keys()))</code></pre>
 </details>
 <h3>Static methods</h3>
 <dl>
@@ -953,7 +979,7 @@ def load(cls, file: str, element_spec_path: Optional[str] = None) -&gt; ROOTData
         file, &#39;element_spec&#39;) if element_spec_path is None else element_spec_path
     with open(element_spec_path, &#39;rb&#39;) as f:
         element_spec = pickle.load(f)
-    dataset = tf.data.experimental.load(
+    dataset = tf.data.Dataset.load(
         file, compression=&#39;GZIP&#39;, element_spec=element_spec)
     return cls(dataset, list(element_spec.keys()))</code></pre>
 </details>
@@ -990,6 +1016,42 @@ def variables(self) -&gt; List[str]:
 </dl>
 <h3>Methods</h3>
 <dl>
+<dt id="jidenn.data.ROOTDataset.ROOTDataset.map"><code class="name flex">
+<span>def <span class="ident">map</span></span>(<span>self, func: Callable[[<a title="jidenn.data.ROOTDataset.ROOTVariables" href="#jidenn.data.ROOTDataset.ROOTVariables">ROOTVariables</a>], <a title="jidenn.data.ROOTDataset.ROOTVariables" href="#jidenn.data.ROOTDataset.ROOTVariables">ROOTVariables</a>]) ‑> <a title="jidenn.data.ROOTDataset.ROOTDataset" href="#jidenn.data.ROOTDataset.ROOTDataset">ROOTDataset</a></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Maps a function to the dataset. The function should take a <code><a title="jidenn.data.ROOTDataset.ROOTVariables" href="#jidenn.data.ROOTDataset.ROOTVariables">ROOTVariables</a></code> object as input and return a <code><a title="jidenn.data.ROOTDataset.ROOTVariables" href="#jidenn.data.ROOTDataset.ROOTVariables">ROOTVariables</a></code> object as output.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>func</code></strong> :&ensp;<code>Callable</code></dt>
+<dd>Function to be mapped.</dd>
+<dt><strong><code>num_parallel_calls</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Number of parallel calls to use. Defaults to <code>None</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="jidenn.data.ROOTDataset.ROOTDataset" href="#jidenn.data.ROOTDataset.ROOTDataset">ROOTDataset</a></code></dt>
+<dd>Mapped <code><a title="jidenn.data.ROOTDataset.ROOTDataset" href="#jidenn.data.ROOTDataset.ROOTDataset">ROOTDataset</a></code> object.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def map(self, func: Callable[[ROOTVariables], ROOTVariables]) -&gt; ROOTDataset:
+    &#34;&#34;&#34;Maps a function to the dataset. The function should take a `ROOTVariables` object as input and return a `ROOTVariables` object as output.
+
+    Args:
+        func (Callable): Function to be mapped.
+        num_parallel_calls (int, optional): Number of parallel calls to use. Defaults to `None`.
+
+    Returns:
+        ROOTDataset: Mapped `ROOTDataset` object.
+    &#34;&#34;&#34;
+    new_ds = self.dataset.map(func)
+    new_ds = new_ds.prefetch(tf.data.AUTOTUNE)
+    return ROOTDataset(new_ds, list(new_ds.element_spec.keys()))</code></pre>
+</details>
+</dd>
 <dt id="jidenn.data.ROOTDataset.ROOTDataset.save"><code class="name flex">
 <span>def <span class="ident">save</span></span>(<span>self, save_path: str, element_spec_path: Optional[str] = None, shard_func: Optional[Callable[[<a title="jidenn.data.ROOTDataset.ROOTVariables" href="#jidenn.data.ROOTDataset.ROOTVariables">ROOTVariables</a>], tf.Tensor]] = None) ‑> None</span>
 </code></dt>
@@ -1027,8 +1089,7 @@ and the <code>element_spec</code> is saved separately as a pickle object saved i
     element_spec_path = os.path.join(
         save_path, &#39;element_spec&#39;) if element_spec_path is None else element_spec_path
     element_spec = self._dataset.element_spec
-    tf.data.experimental.save(
-        self._dataset, save_path, compression=&#39;GZIP&#39;, shard_func=shard_func)
+    self._dataset.save(save_path, compression=&#39;GZIP&#39;, shard_func=shard_func)
     with open(element_spec_path, &#39;wb&#39;) as f:
         pickle.dump(element_spec, f)</code></pre>
 </details>
@@ -1076,6 +1137,7 @@ and the <code>element_spec</code> is saved separately as a pickle object saved i
 <li><code><a title="jidenn.data.ROOTDataset.ROOTDataset.from_root_file" href="#jidenn.data.ROOTDataset.ROOTDataset.from_root_file">from_root_file</a></code></li>
 <li><code><a title="jidenn.data.ROOTDataset.ROOTDataset.from_root_files" href="#jidenn.data.ROOTDataset.ROOTDataset.from_root_files">from_root_files</a></code></li>
 <li><code><a title="jidenn.data.ROOTDataset.ROOTDataset.load" href="#jidenn.data.ROOTDataset.ROOTDataset.load">load</a></code></li>
+<li><code><a title="jidenn.data.ROOTDataset.ROOTDataset.map" href="#jidenn.data.ROOTDataset.ROOTDataset.map">map</a></code></li>
 <li><code><a title="jidenn.data.ROOTDataset.ROOTDataset.save" href="#jidenn.data.ROOTDataset.ROOTDataset.save">save</a></code></li>
 <li><code><a title="jidenn.data.ROOTDataset.ROOTDataset.variables" href="#jidenn.data.ROOTDataset.ROOTDataset.variables">variables</a></code></li>
 </ul>

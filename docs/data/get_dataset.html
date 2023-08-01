@@ -41,13 +41,12 @@ from typing import List, Optional, Tuple, Callable
 
 from jidenn.config import config
 from jidenn.data.string_conversions import Cut
-from jidenn.data.JIDENNDataset import JIDENNDataset, JIDENNVariables, ROOTVariables
+from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 
 
 def get_preprocessed_dataset(files: List[str],
                              args_data: config.Data,
-                             files_labels: Optional[List[int]] = None,
-                             resample_labels: bool = True) -&gt; JIDENNDataset:
+                             files_labels: Optional[List[int]] = None) -&gt; JIDENNDataset:
     &#34;&#34;&#34;Loads and preprocesses a dataset from a list of files into `JIDENNDataset` objects, performs the preprocessing steps specified in `args_data` 
     and combines the datasets into one. 
 
@@ -71,12 +70,13 @@ def get_preprocessed_dataset(files: List[str],
         A JIDENNDataset object containing the preprocessed dataset.
     &#34;&#34;&#34;
 
-    var_labels_1 = tf.constant(args_data.variable_labels[0], dtype=tf.int32)
-    var_labels_2 = tf.constant(args_data.variable_labels[1], dtype=tf.int32)
-    num_labels = len(args_data.variable_labels)
+    var_labels_1 = tf.constant(args_data.target_labels[0], dtype=tf.int32)
+    var_labels_2 = tf.constant(args_data.target_labels[1], dtype=tf.int32)
 
     @tf.function
-    def resample(_: JIDENNVariables, x: int) -&gt; int:
+    def resample(d: ROOTVariables, x: tf.Tensor) -&gt; int:
+        if x.dtype != tf.int32:
+            x = tf.cast(x, tf.int32)
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):
@@ -86,6 +86,8 @@ def get_preprocessed_dataset(files: List[str],
 
     @tf.function
     def label_mapping(x: int) -&gt; int:
+        if x.dtype != tf.int32:
+            x = tf.cast(x, tf.int32)
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):
@@ -93,13 +95,11 @@ def get_preprocessed_dataset(files: List[str],
         else:
             return -999
 
-    def stamp_origin_file(stamp: int) -&gt; Callable[[JIDENNVariables], JIDENNVariables]:
+    def stamp_origin_file(stamp: int) -&gt; Callable[[ROOTVariables], ROOTVariables]:
         @tf.function
-        def stamp_origin_file_wrap(data: JIDENNVariables) -&gt; JIDENNVariables:
+        def stamp_origin_file_wrap(data: ROOTVariables) -&gt; ROOTVariables:
             new_data = data.copy()
-            per_event = new_data[&#39;perEvent&#39;].copy()
-            per_event[&#39;origin_file&#39;] = stamp
-            new_data[&#39;perEvent&#39;] = per_event
+            new_data[&#39;origin_file&#39;] = tf.constant(stamp, tf.int32)
             return new_data
         return stamp_origin_file_wrap
 
@@ -108,11 +108,13 @@ def get_preprocessed_dataset(files: List[str],
         for pfo_var in [&#39;jets_PFO_pt&#39;, &#39;jets_PFO_eta&#39;, &#39;jets_PFO_phi&#39;, &#39;jets_PFO_m&#39;]:
             if pfo_var in sample.keys():
                 sample = sample.copy()
-                sample[&#39;jets_PFO_n&#39;] = tf.reduce_sum(tf.ones_like(sample[&#39;jets_PFO_pt&#39;]))
+                sample[&#39;jets_PFO_n&#39;] = tf.reduce_sum(
+                    tf.ones_like(sample[&#39;jets_PFO_pt&#39;]))
                 break
         return sample
 
-    JZ_cuts = args_data.subfolder_cut if args_data.subfolder_cut is not None else [None] * len(files)
+    JZ_cuts = args_data.subfolder_cut if args_data.subfolder_cut is not None else [
+        None] * len(files)
 
     datasets = []
     for i, (jz_cut, jz_file) in enumerate(zip(JZ_cuts, files)):
@@ -123,17 +125,23 @@ def get_preprocessed_dataset(files: List[str],
         jidenn_dataset = jidenn_dataset.load_dataset(jz_file)
 
         if jz_cut is not None:
-            cut = Cut(jz_cut) &amp; Cut(args_data.cut) if args_data.cut is not None else Cut(jz_cut)
+            cut = Cut(jz_cut) &amp; Cut(
+                args_data.cut) if args_data.cut is not None else Cut(jz_cut)
         elif args_data.cut is not None:
             cut = Cut(args_data.cut)
         else:
             cut = None
 
-        jidenn_dataset = jidenn_dataset.create_JIDENNVariables(
-            cut=cut, map_dataset=count_PFO) if cut is not None else jidenn_dataset
+        jidenn_dataset = jidenn_dataset.create_variables(
+            cut=cut, map_dataset=count_PFO)
 
-        jidenn_dataset = jidenn_dataset.resample_dataset(
-            resample, [1 / num_labels] * num_labels) if resample_labels else jidenn_dataset
+        if args_data.resample_labels is not None:
+            if len(args_data.target_labels) != len(args_data.resample_labels):
+                raise ValueError(
+                    &#39;The number of target labels and resample labels must be the same.&#39;)
+            jidenn_dataset = jidenn_dataset.resample_dataset(
+                resample, args_data.resample_labels)
+
         jidenn_dataset = jidenn_dataset.create_train_input(stamp_origin_file(
             files_labels[i])) if files_labels is not None else jidenn_dataset
 
@@ -143,18 +151,7 @@ def get_preprocessed_dataset(files: List[str],
     if len(datasets) == 1:
         return datasets[0]
 
-    return JIDENNDataset.combine(datasets, args_data.subfolder_weights)
-
-
-# def cache_dataset(jidenn_dataset: JIDENNDataset, size: int, path: str, num_shards: int = 10):
-
-#     def _prep(dataset: tf.data.Dataset) -&gt; tf.data.Dataset:
-#         dataset = dataset.take(size)
-#         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-#         return dataset
-
-#     jidenn_dataset = jidenn_dataset.apply(_prep)
-#     jidenn_dataset.save_dataset(path, num_shards)</code></pre>
+    return JIDENNDataset.combine(datasets, args_data.subfolder_weights if args_data.subfolder_weights is not None else [1 / len(files)] * len(files))</code></pre>
 </details>
 </section>
 <section>
@@ -165,7 +162,7 @@ def get_preprocessed_dataset(files: List[str],
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="jidenn.data.get_dataset.get_preprocessed_dataset"><code class="name flex">
-<span>def <span class="ident">get_preprocessed_dataset</span></span>(<span>files: List[str], args_data: <a title="jidenn.config.config.Data" href="../config/config.html#jidenn.config.config.Data">Data</a>, files_labels: Optional[List[int]] = None, resample_labels: bool = True) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="JIDENNDataset.html#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
+<span>def <span class="ident">get_preprocessed_dataset</span></span>(<span>files: List[str], args_data: <a title="jidenn.config.config.Data" href="../config/config.html#jidenn.config.config.Data">Data</a>, files_labels: Optional[List[int]] = None) ‑> <a title="jidenn.data.JIDENNDataset.JIDENNDataset" href="JIDENNDataset.html#jidenn.data.JIDENNDataset.JIDENNDataset">JIDENNDataset</a></span>
 </code></dt>
 <dd>
 <div class="desc"><p>Loads and preprocesses a dataset from a list of files into <code>JIDENNDataset</code> objects, performs the preprocessing steps specified in <code>args_data</code>
@@ -199,8 +196,7 @@ and combines the datasets into one. </p>
 </summary>
 <pre><code class="python">def get_preprocessed_dataset(files: List[str],
                              args_data: config.Data,
-                             files_labels: Optional[List[int]] = None,
-                             resample_labels: bool = True) -&gt; JIDENNDataset:
+                             files_labels: Optional[List[int]] = None) -&gt; JIDENNDataset:
     &#34;&#34;&#34;Loads and preprocesses a dataset from a list of files into `JIDENNDataset` objects, performs the preprocessing steps specified in `args_data` 
     and combines the datasets into one. 
 
@@ -224,12 +220,13 @@ and combines the datasets into one. </p>
         A JIDENNDataset object containing the preprocessed dataset.
     &#34;&#34;&#34;
 
-    var_labels_1 = tf.constant(args_data.variable_labels[0], dtype=tf.int32)
-    var_labels_2 = tf.constant(args_data.variable_labels[1], dtype=tf.int32)
-    num_labels = len(args_data.variable_labels)
+    var_labels_1 = tf.constant(args_data.target_labels[0], dtype=tf.int32)
+    var_labels_2 = tf.constant(args_data.target_labels[1], dtype=tf.int32)
 
     @tf.function
-    def resample(_: JIDENNVariables, x: int) -&gt; int:
+    def resample(d: ROOTVariables, x: tf.Tensor) -&gt; int:
+        if x.dtype != tf.int32:
+            x = tf.cast(x, tf.int32)
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):
@@ -239,6 +236,8 @@ and combines the datasets into one. </p>
 
     @tf.function
     def label_mapping(x: int) -&gt; int:
+        if x.dtype != tf.int32:
+            x = tf.cast(x, tf.int32)
         if tf.reduce_any(x == var_labels_1):
             return 0
         elif tf.reduce_any(x == var_labels_2):
@@ -246,13 +245,11 @@ and combines the datasets into one. </p>
         else:
             return -999
 
-    def stamp_origin_file(stamp: int) -&gt; Callable[[JIDENNVariables], JIDENNVariables]:
+    def stamp_origin_file(stamp: int) -&gt; Callable[[ROOTVariables], ROOTVariables]:
         @tf.function
-        def stamp_origin_file_wrap(data: JIDENNVariables) -&gt; JIDENNVariables:
+        def stamp_origin_file_wrap(data: ROOTVariables) -&gt; ROOTVariables:
             new_data = data.copy()
-            per_event = new_data[&#39;perEvent&#39;].copy()
-            per_event[&#39;origin_file&#39;] = stamp
-            new_data[&#39;perEvent&#39;] = per_event
+            new_data[&#39;origin_file&#39;] = tf.constant(stamp, tf.int32)
             return new_data
         return stamp_origin_file_wrap
 
@@ -261,11 +258,13 @@ and combines the datasets into one. </p>
         for pfo_var in [&#39;jets_PFO_pt&#39;, &#39;jets_PFO_eta&#39;, &#39;jets_PFO_phi&#39;, &#39;jets_PFO_m&#39;]:
             if pfo_var in sample.keys():
                 sample = sample.copy()
-                sample[&#39;jets_PFO_n&#39;] = tf.reduce_sum(tf.ones_like(sample[&#39;jets_PFO_pt&#39;]))
+                sample[&#39;jets_PFO_n&#39;] = tf.reduce_sum(
+                    tf.ones_like(sample[&#39;jets_PFO_pt&#39;]))
                 break
         return sample
 
-    JZ_cuts = args_data.subfolder_cut if args_data.subfolder_cut is not None else [None] * len(files)
+    JZ_cuts = args_data.subfolder_cut if args_data.subfolder_cut is not None else [
+        None] * len(files)
 
     datasets = []
     for i, (jz_cut, jz_file) in enumerate(zip(JZ_cuts, files)):
@@ -276,17 +275,23 @@ and combines the datasets into one. </p>
         jidenn_dataset = jidenn_dataset.load_dataset(jz_file)
 
         if jz_cut is not None:
-            cut = Cut(jz_cut) &amp; Cut(args_data.cut) if args_data.cut is not None else Cut(jz_cut)
+            cut = Cut(jz_cut) &amp; Cut(
+                args_data.cut) if args_data.cut is not None else Cut(jz_cut)
         elif args_data.cut is not None:
             cut = Cut(args_data.cut)
         else:
             cut = None
 
-        jidenn_dataset = jidenn_dataset.create_JIDENNVariables(
-            cut=cut, map_dataset=count_PFO) if cut is not None else jidenn_dataset
+        jidenn_dataset = jidenn_dataset.create_variables(
+            cut=cut, map_dataset=count_PFO)
 
-        jidenn_dataset = jidenn_dataset.resample_dataset(
-            resample, [1 / num_labels] * num_labels) if resample_labels else jidenn_dataset
+        if args_data.resample_labels is not None:
+            if len(args_data.target_labels) != len(args_data.resample_labels):
+                raise ValueError(
+                    &#39;The number of target labels and resample labels must be the same.&#39;)
+            jidenn_dataset = jidenn_dataset.resample_dataset(
+                resample, args_data.resample_labels)
+
         jidenn_dataset = jidenn_dataset.create_train_input(stamp_origin_file(
             files_labels[i])) if files_labels is not None else jidenn_dataset
 
@@ -296,7 +301,7 @@ and combines the datasets into one. </p>
     if len(datasets) == 1:
         return datasets[0]
 
-    return JIDENNDataset.combine(datasets, args_data.subfolder_weights)</code></pre>
+    return JIDENNDataset.combine(datasets, args_data.subfolder_weights if args_data.subfolder_weights is not None else [1 / len(files)] * len(files))</code></pre>
 </details>
 </dd>
 </dl>

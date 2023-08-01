@@ -10,7 +10,8 @@ def get_jet_h5_iterator(filename, dataset, variable_names):
     def _h5_iterator():
         with h5py.File(filename, 'r') as hf:
             for dato in hf[dataset]:
-                yield {name: var for name, var in zip(variable_names, dato)}
+                yield dato
+                # yield {name: var for name, var in zip(variable_names, dato)}
     return _h5_iterator
 
 
@@ -52,3 +53,14 @@ def convert_h5_to_tfdataset(load_path,
     )
 
     return tf.data.Dataset.zip((jet_dataset, flow_dataset)).map(lambda x, y: {**x, **y})
+
+
+if __name__ == '__main__':
+    jet_iter = get_jet_h5_iterator('/Users/samueljankovych/Documents/jet_tagging/JIDENN/data/group.perf-jets.32603976._000001.output.h5', 'jets', ['jets_E', 'jets_eta', 'jets_pt', 'jets_phi',
+                                                                                                                                                   'jets_label', 'jets_num', 'event', 'mu', 'corr_mu'])
+    flow_iter = get_flow_h5_iterator('/Users/samueljankovych/Documents/jet_tagging/JIDENN/data/group.perf-jets.32603976._000001.output.h5', 'flow', [
+                                     "jets_UFO_pt", "jets_UFO_energy", "jets_UFO_deta", "jets_UFO_dphi", "jets_UFO_dr", "jets_UFO_track_pt", "jets_UFO_d0", "jets_UFO_z0SinTheta"])
+
+    for i in range(1):
+        print(next(jet_iter()))
+        print(next(flow_iter()))
