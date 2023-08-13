@@ -23,9 +23,9 @@ batch_size: 384
 take: 600_000
 binning:
   variable: jets_pt
-  bins: 20
-  max_bin: 3_900_000
-  min_bin: 50_000
+  bins: 50
+  max_bin: 2_500_000
+  min_bin: 40_000
   log_bin_base:
 metrics_to_plot:
   [
@@ -39,34 +39,34 @@ reference_model: transformer
 validation_plots_in_bins: False
 ylims: # [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1], [0.10, 0.5]]
 model_names: [
-    # "idepart",
-    # "ipart",
-    # #
-    # "idepart_rel",
-    # #
-    # "depart",
-    # "part",
-    # "transformer",
+    "idepart",
+    "ipart",
+    #
+    "idepart_rel",
+    #
+    "depart",
+    "part",
+    "transformer",
     "efn",
     "pfn",
     #
-    # "fc",
-    # "highway",
+    "fc",
+    "highway",
   ]
 model_input_types: [
-    # "interaction_constituents",
-    # "interaction_constituents",
-    # #
-    # "irelative_constituents",
-    # #
-    # "constituents",
-    # "constituents",
-    # "constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    #
+    "irelative_constituents",
+    #
+    "constituents",
+    "constituents",
+    "constituents",
     "constituents",
     "constituents",
     #
-    # "highlevel",
-    # "highlevel",
+    "highlevel",
+    "highlevel",
   ]
 working_point_path: # good_logs/cpre
 working_point_file_name:

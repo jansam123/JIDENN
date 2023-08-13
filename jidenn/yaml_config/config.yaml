@@ -23,7 +23,7 @@ general:
   logdir: ${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory.
   checkpoint: # Path to checkpoint directory (inside logdir). If nothing is set (or null), no checkpoints are saved.
   backup: "backup" # Path to backup directory (inside logdir). If nothing is set (or null), no backups are saved.
-  backup_freq: 4_000 # Frequency of backups (in batches).
+  backup_freq: # Frequency of backups (in batches). Use None (null) to backup every epoch.
   load_checkpoint_path:
 
 optimizer:
@@ -31,7 +31,7 @@ optimizer:
   warmup_steps: 100 # Number of steps, when learning rate is increased linearly.
   learning_rate: 0.001 # Learning rate.
   min_learning_rate: 0.01 # Minimal learning rate as a fraction of the initial learning rate.
-  decay_steps: 70416 # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
+  decay_steps: # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
   clipnorm: # Gradient clipping (maximal norm of the gradient).
   weight_decay: # Weight decay (L2 regularization).
   beta_1: # Adam beta_1 (optimizer parameter).
