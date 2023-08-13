@@ -100,8 +100,9 @@ class ValidationROC(ValidationFigure):
     """
 
     def get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
+        weights = self._df['weight'].values if 'weight' in self._df.columns else None
         fp, tp, th = roc_curve(
-            self._df['label'].values, self._df['score'].values)
+            self._df['label'].values, self._df['score'].values, sample_weight=weights)
         self._data = pd.DataFrame({'FPR': fp, 'TPR': tp, 'threshold': th})
         auc_score = auc(fp, tp)
 
@@ -126,8 +127,9 @@ class ValidationCM(ValidationFigure):
     """Plots the confusion matrix."""
 
     def get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
+        weights = self._df['weight'].values if 'weight' in self._df.columns else None
         cm = confusion_matrix(
-            self._df['label'].values, self._df['prediction'].values)
+            self._df['label'].values, self._df['prediction'].values, sample_weight=weights)
         if fig is None:
             fig = plt.figure(figsize=(6, 6))
 
@@ -147,12 +149,15 @@ class ValidationScoreHistogram(ValidationFigure):
     """Plots the output scores of the model, colored by the truth label."""
 
     def get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
+        weights = self._df['weight'].values if 'weight' in self._df.columns else None
+
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         self._data = self._df[['score', 'Truth Label']]
         ax = sns.histplot(data=self._df, x='score', hue='Truth Label',
-                          palette='Set1', stat='count', element="step", fill=True,
-                          hue_order=self._class_names)
+                          palette='Set1', stat='count' if weights is None else 'density',
+                          element="step", fill=True,
+                          hue_order=self._class_names, weights=weights)
         sns.move_legend(ax, 'upper center')
         plt.xlabel('Score')
         return fig
@@ -164,12 +169,14 @@ class ValidationLabelHistogram(ValidationFigure):
     """
 
     def get_fig(self, fig: Union[plt.Figure, None] = None) -> plt.Figure:
+        weights = self._df['weight'].values if 'weight' in self._df.columns else None
         if fig is None:
             fig = plt.figure(figsize=(8, 8))
         self._data = self._df[['Truth Label', 'named_prediction']]
         sns.histplot(self._df, x='named_prediction', hue='Truth Label',
-                     stat='count', multiple='stack', hue_order=self._class_names,
-                     palette='Set1')
+                     stat='count' if weights is None else 'density',
+                     multiple='stack', hue_order=self._class_names,
+                     palette='Set1', weights=weights)
         plt.xlabel('Predicted Tag')
         return fig
 

@@ -65,12 +65,16 @@ def main(args: eval_config.EvalConfig) -> None:
                                             )
 
     variables = [f'{model}_score' for model in args.model_names] + [variable]
+    variables += [args.data.weight] if args.data.weight is not None else []
     log.info('Converting to pandas')
     df = full_dataset.to_pandas(variables=variables)
+    df = df.rename(columns={args.data.weight: 'weight'}) if args.data.weight is not None else df
 
     if args.binning.log_bin_base is not None:
-        min_val = np.log(args.binning.min_bin) / np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.min_bin)
-        max_val = np.log(args.binning.max_bin) / np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.max_bin)
+        min_val = np.log(args.binning.min_bin) / \
+            np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.min_bin)
+        max_val = np.log(args.binning.max_bin) / \
+            np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.max_bin)
         bins = np.logspace(min_val, max_val,
                            args.binning.bins + 1, base=args.binning.log_bin_base if args.binning.log_bin_base != 0 else np.e)
     else:
@@ -100,7 +104,9 @@ def main(args: eval_config.EvalConfig) -> None:
         log.info(f'Calculating metrics for model: {model_name}')
 
         os.makedirs(f'{args.logdir}/models/{model_name}', exist_ok=True)
-        plot_validation_figs(df=df[[f'{model_name}_score', 'label']].copy(),
+        score_df = df[[f'{model_name}_score', 'label']].copy() if args.data.weight is None else df[[
+            f'{model_name}_score', 'label', 'weight']].copy()
+        plot_validation_figs(df=score_df,
                              logdir=os.path.join(args.logdir, 'models', model_name),
                              score_name=f'{model_name}_score',
                              class_names=labels)
@@ -110,7 +116,9 @@ def main(args: eval_config.EvalConfig) -> None:
 
         def validation_plotter(x: pd.DataFrame):
             bin_center_name = x['bin'].apply(lambda x: x.mid * 1e-6).iloc[0]
-            plot_validation_figs(df=x[[f'{model_name}_score', 'label']].copy(),
+            score_df = x[[f'{model_name}_score', 'label']].copy() if args.data.weight is None else df[[
+                f'{model_name}_score', 'label', 'weight']].copy()
+            plot_validation_figs(df=score_df,
                                  logdir=os.path.join(args.logdir, 'models', model_name, f'{bin_center_name:.2f}'),
                                  score_name=f'{model_name}_score',
                                  class_names=labels)
@@ -118,6 +126,7 @@ def main(args: eval_config.EvalConfig) -> None:
         model_df = calculate_binned_metrics(df=df,
                                             binned_variable=variable,
                                             score_variable=f'{model_name}_score',
+                                            weights_variable=args.data.weight,
                                             bins=bins,
                                             validation_plotter=validation_plotter if args.validation_plots_in_bins else None,
                                             threshold=threshold,

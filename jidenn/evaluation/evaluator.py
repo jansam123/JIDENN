@@ -51,7 +51,7 @@ def add_score_to_dataset(dataset: JIDENNDataset,
 
 
 def _calculate_metrics_in_bin(x):
-    y, score_variable, threshold, validation_plotter = x
+    y, score_variable, threshold, validation_plotter, weights_variable = x
     inter, x = y
     if x.empty:
         return
@@ -63,7 +63,7 @@ def _calculate_metrics_in_bin(x):
         threshold_val = threshold
     if validation_plotter is not None:
         validation_plotter(x)
-    ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold_val)
+    ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold_val, weights=x[weights_variable] if weights_variable is not None else None)
     ret['num_events'] = len(x)
     ret['bin'] = inter
     return ret
@@ -73,6 +73,7 @@ def calculate_binned_metrics(df: pd.DataFrame,
                              binned_variable: str,
                              score_variable: str,
                              bins: Union[List[Union[float, int]], np.ndarray],
+                             weights_variable: Optional[str] = None,
                              validation_plotter: Optional[Callable[[pd.DataFrame], None]] = None,
                              threshold: Union[BinnedVariable, float] = 0.5,
                              threads: Optional[int] = None) -> pd.DataFrame:
@@ -120,7 +121,10 @@ def calculate_binned_metrics(df: pd.DataFrame,
     df['bin'] = pd.cut(df[binned_variable], bins=bins)
 
     grouped_metrics = df.groupby('bin')
-    args = [(x, score_variable, threshold, validation_plotter) for x in grouped_metrics]
+    if weights_variable is not None:
+        args = [(x, score_variable, threshold, validation_plotter, weights_variable) for x in grouped_metrics]
+    else:
+        args = [(x, score_variable, threshold, validation_plotter, None) for x in grouped_metrics]
 
     if threads is not None and threads > 1:
         with Pool(threads) as pool:
