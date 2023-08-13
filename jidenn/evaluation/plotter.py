@@ -401,12 +401,13 @@ def plot_single_dist(df: pd.DataFrame,
 
     palette = sns.color_palette("hls", 12) if hue_var == 'JZ_slice' else palette
     element = "bars" if hue_var == 'JZ_slice' else "step"
+    common_norm = True if hue_var == 'JZ_slice' else False
     print(df)
     print(variable)
     print(weight_var)
     sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
                  stat=stat, element=element, fill=True, multiple=multiple,
-                 palette=palette, common_norm=True, hue_order=hue_order, bins=bins)
+                 palette=palette, common_norm=common_norm, hue_order=hue_order, bins=bins)
     plt.ylim(ylim) if ylim is not None else None
     plt.savefig(save_path)
     plt.yscale('log') if ylog else plt.yscale('linear')

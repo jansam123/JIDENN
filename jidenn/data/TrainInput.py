@@ -96,14 +96,15 @@ class HighLevelJetVariables(TrainInput):
                 'jets_m',
                 'jets_phi',
                 'jets_pt',
-                'jets_PFO_n',
-                'jets_ChargedPFOWidthPt1000[0]',
-                'jets_TrackWidthPt1000[0]',
-                'jets_NumChargedPFOPt1000[0]',
-                'jets_SumPtChargedPFOPt500[0]',
-                'jets_NumChargedPFOPt500[0]',
-                'corrected_averageInteractionsPerCrossing[0]',
-            ]
+                'jets_PFO_n',]
+
+            self.idxd_variables = ['jets_ChargedPFOWidthPt1000[0]',
+                                     'jets_TrackWidthPt1000[0]',
+                                     'jets_NumChargedPFOPt1000[0]',
+                                     'jets_SumPtChargedPFOPt500[0]',
+                                     'jets_NumChargedPFOPt500[0]',
+                                     'corrected_averageInteractionsPerCrossing[0]',
+                                     ]
 
     def __call__(self, sample: ROOTVariables) -> ROOTVariables:
         """Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
@@ -115,12 +116,14 @@ class HighLevelJetVariables(TrainInput):
             ROOTVariables: The output variables of the form `{'var_name': tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
         """
 
-        return {var: tf.cast(sample[var], tf.float32) for var in self.variables}
+        new_sample = {var: tf.cast(sample[var], tf.float32) for var in self.variables}
+        new_sample.update({var: tf.cast(sample[var][0], tf.float32) for var in self.idxd_variables})
+        return new_sample
 
     @property
     def input_shape(self) -> int:
         """The input shape is just an integer `len(self.variables)`."""
-        return len(self.variables)
+        return len(self.variables) + len(self.idxd_variables)
 
 
 class QR(TrainInput):

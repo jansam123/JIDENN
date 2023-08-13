@@ -98,14 +98,10 @@ class Data:
     target: str
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
-    variable_unknown_labels: List[int]
-    resample_labels: Optional[List[float]]
-    variables: List[str]
+    variable_unknown_labels: Optional[List[int]]
+    label_weights: Optional[List[float]]
     weight: Optional[str]
     cut: Optional[str]
-    subfolders: Optional[List[str]]   # Slices of JZ to use.
-    subfolder_cut: Optional[List[str]]   # Cut to apply to JZ slices.
-    subfolder_weights: Optional[List[float]]  # Weights to apply to JZ slices.
     cached: Optional[str]   # Path to cached data.
 
 

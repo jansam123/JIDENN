@@ -1,5 +1,5 @@
 defaults:
-  - data: pythia
+  # - data: pythia
   - _self_
 
 hydra:
@@ -26,6 +26,21 @@ general:
   backup_freq: # Frequency of backups (in batches). Use None (null) to backup every epoch.
   load_checkpoint_path:
 
+data:
+  path: ./data/pythia_stepwise # Path to data folder containing folder of *.root files.
+  target: jets_PartonTruthLabelID
+  labels: # list of labels to use.
+    - gluon
+    - quark
+  target_labels:
+    - [21]
+    - [1, 2, 3, 4, 5, 6]
+  variable_unknown_labels: [-1, -999]
+  label_weights:
+  cut: jets_PFO_n<100
+  cached:
+  weight: #weight
+  
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB, Lion.
   warmup_steps: 100 # Number of steps, when learning rate is increased linearly.
