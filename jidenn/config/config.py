@@ -94,7 +94,7 @@ class Data:
 
         cached (Optional[str]): **Untested.** Path to cached data. If `None`, no cached data is used. If `cached` is not `None`, the `path` is ignored.
     """
-    path: str   # Path to data folder containing folder of *.root files.
+    path: str   
     target: str
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.

@@ -24,3 +24,7 @@ tmp
 _*.py
 _*.csv
 tests
+.pytest_cache
+.vscode
+*.root
+**/*.root

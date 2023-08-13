@@ -160,22 +160,38 @@ class ROOTDataset:
 
     """
 
-    def __init__(self, dataset: tf.data.Dataset, variables: List[str]):
-        self._variables = variables
+    def __init__(self, dataset: tf.data.Dataset, metadata: Optional[tf.Tensor] = None):
         self._dataset = dataset
+        self._metadata = metadata
 
     @property
     def variables(self) -> List[str]:
         """List of variable names inferred from the ROOT file."""
-        return self._variables
+        if self._element_spec is None:
+            return None
+        return list(self._dataset.element_spec.keys())
 
     @property
     def dataset(self) -> tf.data.Dataset:
         """Tensorflow `tf.data.Dataset` object created from the ROOT file."""
         return self._dataset
+    
+    @property
+    def element_spec(self) -> Dict[str, tf.TensorSpec]:
+        """`tf.data.Dataset.element_spec` of the `ROOTDataset` object."""
+        if self._dataset is None:
+            return None
+        return self._dataset.element_spec
 
-    @classmethod
-    def from_root_file(cls, filename: str,
+    @property
+    def metadata(self) -> Optional[tf.Tensor]:
+        """Tensorflow `tf.Tensor` object containing the metadata of the ROOT file. The metadata is a histogram containing
+        the cross section, sum of weights, etc. of the ROOT file. The metadata is read from the ROOT file using the 
+        `h_metadata` histogram. If the histogram is not present, the metadata is `None`."""
+        return self._metadata
+    
+    @staticmethod
+    def from_root_file(filename: str,
                        tree_name: str = 'NOMINAL',
                        metadata_hist: Optional[str] = 'h_metadata',
                        backend: Literal['pd', 'ak'] = 'pd') -> ROOTDataset:
@@ -190,20 +206,22 @@ class ROOTDataset:
         Returns:
             ROOTDataset: `ROOTDataset` object.
         """
-        file = uproot.open(filename, object_cache=None, array_cache=None)
-        tree = file[tree_name]
-        logging.info(f"Loading ROOT file {filename}")
-        sample = read_ttree(tree, backend=backend)
+        with uproot.open(filename, object_cache=None, array_cache=None) as file:
+            tree = file[tree_name]
+            logging.info(f"Loading ROOT file {filename}")
+            sample = read_ttree(tree, backend=backend)
 
-        if metadata_hist is not None:
-            logging.info("Getting metadata")
-            metadata = file[metadata_hist].values()
-            sample['metadata'] = tf.tile(tf.constant(metadata)[tf.newaxis, :], [
-                                         sample['eventNumber'].shape[0], 1])
+            if metadata_hist is not None:
+                logging.info("Getting metadata")
+                labels = file[metadata_hist].member('fXaxis').labels()
+                values = file[metadata_hist].values()
+                values = tf.constant(values)
+                metadata = dict(zip(labels, values))
+                logging.info(f"Metadata: {metadata}")
 
-        logging.info(f'Done loading file:{filename}')
-        dataset = tf.data.Dataset.from_tensor_slices(sample)
-        return cls(dataset, list(sample.keys()))
+            logging.info(f'Done loading file:{filename}')
+            dataset = tf.data.Dataset.from_tensor_slices(sample)
+        return ROOTDataset(dataset, metadata=metadata if metadata_hist is not None else None)
 
     @classmethod
     def concat(cls, datasets: List[ROOTDataset]) -> ROOTDataset:
@@ -219,12 +237,20 @@ class ROOTDataset:
             ROOTDataset: Combined `ROOTDataset` object.
         """
         for dataset in datasets:
-            if dataset.variables != datasets[0].variables:
-                raise ValueError("Variables of datasets do not match")
+            if dataset.element_spec != datasets[0].element_spec:
+                raise ValueError("Element Spec of datasets do not match")
+            if dataset.metadata is not None and dataset.metadata.keys() != datasets[0].metadata.keys():
+                raise ValueError("Metadata of datasets do not match")
+                
         final_dataset = datasets[0]._dataset
         for ds in datasets[1:]:
             final_dataset = final_dataset.concatenate(ds._dataset)
-        return cls(final_dataset, datasets[0].variables)
+        if datasets[0].metadata is not None:
+            metadata = {key : tf.reduce_sum(tf.stack([ds.metadata[key] for ds in datasets], axis=0), axis=0) for key in datasets[0].metadata}
+        else:
+            metadata = None
+            
+        return cls(final_dataset, metadata=metadata)
 
     @classmethod
     def from_root_files(cls, filenames: Union[List[str], str]) -> ROOTDataset:
@@ -241,7 +267,8 @@ class ROOTDataset:
         return cls.concat([cls.from_root_file(filename) for filename in filenames])
 
     @classmethod
-    def load(cls, file: str, element_spec_path: Optional[str] = None) -> ROOTDataset:
+    def load(cls, file: str, element_spec_path: Optional[str] = None,
+             metadata_path: Optional[str] = None,) -> ROOTDataset:
         """Loads a `ROOTDataset` object from a saved directory. The saved object is a `tf.data.Dataset` object
         saved using `tf.data.Dataset.save`. The `element_spec` is loaded separately as a pickle object and is used 
         to create the `tf.data.Dataset` object. Defaults to `element_spec` file inside the saved directory.
@@ -272,14 +299,25 @@ class ROOTDataset:
         """
 
         element_spec_path = os.path.join(
-            file, 'element_spec') if element_spec_path is None else element_spec_path
+            file, 'element_spec.pkl') if element_spec_path is None else element_spec_path
         with open(element_spec_path, 'rb') as f:
             element_spec = pickle.load(f)
+        meta_path = os.path.join(file, 'metadata.pkl') if metadata_path is None else metadata_path
+        try:
+            with open(meta_path, 'rb') as f:
+                metadata = pickle.load(f)
+        except FileNotFoundError:
+            logging.warning(f"Metadata file not found at {meta_path}")
+            logging.warning("Setting metadata to None")
+            metadata = None
+            
         dataset = tf.data.Dataset.load(
             file, compression='GZIP', element_spec=element_spec)
-        return cls(dataset, list(element_spec.keys()))
+        return cls(dataset, metadata=metadata)
 
-    def save(self, save_path: str, element_spec_path: Optional[str] = None, shard_func: Optional[Callable[[ROOTVariables], tf.Tensor]] = None) -> None:
+    def save(self, save_path: str, element_spec_path: Optional[str] = None, 
+             metadata_path: Optional[str] = None,
+             shard_func: Optional[Callable[[ROOTVariables], tf.Tensor]] = None) -> None:
         """Saves a `ROOTDataset` object to a directory. The saved object is a `tf.data.Dataset` object 
         and the `element_spec` is saved separately as a pickle object saved inside the saved directory.
 
@@ -293,11 +331,16 @@ class ROOTDataset:
 
         """
         element_spec_path = os.path.join(
-            save_path, 'element_spec') if element_spec_path is None else element_spec_path
+            save_path, 'element_spec.pkl') if element_spec_path is None else element_spec_path
+        metadata_path = os.path.join(
+            save_path, 'metadata.pkl') if metadata_path is None else metadata_path
         element_spec = self._dataset.element_spec
         self._dataset.save(save_path, compression='GZIP', shard_func=shard_func)
         with open(element_spec_path, 'wb') as f:
             pickle.dump(element_spec, f)
+        if self.metadata is not None:
+            with open(metadata_path, 'wb') as f:
+                pickle.dump(self.metadata, f)
 
     def map(self, func: Callable[[ROOTVariables], ROOTVariables]) -> ROOTDataset:
         """Maps a function to the dataset. The function should take a `ROOTVariables` object as input and return a `ROOTVariables` object as output.
@@ -311,4 +354,17 @@ class ROOTDataset:
         """
         new_ds = self.dataset.map(func)
         new_ds = new_ds.prefetch(tf.data.AUTOTUNE)
-        return ROOTDataset(new_ds, list(new_ds.element_spec.keys()))
+        return ROOTDataset(new_ds, metadata=self.metadata)
+    
+    def filter(self, func: Callable[[ROOTVariables], tf.Tensor]) -> ROOTDataset:
+        """Filters the dataset using a function. The function should take a `ROOTVariables` object as input and return a `tf.Tensor` object as output.
+
+        Args:
+            func (Callable): Function to be mapped.
+            num_parallel_calls (int, optional): Number of parallel calls to use. Defaults to `None`.
+
+        Returns:
+            ROOTDataset: Filtered `ROOTDataset` object.
+        """
+        new_ds = self.dataset.filter(func)
+        return ROOTDataset(new_ds, metadata=self.metadata)

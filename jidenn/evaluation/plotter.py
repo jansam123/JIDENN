@@ -366,27 +366,52 @@ def plot_data_distributions(df: pd.DataFrame,
 
 def plot_single_dist(df: pd.DataFrame,
                      variable: str,
+                     hue_var: Optional[str] = None,
                      bins: Union[int, str] = 'auto',
-                     hue_var: str = 'label',
                      ylog: bool = False,
                      xlog: bool = False,
                      ylim: Optional[Tuple[float, float]] = None,
+                     xlim: Optional[Tuple[float, float]] = None,
+                     log_bins: bool = False,
                      xlabel: Optional[str] = None,
                      hue_order: Optional[List[str]] = None,
                      badge_text: Optional[str] = None,
+                     badge: bool = True,
                      weight_var: Optional[str] = None,
+                     stat: str = 'count',
+                     multiple: str = 'layer',
+                     palette: str = 'Set1',
                      save_path: str = 'figs.png') -> None:
 
+    if log_bins and isinstance(bins, int) and xlim is not None:
+        bins = np.logspace(np.log(xlim[0]), np.log(xlim[1]), bins + 1, base=np.e)
+    elif isinstance(bins, int) and xlim:
+        bins = np.linspace(xlim[0], xlim[1], bins + 1)
+    elif isinstance(bins, int) and not xlim:
+        bins = bins
+    else:
+        bins = 'auto'
+
+    palette = sns.color_palette("hls", 12) if hue_var == 'JZ_slice' else palette
+    element = "bars" if hue_var == 'JZ_slice' else "step"
+    print(df)
+    print(variable)
+    print(weight_var)
     sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
-                 stat='count', element="step", fill=True,
-                 palette='Set1', common_norm=False, hue_order=hue_order, bins=bins)
+                 stat=stat, element=element, fill=True, multiple=multiple,
+                 palette=palette, common_norm=True, hue_order=hue_order, bins=bins)
     plt.ylim(ylim) if ylim is not None else None
     plt.savefig(save_path)
     plt.yscale('log') if ylog else plt.yscale('linear')
     plt.xscale('log') if xlog else plt.xscale('linear')
     plt.xlabel(xlabel if xlabel is not None else variable)
+
+    subtext = f"Simulation Internal \n {badge_text}" if badge_text is not None else "Simulation Internal"
+
     atlasify.atlasify(
-        subtext=f"Simulation Internal \n {badge_text}" if badge_text is not None else "Simulation Internal")
+        atlas=badge,
+        subtext=subtext if badge else None,
+    )
     plt.savefig(save_path, dpi=400, bbox_inches='tight')
     plt.close()
 

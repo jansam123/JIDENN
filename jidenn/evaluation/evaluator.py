@@ -180,7 +180,7 @@ def evaluate_multiple_models(model_paths: List[str],
         train_input_class = input_classes_lookup(input_type)
         train_input_class = train_input_class()
         model_input = tf.function(func=train_input_class)
-        ds = dataset.create_train_input(model_input)
+        ds = dataset.remap_data(model_input)
         if distribution_drawer is not None:
             log.info(f'----- Drawing data distribution for: {input_type}') if log is not None else None
             distribution_drawer(ds)

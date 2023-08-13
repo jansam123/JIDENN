@@ -9,7 +9,8 @@ from typing import Tuple, List, Dict, Union, Optional, Callable
 ROOTVariables = Dict[str, tf.RaggedTensor]
 
 
-def get_ragged_to_dataset_fn(reference_variable: str = 'jets_PartonTruthLabelID') -> Callable[[ROOTVariables], tf.data.Dataset]:
+def get_ragged_to_dataset_fn(reference_variable: str = 'jets_PartonTruthLabelID',
+                             key_phrase: str = 'jets') -> Callable[[ROOTVariables], tf.data.Dataset]:
     """Get a function that converts a tf.RaggedTensor to a tf.data.Dataset. The intended use is to use this function 
     in a tf.data.Dataset.interleave call to flatten a dataset. The function will infer the shape of the ragged tensor
     from the shape of the reference variable. Variables toher than the reference variable will be tiled to match the
@@ -27,14 +28,10 @@ def get_ragged_to_dataset_fn(reference_variable: str = 'jets_PartonTruthLabelID'
         sample = sample.copy()
         ragged_shape = tf.shape(sample[reference_variable])
         for key, item in sample.items():
-            if isinstance(item, tf.RaggedTensor) and ragged_shape[0] == tf.shape(item)[0]:
-                continue
-            elif len(tf.shape(item)) == 0:
-                sample[key] = tf.tile(item[tf.newaxis, tf.newaxis], [ragged_shape[0], 1])
-            elif tf.shape(item)[0] != ragged_shape[0]:
-                sample[key] = tf.tile(item[tf.newaxis, :], [ragged_shape[0], 1])
-            else:
-                continue
+            if key_phrase not in key or item.shape.num_elements() == 1:
+                tensor_with_new_axis = tf.expand_dims(item, axis=0)
+                sample[key] = tf.tile(tensor_with_new_axis, [ragged_shape[0]] + [1] * len(item.shape))
+
         return tf.data.Dataset.from_tensor_slices(sample)
     return _ragged_to_dataset
 
@@ -57,7 +54,8 @@ def get_filter_empty_fn(reference_variable: str = 'jets_PartonTruthLabelID') -> 
 
 
 def get_filter_ragged_values_fn(reference_variable: str = 'jets_PartonTruthLabelID',
-                                         wanted_values: List[int] = [1, 2, 3, 4, 5, 6, 21]) -> Callable[[ROOTVariables], ROOTVariables]:
+                                wanted_values: List[int] = [1, 2, 3, 4, 5, 6, 21],
+                                key_phrase: str = 'jets') -> Callable[[ROOTVariables], ROOTVariables]:
     """Get a function that filters out unwanted values from a ROOTVariables dictionary containg a RaggedTensor. The
     intended use is to use this function in a tf.data.Dataset.map call to filter out unwanted values from a dataset.
     the `get_filter_empty_fn` function should be used after this function to filter out empty events.
@@ -72,9 +70,14 @@ def get_filter_ragged_values_fn(reference_variable: str = 'jets_PartonTruthLabel
     @tf.function
     def _filter_unwanted_ragged_values_fn(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
-        mask = tf.math.reduce_any(tf.math.equal(sample[reference_variable], wanted_values), axis=-1)
+        reference_tensor = sample[reference_variable]
+        mask = tf.math.equal(tf.expand_dims(reference_tensor, axis=1), tf.tile(
+            tf.expand_dims(wanted_values, axis=0), [tf.shape(reference_tensor)[0], 1]))
+        mask = tf.reduce_any(mask, axis=1)
         for key, item in sample.items():
-            if tf.reduce_all(tf.math.equal(tf.shape(item), tf.shape(mask))):
+            if item.shape.num_elements() == 0 or item.shape.num_elements() == 1:
+                continue
+            if key_phrase in key:
                 sample[key] = tf.ragged.boolean_mask(item, mask)
         return sample
     return _filter_unwanted_ragged_values_fn
@@ -102,13 +105,13 @@ def flatten_dataset(dataset: tf.data.Dataset,
     if wanted_values is None:
         return (
             dataset
-            .map(get_filter_empty_fn(reference_variable))
+            .filter(get_filter_empty_fn(reference_variable))
             .interleave(get_ragged_to_dataset_fn(reference_variable))
         )
     else:
         return (
             dataset
             .map(get_filter_ragged_values_fn(reference_variable, wanted_values))
-            .map(get_filter_empty_fn(reference_variable))
+            .filter(get_filter_empty_fn(reference_variable))
             .interleave(get_ragged_to_dataset_fn(reference_variable))
         )

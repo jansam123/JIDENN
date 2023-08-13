@@ -76,21 +76,17 @@ def main(args: config.JIDENNConfig) -> None:
         file = [f'{args.data.path}/{sub_folder}/{name}' for sub_folder in args.data.subfolders] if args.data.subfolders is not None else [f'{args.data.path}/{name}']
         files_per_subfolder.append(file)
 
-    train, dev = [get_preprocessed_dataset(
-        file, args.data) for file in files_per_subfolder]
 
     # pick input variables according to model
     # if you want to choose your own input, implement a subclass of `TrainInput` in  `jidenn.data.TrainInput` and put it into the dict in the function `input_classes_lookup`
     train_input_class = input_classes_lookup(
         getattr(args.models, args.general.model).train_input)
     train_input_class = train_input_class()
-    model_input = tf.function(func=train_input_class)
+    model_input_creator = tf.function(func=train_input_class)
     input_size = train_input_class.input_shape
-
-    # construct input variables
-    train = train.create_train_input(model_input)
-    dev = dev.create_train_input(model_input)
-    # test = test.create_train_input(model_input)
+    
+    train, dev = [get_preprocessed_dataset(
+        file, args.data, input_creator=model_input_creator) for file in files_per_subfolder]
 
     try:
         restoring_from_backup = len(os.listdir(os.path.join(
@@ -118,9 +114,8 @@ def main(args: config.JIDENNConfig) -> None:
         train_size = 1 - args.dataset.dev_size - args.dataset.test_size
         train_size = int(train_size * args.dataset.take)
         dev_size = int(args.dataset.dev_size * args.dataset.take)
-        # test_size = int(args.dataset.test_size * args.dataset.take)
     else:
-        train_size, dev_size, test_size = None, None, None
+        train_size, dev_size = None, None
 
     # get fully prepared (batched, shuffled, prefetched) dataset
     train = train.get_prepared_dataset(batch_size=args.dataset.batch_size,
@@ -129,15 +124,12 @@ def main(args: config.JIDENNConfig) -> None:
                                        assert_length=True)
     dev = dev.get_prepared_dataset(batch_size=args.dataset.batch_size,
                                    take=dev_size)
-    # test = test.get_prepared_dataset(batch_size=args.dataset.batch_size,
-    #                                  take=test_size)
-
+    
     # this is only to get rid of some warnings
     options = tf.data.Options()
     options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
     train = train.with_options(options)
     dev = dev.with_options(options)
-    # test = test.with_options(options)
 
     # build model, gpu_strategy is based on the number of gpus available
     @gpu_strategy
