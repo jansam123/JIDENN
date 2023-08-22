@@ -1,5 +1,5 @@
 defaults:
-  - data: pythia_allJZ
+  # - data: pythia_allJZ
   - _self_
 
 hydra:
@@ -14,19 +14,34 @@ hydra:
         format: "[%(asctime)s][%(levelname)s] - %(message)s"
   output_subdir: config
 
+data:
+  path: ./data/pythia_stepwise # Path to data folder containing folder of *.root files.
+  target: jets_PartonTruthLabelID
+  labels: # list of labels to use.
+    - gluon
+    - quark
+  target_labels:
+    - [21]
+    - [1, 2, 3, 4, 5, 6]
+  variable_unknown_labels: [-1, -999]
+  label_weights:
+  cut: jets_PFO_n<100
+  cached:
+  weight: #weight
+
 logdir: logs/stepwise_flat/eval
 models_path: logs/stepwise_flat
 seed: 42
-draw_distribution: 20_000
+draw_distribution: 200_000
 test_subfolder: test
 batch_size: 384
-take: 600_000
+take: 700_000
 binning:
   variable: jets_pt
-  bins: 50
+  bins: 10
   max_bin: 2_500_000
-  min_bin: 40_000
-  log_bin_base:
+  min_bin: 60_000
+  log_bin_base: 0
 metrics_to_plot:
   [
     "gluon_efficiency",
@@ -42,13 +57,14 @@ model_names: [
     "idepart",
     "ipart",
     #
-    "idepart_rel",
+    # "idepart_rel",
     #
     "depart",
     "part",
     "transformer",
-    "efn",
     "pfn",
+    #
+    "efn",
     #
     "fc",
     "highway",
@@ -57,13 +73,14 @@ model_input_types: [
     "interaction_constituents",
     "interaction_constituents",
     #
-    "irelative_constituents",
+    # "irelative_constituents",
     #
     "constituents",
     "constituents",
     "constituents",
     "constituents",
-    "constituents",
+    #
+    "irc_safe",
     #
     "highlevel",
     "highlevel",

@@ -36,18 +36,24 @@ def add_score_to_dataset(dataset: JIDENNDataset,
         i.e. a dictionary with the same kay-value pairs with one additional key-value pair for the score `{score_name: score[i]}`.
 
     """
-    @tf.function
-    def add_to_dict(data_label: Tuple[ROOTVariables, tf.Tensor], score: tf.Tensor) -> Tuple[ROOTVariables, tf.Tensor]:
-        data, label = data_label[0].copy(), data_label[1]
-        data[score_name] = score
-        return data, label
+    if dataset.weight is None:
+        @tf.function
+        def add_to_dict(data_label: Tuple[ROOTVariables, tf.Tensor], score: tf.Tensor) -> Tuple[ROOTVariables, tf.Tensor]:
+            data, label = data_label[0].copy(), data_label[1]
+            data[score_name] = score
+            return data, label
+    else:
+        @tf.function
+        def add_to_dict(data_label: Tuple[ROOTVariables, tf.Tensor], score: tf.Tensor) -> Tuple[ROOTVariables, tf.Tensor, tf.Tensor]:
+            data, label, weight = data_label[0].copy(), data_label[1], data_label[2]
+            data[score_name] = score
+            return data, label, weight
 
     score_dataset = tf.data.Dataset.from_tensor_slices(score)
-    dataset = tf.data.Dataset.zip((dataset.dataset, score_dataset))
-    dataset = dataset.map(add_to_dict)
-    variables = list(dataset.element_spec[0].keys())
+    new_dataset = tf.data.Dataset.zip((dataset.dataset, score_dataset))
+    new_dataset = new_dataset.map(add_to_dict)
 
-    return JIDENNDataset(variables).set_dataset(dataset, element_spec=dataset.element_spec)
+    return JIDENNDataset(dataset=new_dataset, element_spec=dataset.element_spec, metadata=dataset.metadata, target=dataset.target, weight=dataset.weight)
 
 
 def _calculate_metrics_in_bin(x):
@@ -57,13 +63,13 @@ def _calculate_metrics_in_bin(x):
         return
     if len(x['label'].unique()) < 2:
         return
-    if isinstance(threshold, BinnedVariable):
-        threshold_val = threshold[x['bin'].iloc[0]]
-    else:
-        threshold_val = threshold
+    print(x['bin'].unique())
+    print(threshold)
+    
     if validation_plotter is not None:
         validation_plotter(x)
-    ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold_val, weights=x[weights_variable] if weights_variable is not None else None)
+    ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold,
+                            weights=x[weights_variable] if weights_variable is not None else None)
     ret['num_events'] = len(x)
     ret['bin'] = inter
     return ret
@@ -118,13 +124,16 @@ def calculate_binned_metrics(df: pd.DataFrame,
 
     """
 
-    df['bin'] = pd.cut(df[binned_variable], bins=bins)
-
+    df['bin'] = pd.cut(df[binned_variable], bins=bins) if not isinstance(
+        bins, BinnedVariable) else pd.cut(df[binned_variable], bins=threshold.bins)
     grouped_metrics = df.groupby('bin')
+    threshold_values = threshold.values if isinstance(threshold, BinnedVariable) else [threshold] * len(grouped_metrics)
+
     if weights_variable is not None:
-        args = [(x, score_variable, threshold, validation_plotter, weights_variable) for x in grouped_metrics]
+        args = [(x, score_variable, th, validation_plotter, weights_variable)
+                for x, th in zip(grouped_metrics, threshold_values)]
     else:
-        args = [(x, score_variable, threshold, validation_plotter, None) for x in grouped_metrics]
+        args = [(x, score_variable, th, validation_plotter, None) for x, th in zip(grouped_metrics, threshold_values)]
 
     if threads is not None and threads > 1:
         with Pool(threads) as pool:

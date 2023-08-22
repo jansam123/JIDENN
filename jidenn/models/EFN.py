@@ -80,7 +80,7 @@ class EFNModel(tf.keras.Model):
     """
 
     def __init__(self,
-                 input_shape: Tuple[None, int],
+                 input_shape: Tuple[Tuple[None, int], Tuple[None, int]],
                  Phi_sizes: List[int],
                  F_sizes: List[int],
                  output_layer: tf.keras.layers.Layer,
@@ -96,17 +96,17 @@ class EFNModel(tf.keras.Model):
         self.F_dropout = F_dropout
         self.activation = activation
 
-        input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+        input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
+                 tf.keras.layers.Input(shape=input_shape[1], ragged=True))
 
-        if preprocess is not None:
-            input = preprocess(input)
-
-        angular = input[:, :, 6:]
+        angular, energy = input
         row_lengths = angular.row_lengths()
         mask = tf.sequence_mask(row_lengths)
-
-        energy = input[:, :, :6].to_tensor()
+        energy = energy.to_tensor()
         angular = angular.to_tensor()
+
+        if preprocess is not None:
+            angular = preprocess(angular)
 
         if batch_norm:
             angular = tf.keras.layers.BatchNormalization()(angular)

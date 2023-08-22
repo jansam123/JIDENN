@@ -40,7 +40,7 @@ data:
   cut: jets_PFO_n<100
   cached:
   weight: #weight
-  
+
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB, Lion.
   warmup_steps: 100 # Number of steps, when learning rate is increased linearly.
@@ -78,7 +78,7 @@ models:
     layer_size: 344 # Size of the highway layer.
     num_layers: 11 # Number of highway layers.
     dropout: 0.2 # Dropout after highway layers.
-    activation: swish # Activation function to use (relu/elu/gelu/silu).
+    activation: gelu # Activation function to use (relu/elu/gelu/silu).
     train_input: highlevel
 
   transformer:
@@ -139,7 +139,7 @@ models:
     activation: gelu #  Activation function to use (relu/elu/gelu/silu).
     Phi_dropout: #  Dropout after PHI.
     F_dropout: #  Dropout after F.
-    train_input: constituents
+    train_input: irc_safe
 
   bdt:
     num_trees: 300 #  Number of trees in the forest.

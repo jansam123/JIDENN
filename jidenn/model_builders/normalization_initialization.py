@@ -10,25 +10,25 @@ from typing import Optional, Tuple, Union, Literal
 
 def get_normalization(dataset: tf.data.Dataset,
                       log: logging.Logger,
+                      input_shape,
                       adapt: bool = True,
-                      ragged: bool = False,
-                      normalization_steps: Optional[int] = None,
-                      interaction: Optional[bool] = None,) -> Union[tf.keras.layers.Normalization, Tuple[tf.keras.layers.Normalization, tf.keras.layers.Normalization]]:
+                      normalization_steps: Optional[int] = None,) -> Union[tf.keras.layers.Normalization, Tuple[tf.keras.layers.Normalization, tf.keras.layers.Normalization]]:
     """Function returning normalization layer(s) adapted to the dataset if requested.
     Unadapted normalization layer(s) are asumed to have weights loaded from checkpoint.
 
     Args:
         dataset (tf.data.Dataset): Dataset to adapt the normalization layer to.
         log (logging.Logger): Logger.
+        input_shape (Tuple[None, int]): The shape of the input.
         adapt (bool, optional): Whether to adapt the normalization layer to the dataset. Defaults to True.
-        ragged (bool, optional): Whether the dataset samples are ragged. Defaults to False.
         normalization_steps (int, optional): Number of batches to use for adaptation. Defaults to None.
-        interaction (bool, optional): Whether to adapt the normalization layer to the interaction variables. Defaults to None.
 
     Returns:
         Union[tf.keras.layers.Normalization, Tuple[tf.keras.layers.Normalization, tf.keras.layers.Normalization]]: Return `None` if the model is `bdt` or unknown model,
             one layer if there is no interaction, two layers as a `tuple` if there is interaction.
     """
+    ragged = isinstance(input_shape, tuple)
+    interaction = isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple) and len(input_shape[1]) == 3
 
     if not adapt:
         log.warning("Normalization not adapting. Loading weights expected.")
@@ -45,7 +45,7 @@ def get_normalization(dataset: tf.data.Dataset,
     if not ragged:
         def picker(*x):
             return x[0]
-    elif interaction:
+    elif isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
         def picker(*x):
             return x[0][0].to_tensor()
     else:

@@ -277,7 +277,16 @@ class JIDENNDataset:
     @property
     def variables(self) -> Union[List[str], None]:
         """The variables of the dataset or `None` if the dataset is not set yet."""
-        return self._variables if self._variables is not None else list(self.element_spec.keys())
+        if self.dataset is None:
+            raise ValueError('Dataset not loaded yet.')
+        if self._variables is not None:
+            return self._variables
+        if not isinstance(self.element_spec, tuple):
+            return list(self.element_spec.keys()) 
+        elif isinstance(self.element_spec[0], tuple):
+            return list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
+        else:
+            return list(self.element_spec[0].keys())
 
     @property
     def target(self) -> Union[str, None]:
@@ -662,7 +671,7 @@ class JIDENNDataset:
                 return func(*data)
         dataset = self.dataset.map(input_wrapper)
         return JIDENNDataset(dataset=dataset, element_spec=dataset.element_spec,
-                             metadata=self.metadata, variables=self.variables,
+                             metadata=self.metadata, 
                              target=self.target, weight=self.weight, length=self.length)
 
     def resample_dataset(self, resampling_func: Callable[[ROOTVariables, Any], int], target_dist: List[float]):
@@ -761,7 +770,7 @@ class JIDENNDataset:
 
         self = self.remap_data(dict_to_stacked_tensor)
         dataset = self.dataset.shuffle(
-            shuffle_buffer_size) if shuffle_buffer_size is not None else dataset
+            shuffle_buffer_size) if shuffle_buffer_size is not None else self.dataset
         dataset = dataset.take(take) if take is not None else dataset
         if assert_length and take is not None:
             dataset = dataset.apply(tf.data.experimental.assert_cardinality(
@@ -893,6 +902,13 @@ class JIDENNDataset:
         """
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
+        if not isinstance(self.element_spec, tuple):
+            variables = list(self.element_spec.keys()) 
+        elif isinstance(self.element_spec[0], tuple):
+            variables = list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
+        else:
+            variables = list(self.element_spec[0].keys())
+            
         df = self.to_pandas(variables)
         plot_data_distributions(df, folder=folder, named_labels=named_labels,
                                 xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)

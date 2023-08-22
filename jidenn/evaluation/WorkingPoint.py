@@ -19,8 +19,12 @@ class BinnedVariable:
 
     def _create_bins(self, binning: Binning) -> np.ndarray:
         if binning.log_bin_base is not None:
-            bins = np.logspace(np.log10(binning.min_bin), np.log10(binning.max_bin),
-                               binning.bins + 1, base=binning.log_bin_base)
+            min_val = np.log(binning.min_bin) / \
+                np.log(binning.log_bin_base) if binning.log_bin_base != 0 else np.log(binning.min_bin)
+            max_val = np.log(binning.max_bin) / \
+                np.log(binning.log_bin_base) if binning.log_bin_base != 0 else np.log(binning.max_bin)
+            bins = np.logspace(min_val, max_val,
+                            binning.bins + 1, base=binning.log_bin_base if binning.log_bin_base != 0 else np.e)
         else:
             bins = np.linspace(binning.min_bin, binning.max_bin, binning.bins + 1)
         return bins

@@ -69,13 +69,7 @@ def main(args: config.JIDENNConfig) -> None:
     else:
         log.info(f"Decay steps set to {args.optimizer.decay_steps}")
 
-    # create 3 lists containing lists of file names for train, dev, test datasets separately
-    # each subfolder must contain train, dev, test subfolder
-    files_per_subfolder = []
-    for name in ["train", "dev"]:
-        file = [f'{args.data.path}/{sub_folder}/{name}' for sub_folder in args.data.subfolders] if args.data.subfolders is not None else [f'{args.data.path}/{name}']
-        files_per_subfolder.append(file)
-
+    files = [f'{args.data.path}/{name}' for name in ["train", "dev"]]
 
     # pick input variables according to model
     # if you want to choose your own input, implement a subclass of `TrainInput` in  `jidenn.data.TrainInput` and put it into the dict in the function `input_classes_lookup`
@@ -83,10 +77,10 @@ def main(args: config.JIDENNConfig) -> None:
         getattr(args.models, args.general.model).train_input)
     train_input_class = train_input_class()
     model_input_creator = tf.function(func=train_input_class)
-    input_size = train_input_class.input_shape
-    
+    input_shape = train_input_class.input_shape
+
     train, dev = [get_preprocessed_dataset(
-        file, args.data, input_creator=model_input_creator) for file in files_per_subfolder]
+        file, args.data, input_creator=model_input_creator) for file in files]
 
     try:
         restoring_from_backup = len(os.listdir(os.path.join(
@@ -100,14 +94,9 @@ def main(args: config.JIDENNConfig) -> None:
             f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
         dir = os.path.join(args.general.logdir, 'dist')
         os.makedirs(dir, exist_ok=True)
-
-        dist_dataset = train.apply(lambda x: x.take(
-            args.preprocess.draw_distribution))
-        df = dist_dataset.to_pandas()
-        df['named_label'] = df['label'].replace(
-            {0: args.data.labels[0], 1: args.data.labels[1]})
-        data_info.generate_data_distributions(
-            df=df, folder=dir, hue_order=args.data.labels)
+        named_labels = {0: args.data.labels[0], 1: args.data.labels[1]}
+        train.take(args.preprocess.draw_distribution).plot_data_distributions(hue_variable='label',
+                                                                              folder=dir, named_labels=named_labels)
 
     # get proper dataset size based on the config
     if args.dataset.take is not None:
@@ -124,7 +113,7 @@ def main(args: config.JIDENNConfig) -> None:
                                        assert_length=True)
     dev = dev.get_prepared_dataset(batch_size=args.dataset.batch_size,
                                    take=dev_size)
-    
+
     # this is only to get rid of some warnings
     options = tf.data.Options()
     options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
@@ -142,11 +131,8 @@ def main(args: config.JIDENNConfig) -> None:
             adapt = adapt and not restoring_from_backup
             normalizer = get_normalization(dataset=train,
                                            adapt=True,
-                                           ragged=isinstance(
-                                               input_size, tuple),
+                                           input_shape=input_shape,
                                            normalization_steps=args.preprocess.normalization_size,
-                                           interaction=isinstance(input_size, tuple) and isinstance(
-                                               input_size[0], tuple),
                                            log=log)
         else:
             normalizer = None
@@ -155,7 +141,7 @@ def main(args: config.JIDENNConfig) -> None:
         # create a ModelBuilder class construct the model specified
         model_builder = ModelBuilder(model_name=args.general.model,
                                      args_model=args.models,
-                                     input_size=input_size,
+                                     input_size=input_shape,
                                      num_labels=len(args.data.labels),
                                      args_optimizer=args.optimizer,
                                      preprocess=normalizer,
@@ -194,7 +180,6 @@ def main(args: config.JIDENNConfig) -> None:
     model_dir = os.path.join(args.general.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir, save_format='tf')
-    
 
     # save the training history and plot it
     if args.general.model != 'bdt':
