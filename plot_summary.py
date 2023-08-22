@@ -49,7 +49,7 @@ def plot_metric(df: pd.DataFrame,
     ax1.set(ylabel=METRIC_NAMING_SCHEMA[metric]
             if metric in METRIC_NAMING_SCHEMA else metric, xlabel=None)
     handles, labels = ax1.get_legend_handles_labels()
-    ax1.legend(handles=handles, labels=labels, loc='lower right')
+    ax1.legend(handles=handles, labels=labels, loc='upper right')
 
     sns.pointplot(x='cut', y=metric, data=relative_df, hue='Model', errorbar=None,
                     palette=palette, hue_order=order, ax=ax2, estimator=np.mean)
@@ -99,22 +99,24 @@ def compare_ml_models(overall_metrics_path: str,
                         xlabel=r'$p_T$ [TeV]',
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
+                        xlog=True,
                         colours=colours)
 
     def interval_to_cut(string_interval):
 
-        left, right = string_interval.split(',')
-        left = float(left[1:]) * 1e-6
-        right = float(right[:-1]) * 1e-6
-        mid = (left + right) / 2
-        return f'{mid:.1f}'
+        # left, right = string_interval.split(',')
+        # left = float(left[1:]) * 1e-6
+        # right = float(right[:-1]) * 1e-6
+        # mid = (left + right) / 2
+        return f'{string_interval:.3f}'
 
     dfs_new = []
     rel_dfs = []
     reference_df = sorted_dfs[sorted_labels.index(reference)]
     for df, model_name in zip(sorted_dfs, sorted_labels):
+        print(df)
         df['Model'] = MODEL_NAMING_SCHEMA[model_name]
-        df['cut'] = df['bin'].apply(interval_to_cut)
+        df['cut'] = df['bin_mid'].apply(interval_to_cut)
         dfs_new.append(df)
         rel_df = df.copy()
         for metric in metric_names:
@@ -123,8 +125,8 @@ def compare_ml_models(overall_metrics_path: str,
 
     df = pd.concat(dfs_new)
     rel_df = pd.concat(rel_dfs)
-
-    ylims = [None] * len(metric_names) # if ylims is None else ylims
+    print(df)
+    ylims = [None] * len(metric_names)  # if ylims is None else ylims
     for metric, ylim in zip(metric_names, ylims):
         plot_metric(df=df,
                     relative_df=rel_df,
@@ -156,6 +158,6 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     # args.load_dir = 'logs/stepwise_flat/eval'
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
-    args.model_names = ["idepart", "ipart", "idepart_rel", "depart",
+    args.model_names = ["idepart", "ipart", "depart",
                         "part", "transformer", "efn", "pfn", "fc", "highway"]
     main(args)

@@ -38,17 +38,20 @@ def get_preprocessed_dataset(file: str,
             return 1
         else:
             return -999
+
     @tf.function
     def filter_unknown_labels(sample: ROOTVariables) -> bool:
         is_unknown = tf.reduce_any(sample[args_data.target] == unknown_labels)
         return tf.logical_not(is_unknown)
 
     dataset = JIDENNDataset.load(file)
-    dataset = (dataset
-               .remap_data(count_PFO)
-               .filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
-               .filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset
-               .set_variables_target_weight(target=args_data.target, weight=args_data.weight)
-               .remap_labels(label_mapping)
-               .remap_data(input_creator))
+    dataset = dataset.remap_data(count_PFO)
+    dataset = dataset.filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
+    dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset
+    dataset = dataset.set_variables_target_weight(target=args_data.target, weight=args_data.weight)
+    dataset = dataset.remap_labels(label_mapping)
+    dataset = dataset.remap_data(input_creator) if input_creator is not None else dataset
     return dataset
+
+
+

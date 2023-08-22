@@ -96,15 +96,14 @@ class HighLevelJetVariables(TrainInput):
                 'jets_m',
                 'jets_phi',
                 'jets_pt',
+                'corrected_averageInteractionsPerCrossing',
                 'jets_PFO_n',]
 
-            self.idxd_variables = ['jets_ChargedPFOWidthPt1000[0]',
-                                     'jets_TrackWidthPt1000[0]',
-                                     'jets_NumChargedPFOPt1000[0]',
-                                     'jets_SumPtChargedPFOPt500[0]',
-                                     'jets_NumChargedPFOPt500[0]',
-                                     'corrected_averageInteractionsPerCrossing[0]',
-                                     ]
+            self.idxd_variables = ['jets_ChargedPFOWidthPt1000',
+                                   'jets_TrackWidthPt1000',
+                                   'jets_NumChargedPFOPt1000',
+                                   'jets_SumPtChargedPFOPt500',
+                                   'jets_NumChargedPFOPt500',]
 
     def __call__(self, sample: ROOTVariables) -> ROOTVariables:
         """Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
@@ -350,6 +349,54 @@ class ConstituentVariables(TrainInput):
         return (None, 8)
 
 
+class IRCSVariables(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    """
+
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m_const = sample['jets_PFO_m']
+        pt_const = sample['jets_PFO_pt']
+        eta_const = sample['jets_PFO_eta']
+        phi_const = sample['jets_PFO_phi']
+
+        m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+
+        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        PT_PTjet = pt_const / tf.math.reduce_mean(pt_jet)
+        E_Ejet = PFO_E / tf.math.reduce_mean(jet_E)
+
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        angular = {'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+        energy = {'pT': pt_const * 1e-6, 'E': PFO_E * 1e-6, 'PT|PTjet': PT_PTjet, 'E|Ejet': E_Ejet}
+        return angular, energy
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, int]]:
+        """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent."""
+        return (None, 3), (None, 4)
+
+
 class InteractingRelativeConstituentVariables(TrainInput):
     """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
     It is the same as `ConstituentVariables` but containg only variables relative to the jet.
@@ -533,6 +580,7 @@ def input_classes_lookup(class_name: Literal['highlevel',
                    'constituents': ConstituentVariables,
                    'irelative_constituents': InteractingRelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
+                   'irc_safe': IRCSVariables,
                    'qr': QR,
                    'qr_interaction': QRInteraction}
 

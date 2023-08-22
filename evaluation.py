@@ -10,7 +10,7 @@ import pandas as pd
 from multiprocessing import Pool
 from hydra.core.config_store import ConfigStore
 import seaborn as sns
-import ast
+from functools import partial
 #
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.config import eval_config
@@ -40,9 +40,8 @@ def main(args: eval_config.EvalConfig) -> None:
     log.info(f'Binning in variable: {variable}')
     labels = args.data.labels
 
-    data_path = [f'{args.data.path}/{jz_slice}/{args.test_subfolder}' for jz_slice in args.data.subfolders] if args.data.subfolders is not None else [
-        f'{args.data.path}/{args.test_subfolder}']
-    full_dataset = get_preprocessed_dataset(data_path, args.data, None)
+    data_path = os.path.join(args.data.path, args.test_subfolder)
+    dataset = get_preprocessed_dataset(file=data_path, args_data=args.data, input_creator=None)
     os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
 
     def distribution_drawer(x: JIDENNDataset):
@@ -56,7 +55,7 @@ def main(args: eval_config.EvalConfig) -> None:
     full_dataset = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],
                                             model_names=args.model_names,
                                             model_input_name=args.model_input_types,
-                                            dataset=full_dataset,
+                                            dataset=dataset,
                                             custom_objects=CUSTOM_OBJECTS,
                                             batch_size=args.batch_size,
                                             log=log,
@@ -69,6 +68,7 @@ def main(args: eval_config.EvalConfig) -> None:
     log.info('Converting to pandas')
     df = full_dataset.to_pandas(variables=variables)
     df = df.rename(columns={args.data.weight: 'weight'}) if args.data.weight is not None else df
+    df.to_csv(f'{args.logdir}/score_dataset.csv')
 
     if args.binning.log_bin_base is not None:
         min_val = np.log(args.binning.min_bin) / \
@@ -170,11 +170,13 @@ def main(args: eval_config.EvalConfig) -> None:
                         bin_width_name='bin_width',
                         metric_names=args.metrics_to_plot,
                         ylims=args.ylims,
+                        xlog=args.binning.log_bin_base is not None,
                         xlabel=LATEX_NAMING_CONVENTION[variable],
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         save_path=f'{args.logdir}/compare_models',
                         colours=sorted_colours,
                         )
+    logging.info('DONE')
 
 
 if __name__ == "__main__":
