@@ -28,3 +28,4 @@ tests
 .vscode
 *.root
 **/*.root
+raw

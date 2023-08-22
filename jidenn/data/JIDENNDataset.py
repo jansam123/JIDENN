@@ -339,19 +339,35 @@ class JIDENNDataset:
         else:
             raise ValueError('Element spec is not a dictionary.')
 
+        @tf.function
+        def shuffle_reading(datasets):
+            datasets = datasets.shuffle(512)
+            return datasets.interleave(lambda x: x, num_parallel_calls=tf.data.AUTOTUNE)
+
         dataset = tf.data.Dataset.load(
-            path, compression='GZIP', element_spec=element_spec)
+            path, compression='GZIP', element_spec=element_spec, reader_func=shuffle_reading)
 
         return JIDENNDataset(dataset=dataset, element_spec=element_spec, metadata=metadata, variables=variables, length=dataset.cardinality().numpy())
 
     @staticmethod
     def load_multiple(files: List[str],
+                      file_labels: Optional[List[Any]] = None,
+                      dataset_mapper: Optional[Callable[[tf.data.Dataset], tf.data.Dataset]] = None,
                       element_spec_paths: Optional[List[str]] = None,
+                      stop_on_empty_dataset: bool = False,
+                      weights : Optional[List[float]] = None,
                       metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
 
         element_spec_paths = [None] * len(files) if element_spec_paths is None else element_spec_paths
         metadata_paths = [None] * len(files) if metadata_paths is None else metadata_paths
-        return JIDENNDataset.combine([JIDENNDataset.load(path, element_spec_path, metadata_path) for path, element_spec_path, metadata_path in zip(files, element_spec_paths, metadata_paths)])
+
+        dss = []
+        for file, file_label, element_spec_path, metadata_path in zip(files, file_labels, element_spec_paths, metadata_paths):
+            ds = JIDENNDataset.load(file, element_spec_path, metadata_path)
+            ds = ds.apply(lambda x: dataset_mapper(x, file_label)) if dataset_mapper is not None else ds
+            dss.append(ds)
+
+        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode='interleave', weights=weights)
 
     @staticmethod
     def load_parallel(files: List[str],
@@ -428,6 +444,8 @@ class JIDENNDataset:
     @staticmethod
     def combine(datasets: List[JIDENNDataset],
                 mode: Literal['concatenate', 'interleave'] = 'concatenate',
+                stop_on_empty_dataset: bool = False,
+                weights: Optional[List[float]] = None,
                 sum_metadata: bool = True) -> JIDENNDataset:
         """Combines multiple datasets into one dataset. The samples are interleaved and the weights are used to sample from the datasets.
 
@@ -443,7 +461,7 @@ class JIDENNDataset:
         element_specs = [dataset.element_spec for dataset in datasets]
         variables = [dataset.variables for dataset in datasets]
         targets = [dataset.target for dataset in datasets]
-        weights = [dataset.weight for dataset in datasets]
+        weight = [dataset.weight for dataset in datasets]
 
         if not all_equal(element_specs):
             raise ValueError('All datasets must have the same element spec.')
@@ -451,14 +469,14 @@ class JIDENNDataset:
             raise ValueError('All datasets must have the same variables.')
         if not all_equal(targets):
             raise ValueError('All datasets must have the same target.')
-        if not all_equal(weights):
+        if not all_equal(weight):
             raise ValueError('All datasets must have the same weight.')
         if sum_metadata and not all_equal([dataset.metadata.keys() for dataset in datasets]):
             raise ValueError('All datasets must have the same metadata.')
 
         if mode == 'interleave':
             dataset = tf.data.Dataset.sample_from_datasets(
-                [dataset.dataset for dataset in datasets], stop_on_empty_dataset=False)
+                [dataset.dataset for dataset in datasets], stop_on_empty_dataset=stop_on_empty_dataset, weights=weights)
         elif mode == 'concatenate':
             dataset = datasets[0].dataset
             for ji_ds in datasets[1:]:
@@ -482,7 +500,7 @@ class JIDENNDataset:
                              element_spec=element_specs[0],
                              variables=variables[0],
                              target=targets[0],
-                             weight=weights[0],
+                             weight=weight[0],
                              length=length)
 
     @staticmethod

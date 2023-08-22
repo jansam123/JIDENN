@@ -31,6 +31,7 @@ parser.add_argument("--stat", type=str, default='count',
                     help="Statistic to plot. Options: count, density, probability.")
 parser.add_argument("--multiple", type=str, default='layer',
                     help="How to plot multiple distributions. Options: layer, stack")
+parser.add_argument("--shuffle", type=int, default=100_000, help="Shuffle buffer size")
 
 HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
 
@@ -79,24 +80,26 @@ def main(args: argparse.Namespace):
         print(f'File: {args.load_path}')
         dataset = JIDENNDataset.load(args.load_path)
         if args.take is not None and args.take > 0:
-            ds = dataset.apply(lambda x: x.take(args.take))
+            dataset = dataset.take(args.take)
+        dataset = dataset.apply(lambda x: x.shuffle(args.shuffle).prefetch(tf.data.AUTOTUNE))
     elif args.load_paths is not None and args.load_path is None:
         print(f'Files: {args.load_paths}')
         dataset = JIDENNDataset.load_parallel(args.load_paths, take=None if args.take == 0 else args.take)
+        dataset = dataset.apply(lambda x: x.shuffle(args.shuffle).prefetch(tf.data.AUTOTUNE))
     else:
         raise ValueError('Either load_path or load_paths needs to be specified.')
 
-    ds_size = dataset.length
-    print(f'Dataset size: {ds_size}')
     ds = dataset.dataset
+    ds_size = ds.cardinality().numpy()
+    print(f'Dataset size: {ds_size}')
 
-    badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None
+    # badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None
 
     if args.plot_single:
         plot_single(ds,
                     variable=args.variables[0], hue_var=args.hue_variable,
                     save_path=args.save_path,
-                    badge_text=badge_text,
+                    badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n',
                     multiple=args.multiple,
                     badge=not args.no_badge,
                     weight_var=args.weight, ylog=args.ylog, ylim=args.ylim, xlim=args.xlim, stat=args.stat,

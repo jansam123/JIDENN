@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from typing import Callable, List, Tuple, Union, Optional
+from typing import Callable, List, Tuple, Union, Optional, Any
 
 ROOTVariables = dict[str, Union[tf.Tensor, tf.RaggedTensor]]
 
@@ -218,7 +218,7 @@ def resampler(dataset: tf.data.Dataset,
         return dataset.map(take_second)
 
 
-def write_new_variable(variable_value: int, variable_name: str = 'JZ_slice') -> Callable[[ROOTVariables], ROOTVariables]:
+def write_new_variable(variable_value: Any, variable_name: str = 'JZ_slice') -> Callable[[ROOTVariables], ROOTVariables]:
     """Get a function that writes a new variable to a dataset. The intended use is to use this function
     with tf.data.Dataset.map() to add a new variable to a dataset. The value is the same for all samples.
 

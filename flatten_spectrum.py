@@ -62,33 +62,34 @@ def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
 
     @tf.function
-    def jz_mapper(dataset: tf.data.Dataset, jz: int) -> tf.data.Dataset:
+    def jz_mapper(dataset: tf.data.Dataset, jz) -> tf.data.Dataset:
         dataset = dataset.map(write_new_variable(jz))
-        if args.jz_low_cut:
-            dataset = dataset.filter(get_cut_fn('jets_pt', lower_limit=tf.constant(JZ_LOW_PT)[jz - 1]))
-        if args.flatten_jz:
-            jz_resampler = partial(resample_var_with_labels,
-                                   bins=args.bins,
-                                   lower_var_limit=tf.constant(JZ_LOW_PT)[jz - 1],
-                                   upper_var_limit=tf.constant(JZ_HIGH_PT)[jz - 1],
-                                   log_binning_base=np.e if args.log_binning else None,
-                                   variable='jets_pt',
-                                   precompute_init_dist=args.precompute,
-                                   label_variable='jets_PartonTruthLabelID',
-                                   from_min_count=args.min_count)
-            dataset = dataset.apply(jz_resampler)
-        if args.equalize_labels:
-            label_resampler = partial(resample_labels,
-                                      label_variable='jets_PartonTruthLabelID',
-                                      precompute_init_dist=args.precompute,
-                                      from_min_count=args.min_count)
-            dataset = dataset.apply(label_resampler)
-
+        # if args.jz_low_cut:
+        #     dataset = dataset.filter(get_cut_fn('jets_pt', lower_limit=tf.constant(JZ_LOW_PT)[jz - 1]))
+        # if args.flatten_jz:
+        #     jz_resampler = partial(resample_var_with_labels,
+        #                         bins=args.bins,
+        #                         lower_var_limit=tf.constant(JZ_LOW_PT)[jz - 1],
+        #                         upper_var_limit=tf.constant(JZ_HIGH_PT)[jz - 1],
+        #                         log_binning_base=np.e if args.log_binning else None,
+        #                         variable='jets_pt',
+        #                         precompute_init_dist=args.precompute,
+        #                         label_variable='jets_PartonTruthLabelID',
+        #                         from_min_count=args.min_count)
+        #     dataset = dataset.apply(jz_resampler)
+        # if args.equalize_labels:
+        #     label_resampler = partial(resample_labels,
+        #                             label_variable='jets_PartonTruthLabelID',
+        #                             precompute_init_dist=args.precompute,
+        #                             from_min_count=args.min_count)
+        #     dataset = dataset.apply(label_resampler)
         return dataset
 
     files = [os.path.join(args.file_path, f'JZ{jz}', args.dataset_type) for jz in range(args.min_jz, args.max_jz + 1)]
     file_labels = list(range(args.min_jz, args.max_jz + 1))
-    dataset = JIDENNDataset.load_parallel(files, dataset_mapper=jz_mapper, file_labels=file_labels)
+    # dataset = JIDENNDataset.load_parallel(files, dataset_mapper=jz_mapper, file_labels=file_labels)
+    dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_mapper,
+                                          file_labels=file_labels, stop_on_empty_dataset=True)
 
     dataset = dataset.filter(get_cut_fn('jets_pt', args.xlim[0], args.xlim[1])) if args.cut else dataset
 

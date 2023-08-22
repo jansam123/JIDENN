@@ -391,23 +391,26 @@ def plot_single_dist(df: pd.DataFrame,
                      save_path: str = 'figs.png') -> None:
 
     if log_bins and isinstance(bins, int) and xlim is not None:
-        bins = np.logspace(np.log(xlim[0]), np.log(xlim[1]), bins + 1, base=np.e)
+        binning = np.logspace(np.log(xlim[0]), np.log(xlim[1]), bins + 1, base=np.e)
     elif isinstance(bins, int) and xlim:
-        bins = np.linspace(xlim[0], xlim[1], bins + 1)
+        binning = np.linspace(xlim[0], xlim[1], bins + 1)
     elif isinstance(bins, int) and not xlim:
-        bins = bins
+        binning = bins
     else:
-        bins = 'auto'
+        binning = 'auto'
 
     palette = sns.color_palette("hls", 12) if hue_var == 'JZ_slice' else palette
     element = "bars" if hue_var == 'JZ_slice' else "step"
     common_norm = True if hue_var == 'JZ_slice' else False
-    print(df)
-    print(variable)
-    print(weight_var)
-    sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
-                 stat=stat, element=element, fill=True, multiple=multiple,
-                 palette=palette, common_norm=common_norm, hue_order=hue_order, bins=bins)
+    try:
+        sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
+                     stat=stat, element=element, fill=True, multiple=multiple,
+                     palette=palette, common_norm=common_norm, hue_order=hue_order, bins=binning)
+    except:
+        sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
+                     stat=stat, element=element, fill=True, multiple=multiple,
+                     palette=palette, common_norm=common_norm, hue_order=hue_order, bins=list(binning))
+
     plt.ylim(ylim) if ylim is not None else None
     plt.savefig(save_path)
     plt.yscale('log') if ylog else plt.yscale('linear')
