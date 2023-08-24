@@ -12,7 +12,8 @@ from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 
 def get_preprocessed_dataset(file: str,
                              args_data: config.Data,
-                             input_creator: Callable[[ROOTVariables], ROOTVariables]):
+                             input_creator: Callable[[ROOTVariables], ROOTVariables],
+                             shuffle_reading: bool = True):
 
     @tf.function
     def count_PFO(sample: ROOTVariables) -> ROOTVariables:
@@ -44,7 +45,7 @@ def get_preprocessed_dataset(file: str,
         is_unknown = tf.reduce_any(sample[args_data.target] == unknown_labels)
         return tf.logical_not(is_unknown)
 
-    dataset = JIDENNDataset.load(file)
+    dataset = JIDENNDataset.load(file, shuffle_reading=shuffle_reading)
     dataset = dataset.remap_data(count_PFO)
     dataset = dataset.filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
     dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset

@@ -12,6 +12,7 @@ logging.basicConfig(format='[%(asctime)s][%(levelname)s] - %(message)s',
 from jidenn.data.JIDENNDataset import JIDENNDataset
 from jidenn.preprocess.resampling import get_cut_fn
 from jidenn.preprocess.resampling import write_new_variable
+from jidenn.preprocess.flatten_dataset import flatten_dataset
 
 
 parser = argparse.ArgumentParser()
@@ -23,6 +24,10 @@ parser.add_argument("--num_shards", type=int, default=256, required=False,
 parser.add_argument("--min_jz", type=int, default=2, help="Maximum JZ to use")
 parser.add_argument("--max_jz", type=int, default=10, help="Maximum JZ to use")
 parser.add_argument("--dataset_type", type=str, default='test', help="train/dev/test")
+parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
+                    help="Variable to use as reference for flattening")
+parser.add_argument("--wanted_values", type=int, nargs='+',
+                    default=[1, 2, 3, 4, 5, 6, 21], help="Values to keep in the reference variable")
 
 
 JZ_LOW_PT = [20, 60, 160, 400, 800, 1300, 1800, 2500, 3200, 3900, 4600, 5300]
@@ -45,7 +50,10 @@ def main(args: argparse.Namespace) -> None:
     @tf.function
     def jz_cutter(dataset: tf.data.Dataset, jz) -> tf.data.Dataset:
         dataset = dataset.filter(get_cut_fn('jets_pt', upper_limit=MAX_FRAC * tf.constant(JZ_HIGH_PT)[jz - 1]))
-        dataset = dataset.filter(write_new_variable('JZ_slice', jz))
+        dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
+                                        wanted_values=args.wanted_values))
+        dataset = dataset.map(write_new_variable(variable_name='JZ_slice',
+                              variable_value=tf.constant(jz, dtype=tf.int32)))
         return dataset
 
     file_labels = list(range(args.min_jz, args.max_jz + 1))
@@ -53,24 +61,14 @@ def main(args: argparse.Namespace) -> None:
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_cutter,
                                           file_labels=file_labels, weights=sampling_weights)
     # dataset = dataset.filter(lambda x: tf.random.uniform([]) < TAKE_FRAC)
-    events = dataset.to_numpy(['eventNumber'])
-    print(f"Number of events: {events['eventNumber'].shape[0]}")
-    event_numbers = np.unique(events['eventNumber'])
-    total_events = event_numbers.shape[0]
-    print(f'Total number of unique events: {total_events}')
-    selected_number_of_events = int(total_events * TAKE_FRAC)
-    print(f'Selected number of events: {selected_number_of_events}')
-    event_numbers = tf.constant(event_numbers, dtype=tf.int32)
-    selected_events = tf.random.shuffle(event_numbers)[:selected_number_of_events]
-    dataset = dataset.filter(lambda x: tf.reduce_any(tf.equal(x['eventNumber'], selected_events)))
-    dataset = dataset.apply(lambda x: x.shuffle(600_000))
+
     dataset = dataset.apply(lambda x: x.prefetch(tf.data.AUTOTUNE))
     dataset.save(args.save_path, num_shards=args.num_shards)
     logging.info(f'Saved dataset to {args.save_path}')
     dataset = JIDENNDataset.load(args.save_path)
     size = dataset.length
     print(f"Number of jets: {size}")
-    dataset.plot_single_variable('jets_pt', os.path.join(args.save_path, 'pt.png'), bins=100, ylim=(1e-4, 1e2),
+    dataset.plot_single_variable('jets_pt', os.path.join(args.save_path, 'pt.png'), bins=100,
                                  weight_variable='weight', multiple='stack',
                                  ylog=True, hue_variable='JZ_slice', xlabel=r'$p_\mathrm{T}$ [TeV]')
 

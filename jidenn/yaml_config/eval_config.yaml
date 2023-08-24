@@ -32,10 +32,10 @@ data:
 logdir: logs/stepwise_flat/eval
 models_path: logs/stepwise_flat
 seed: 42
-draw_distribution: 200_000
+draw_distribution: 400_000
 test_subfolder: test
 batch_size: 384
-take: 700_000
+take: 500_000
 binning:
   variable: jets_pt
   bins: 10
@@ -65,7 +65,7 @@ model_names: [
     "pfn",
     #
     "efn",
-    #
+    
     "fc",
     "highway",
   ]
@@ -81,7 +81,7 @@ model_input_types: [
     "constituents",
     #
     "irc_safe",
-    #
+    
     "highlevel",
     "highlevel",
   ]

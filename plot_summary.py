@@ -49,7 +49,7 @@ def plot_metric(df: pd.DataFrame,
     ax1.set(ylabel=METRIC_NAMING_SCHEMA[metric]
             if metric in METRIC_NAMING_SCHEMA else metric, xlabel=None)
     handles, labels = ax1.get_legend_handles_labels()
-    ax1.legend(handles=handles, labels=labels, loc='upper right')
+    ax1.legend(handles=handles, labels=labels, loc='upper right', ncol=2)
 
     sns.pointplot(x='cut', y=metric, data=relative_df, hue='Model', errorbar=None,
                     palette=palette, hue_order=order, ax=ax2, estimator=np.mean)
@@ -57,6 +57,7 @@ def plot_metric(df: pd.DataFrame,
     ax2.get_legend().set_visible(False)
     if ylim is not None:
         ax1.set_ylim(ylim)
+
     # make a gap between the two plots
     atlasify.atlasify("Simulation Internal", axes=ax1, subtext='13 TeV')
     atlasify.atlasify(atlas=False, axes=ax2)
@@ -136,7 +137,6 @@ def compare_ml_models(overall_metrics_path: str,
                     title=METRIC_NAMING_SCHEMA[metric] if metric in METRIC_NAMING_SCHEMA else metric,
                     order=[MODEL_NAMING_SCHEMA[model] for model in list(acc_sorted_models)],
                     ylim=ylim)
-
 
 def main(args: argparse.Namespace):
 

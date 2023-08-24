@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, help="Path to save the dataset")
 parser.add_argument("--load_dir", type=str, help="Path to the root file")
 parser.add_argument("--backend", type=str, default='pd', help="Backend to use for loading the dataset")
-parser.add_argument("--max_size", type=int, default=200_000, help="Maximum number of samples to use")
+parser.add_argument("--max_size", type=int, default=100_000, help="Maximum number of samples to use")
 parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
                     help="Variable to use as reference for flattening")
 parser.add_argument("--wanted_values", type=int, nargs='+',

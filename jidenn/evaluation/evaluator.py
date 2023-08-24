@@ -63,9 +63,7 @@ def _calculate_metrics_in_bin(x):
         return
     if len(x['label'].unique()) < 2:
         return
-    print(x['bin'].unique())
-    print(threshold)
-    
+
     if validation_plotter is not None:
         validation_plotter(x)
     ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold,
@@ -189,6 +187,7 @@ def evaluate_multiple_models(model_paths: List[str],
 
     # iterate over all input types to reduce the number of times the dataset is prepared
     log.info(f'Batches will be of size: {batch_size}, total number of events: {take}') if log is not None else None
+    labels = list(dataset.dataset.map(lambda x, y: y).as_numpy_iterator())
     for input_type in set(model_input_name):
         train_input_class = input_classes_lookup(input_type)
         train_input_class = train_input_class()
@@ -200,6 +199,8 @@ def evaluate_multiple_models(model_paths: List[str],
         ds = ds.get_prepared_dataset(batch_size=batch_size, take=take)
 
         # iterate over all models with the same input type
+        scores = pd.DataFrame()
+        scores['label'] = labels
         idxs = np.array(model_input_name) == input_type
         for model_path, model_name in zip(np.array(model_paths)[idxs], np.array(model_names)[idxs]):
             log.info(f'----- Loading model: {model_name}') if log is not None else None

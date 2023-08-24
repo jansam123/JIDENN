@@ -91,7 +91,7 @@ def main(args: argparse.Namespace):
 
     ds = dataset.dataset
     ds_size = ds.cardinality().numpy()
-    print(f'Dataset size: {ds_size}')
+    print(f'Dataset size: {ds_size:,}')
 
     # badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None
 
@@ -99,7 +99,7 @@ def main(args: argparse.Namespace):
         plot_single(ds,
                     variable=args.variables[0], hue_var=args.hue_variable,
                     save_path=args.save_path,
-                    badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n',
+                    # badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n',
                     multiple=args.multiple,
                     badge=not args.no_badge,
                     weight_var=args.weight, ylog=args.ylog, ylim=args.ylim, xlim=args.xlim, stat=args.stat,

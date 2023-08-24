@@ -9,11 +9,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Callable, List, Tuple, Union
+from functools import partial
 logging.basicConfig(level=logging.INFO)
 
 from jidenn.data.JIDENNDataset import JIDENNDataset
 from jidenn.preprocess.resampling import write_new_variable
-
+from jidenn.preprocess.flatten_dataset import flatten_dataset
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, default='data/pythia', help="Path to save the dataset")
@@ -23,6 +24,10 @@ parser.add_argument("--num_shards", type=int, default=256, help="Number of shard
 parser.add_argument("--jz", type=int, default=2, help="JZ slice to use.")
 parser.add_argument("--jz_description_file", type=str,
                     default='data/JZ_description.csv', help="JZ description csv file.")
+parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
+                    help="Variable to use as reference for flattening")
+parser.add_argument("--wanted_values", type=int, nargs='+',
+                    default=[1, 2, 3, 4, 5, 6, 21], help="Values to keep in the reference variable")
 
 
 @tf.function
@@ -65,6 +70,10 @@ def main(args: argparse.Namespace) -> None:
     norm = dataset.metadata['sum_AOD_w']
     dataset = dataset.remap_data(write_new_variable(args.jz))
     dataset = dataset.remap_data(write_weights(cross_section, filt_eff, lumi, norm))
+    if args.dataset_type != 'test':
+        dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
+                                        wanted_values=args.wanted_values))
+        dataset = dataset.apply(lambda x: x.shuffle(100_000))
     dataset = dataset.apply(lambda x: x.prefetch(tf.data.AUTOTUNE))
 
     dataset.save(os.path.join(args.save_path, f'JZ{args.jz}', args.dataset_type), num_shards=args.num_shards)

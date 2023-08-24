@@ -41,8 +41,10 @@ def main(args: eval_config.EvalConfig) -> None:
     labels = args.data.labels
 
     data_path = os.path.join(args.data.path, args.test_subfolder)
-    dataset = get_preprocessed_dataset(file=data_path, args_data=args.data, input_creator=None)
-    os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
+    dataset = get_preprocessed_dataset(file=data_path, args_data=args.data, input_creator=None, shuffle_reading=False)
+
+    if args.draw_distribution is not None:
+        os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
 
     def distribution_drawer(x: JIDENNDataset):
         print('Convert to pandas')
@@ -62,7 +64,6 @@ def main(args: eval_config.EvalConfig) -> None:
                                             take=args.take,
                                             distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
                                             )
-
     variables = [f'{model}_score' for model in args.model_names] + [variable]
     variables += [args.data.weight] if args.data.weight is not None else []
     log.info('Converting to pandas')

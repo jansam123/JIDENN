@@ -106,7 +106,11 @@ MC_NAMING_SCHEMA = {
     'pythia': 'Pythia',
     'sherpa': 'Sherpa',
     'sherpa_lund': 'Sherpa (Lund)',
+    'sherpa_dire': 'Sherpa (DIRE)',
+    'sherpa_enh_cluster_tune': 'Sherpa (Enh)',
     'herwig': 'Herwig7',
-    'herwig7': 'Herwig7',
     'herwig_dipole': 'Herwig7 (Dipole)',
+    'herwig7': 'Herwig7',
+    'herwig7_dipole': 'Herwig7 (Dipole)',
+    'powheg_pythia': 'Powheg+Pythia',
 }

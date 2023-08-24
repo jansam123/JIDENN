@@ -1,9 +1,12 @@
-from puma import VarVsEff, VarVsEffPlot
+from puma import VarVsEff, VarVsEffPlot, RocPlot, Roc
+from puma.metrics import calc_rej
 import pandas as pd
 import os
 import numpy as np
 import argparse
+
 from jidenn.config.eval_config import Binning
+from jidenn.const import MODEL_NAMING_SCHEMA
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--load_path", type=str, help="Path to the saved tf.data.Dataset file")
@@ -27,8 +30,10 @@ HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'qu
 
 def main(args):
     score_dataset = pd.read_csv(args.load_path, index_col=0)
+    score_dataset[args.variable] = score_dataset[args.variable] * \
+        1e-3 if args.variable == 'jets_pt' else score_dataset[args.variable]
     is_quark = score_dataset['label'] == 1
-    is_qluon = score_dataset['label'] == 0
+    is_gluon = score_dataset['label'] == 0
     binning = Binning(min_bin=60_000, max_bin=2_500_000, bins=7, log_bin_base=0, variable=args.variable)
 
     if binning.log_bin_base is not None:
@@ -43,43 +48,78 @@ def main(args):
 
     plot_bkg_rej = VarVsEffPlot(
         mode="bkg_rej",
-        ylabel="Background rejection",
+        ylabel="Gluon rejection",
         xlabel=r"$p_{T}$ [GeV]",
         logy=False,
-        logx=True if binning.log_bin_base is not None else False,
+        leg_ncol=2,
+        # logx=True if binning.log_bin_base is not None else False,
         # atlas_second_tag="$\\sqrt{s}=13$ TeV, dummy jets \ndummy sample, $f_{c}=0.018$",
+        figsize=(8, 6),
+        draw_errors=False,
         n_ratio_panels=1,
     )
     plot_sig_eff = VarVsEffPlot(
         mode="sig_eff",
-        ylabel="Signal efficiency",
+        ylabel="Quark efficiency",
         xlabel=r"$p_{T}$ [GeV]",
+        leg_ncol=2,
         logy=False,
-        logx=True if binning.log_bin_base is not None else False,
+        # logx=True if binning.log_bin_base is not None else False,
         # atlas_second_tag="$\\sqrt{s}=13$ TeV, dummy jets, \ndummy sample, $f_{c}=0.018$",
+        figsize=(8, 6),
+        draw_errors=False,
         n_ratio_panels=1,
+    )
+    plot_roc = RocPlot(
+        n_ratio_panels=0,
+        ylabel="Gluon rejection",
+        xlabel="Quark efficiency",
+        # atlas_second_tag="$\\sqrt{s}=13$ TeV, dummy jets \ndummy sample, $f_{c}=0.018$",
+        figsize=(6.5, 6),
+        y_scale=1.4,
     )
 
     plots = []
+    sig_eff = np.linspace(0.1, 1, 40)
     for score_name in score_dataset.columns:
         if 'score' not in score_name:
             continue
+        label = MODEL_NAMING_SCHEMA[score_name.replace('_score', '')]
         plot = VarVsEff(
             x_var_sig=score_dataset[args.variable][is_quark],
             disc_sig=score_dataset[score_name][is_quark],
-            x_var_bkg=score_dataset[args.variable][is_qluon],
-            disc_bkg=score_dataset[score_name][is_qluon],
-            bins=bins,
+            x_var_bkg=score_dataset[args.variable][is_gluon],
+            disc_bkg=score_dataset[score_name][is_gluon],
+            # bins=bins,
+            bins=[200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
             working_point=0.5,
             disc_cut=None,
             fixed_eff_bin=False,
-            label=score_name.strip('_score'),
+            marker='o',
+            markersize=4,
+            is_marker=True,
+            label=label,
+        )
+        rejs = calc_rej(score_dataset[score_name][is_quark], score_dataset[score_name][is_gluon], sig_eff)
+        plot_roc.add_roc(
+            Roc(
+                sig_eff,
+                rejs,
+                n_test=sum(is_gluon),
+
+                # rej_class="gluon",
+                # signal_class="quark",
+                label=label,
+            ),
+            reference=True if score_name == 'transformer_score' else False
         )
         plot_bkg_rej.add(plot, reference=True if score_name == 'transformer_score' else False)
         plot_sig_eff.add(plot, reference=True if score_name == 'transformer_score' else False)
 
     plot_bkg_rej.draw()
     plot_sig_eff.draw()
+    plot_roc.draw()
+    plot_roc.savefig(os.path.join(args.save_path, 'roc.png'), transparent=False, dpi=400)
     plot_bkg_rej.savefig(os.path.join(args.save_path, 'bkg_rej.png'), dpi=400)
     plot_sig_eff.savefig(os.path.join(args.save_path, 'sig_eff.png'), dpi=400)
 

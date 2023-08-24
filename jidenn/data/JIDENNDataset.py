@@ -282,7 +282,7 @@ class JIDENNDataset:
         if self._variables is not None:
             return self._variables
         if not isinstance(self.element_spec, tuple):
-            return list(self.element_spec.keys()) 
+            return list(self.element_spec.keys())
         elif isinstance(self.element_spec[0], tuple):
             return list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
         else:
@@ -306,7 +306,8 @@ class JIDENNDataset:
     @staticmethod
     def load(path: Union[str, List[str]],
              element_spec_path: Optional[str] = None,
-             metadata_path: Optional[str] = None) -> JIDENNDataset:
+             metadata_path: Optional[str] = None,
+             shuffle_reading: bool = True) -> JIDENNDataset:
         """Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
         The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
 
@@ -349,12 +350,12 @@ class JIDENNDataset:
             raise ValueError('Element spec is not a dictionary.')
 
         @tf.function
-        def shuffle_reading(datasets):
+        def shuffle_reading_fn(datasets):
             datasets = datasets.shuffle(512)
             return datasets.interleave(lambda x: x, num_parallel_calls=tf.data.AUTOTUNE)
 
         dataset = tf.data.Dataset.load(
-            path, compression='GZIP', element_spec=element_spec, reader_func=shuffle_reading)
+            path, compression='GZIP', element_spec=element_spec, reader_func=shuffle_reading_fn if shuffle_reading else None)
 
         return JIDENNDataset(dataset=dataset, element_spec=element_spec, metadata=metadata, variables=variables, length=dataset.cardinality().numpy())
 
@@ -364,7 +365,7 @@ class JIDENNDataset:
                       dataset_mapper: Optional[Callable[[tf.data.Dataset], tf.data.Dataset]] = None,
                       element_spec_paths: Optional[List[str]] = None,
                       stop_on_empty_dataset: bool = False,
-                      weights : Optional[List[float]] = None,
+                      weights: Optional[List[float]] = None,
                       metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
 
         element_spec_paths = [None] * len(files) if element_spec_paths is None else element_spec_paths
@@ -671,7 +672,7 @@ class JIDENNDataset:
                 return func(*data)
         dataset = self.dataset.map(input_wrapper)
         return JIDENNDataset(dataset=dataset, element_spec=dataset.element_spec,
-                             metadata=self.metadata, 
+                             metadata=self.metadata,
                              target=self.target, weight=self.weight, length=self.length)
 
     def resample_dataset(self, resampling_func: Callable[[ROOTVariables, Any], int], target_dist: List[float]):
@@ -822,11 +823,6 @@ class JIDENNDataset:
             pd.DataFrame: The `tf.data.Dataset` converted to a pandas `pd.DataFrame`.
         """
 
-        try:
-            import tensorflow_datasets as tfds
-        except ImportError:
-            raise ImportError(
-                'Please install tensorflow_datasets to use this function. Use `pip install tensorflow_datasets`.')
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
 
@@ -835,7 +831,7 @@ class JIDENNDataset:
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
                     data = {**data[0], **data[1]}
-                data = {**data, 'label': label, 'weight': weight}
+                data = {**data, 'label': label}
                 return data
 
         elif isinstance(self._element_spec, tuple) and variables is not None:
@@ -843,8 +839,8 @@ class JIDENNDataset:
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
                     data = {**data[0], **data[1]}
-                data = {**data, 'label': label, 'weight': weight}
-                return {k: data[k] for k in variables + ['label', 'weight']}
+                data = {**data, 'label': label}
+                return {k: data[k] for k in variables + ['label']}
 
         elif isinstance(self._element_spec, dict) and variables is not None:
             @tf.function
@@ -860,7 +856,13 @@ class JIDENNDataset:
             raise ValueError('The dataset must be a tuple or a dict.')
 
         dataset = self.dataset.map(tuple_to_dict)
-        df = tfds.as_dataframe(dataset)
+        try:
+            import tensorflow_datasets as tfds
+            df = tfds.as_dataframe(dataset)
+        except ImportError:
+            logging.warning(
+                'tensorflow_datasets is not installed. Using numpy instead.')
+            df = pd.DataFrame(list(dataset.as_numpy_iterator()))
         df = df.rename(lambda x: x.replace('/', '.'), axis='columns')
         return df
 
@@ -903,12 +905,12 @@ class JIDENNDataset:
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
         if not isinstance(self.element_spec, tuple):
-            variables = list(self.element_spec.keys()) 
+            variables = list(self.element_spec.keys())
         elif isinstance(self.element_spec[0], tuple):
             variables = list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
         else:
             variables = list(self.element_spec[0].keys())
-            
+
         df = self.to_pandas(variables)
         plot_data_distributions(df, folder=folder, named_labels=named_labels,
                                 xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)

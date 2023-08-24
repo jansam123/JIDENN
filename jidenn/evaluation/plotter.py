@@ -401,16 +401,17 @@ def plot_single_dist(df: pd.DataFrame,
 
     palette = sns.color_palette("hls", 12) if hue_var == 'JZ_slice' else palette
     element = "bars" if hue_var == 'JZ_slice' else "step"
-    common_norm = True if hue_var == 'JZ_slice' else False
+    # common_norm = True if hue_var == 'JZ_slice' else False
+    common_norm = True
     try:
-        sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
-                     stat=stat, element=element, fill=True, multiple=multiple,
-                     palette=palette, common_norm=common_norm, hue_order=hue_order, bins=binning)
+        ax = sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
+                          stat=stat, element=element, fill=True, multiple=multiple,
+                          palette=palette, common_norm=common_norm, hue_order=hue_order, bins=binning)
     except:
-        sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
-                     stat=stat, element=element, fill=True, multiple=multiple,
-                     palette=palette, common_norm=common_norm, hue_order=hue_order, bins=list(binning))
-
+        ax = sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
+                          stat=stat, element=element, fill=True, multiple=multiple,
+                          palette=palette, common_norm=common_norm, hue_order=hue_order, bins=list(binning))
+    ax.legend_.set_title(None)
     plt.ylim(ylim) if ylim is not None else None
     plt.savefig(save_path)
     plt.yscale('log') if ylog else plt.yscale('linear')
@@ -433,11 +434,15 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         bin_width_name: str,
                         metric_names: List[str],
                         save_path: str,
+                        title: str = None,
                         ratio_reference_label: Optional[str] = None,
                         xlabel: Optional[str] = None,
                         ylabel_mapper: Optional[Dict[str, str]] = None,
                         ylims: Optional[List[Tuple[float, float]]] = None,
                         xlog: bool = False,
+                        figsize: Tuple[float, float] = (10, 8),
+                        leg_loc='lower right',
+                        h_line_position: Optional[float] = None,
                         colours: Optional[List[str]] = None,
                         ):
     """Plot the dependence of multiple metrics on a variable in a DataFrame for multiple models.
@@ -475,9 +480,10 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             ymin=ylims[i][0] if ylims is not None else None,
             ymax=ylims[i][1] if ylims is not None else None,
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
-            figsize=(10, 8),
-            atlas_second_tag='13 TeV',
-            leg_loc='lower right',
+            figsize=figsize,
+            atlas_second_tag=f'13 TeV \n {title}' if title is not None else '13 TeV',
+            leg_loc=leg_loc,
+            leg_ncol=2,
         )
 
         for df, label in zip(dfs, labels):
@@ -503,5 +509,8 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                 ),
                 reference=True if ratio_reference_label is not None and label == ratio_reference_label else False,
             )
+
+        plot.draw_hline(h_line_position[i]) if h_line_position is not None and h_line_position[i] is not None else None
         plot.draw()
+        os.makedirs(save_path, exist_ok=True)
         plot.savefig(os.path.join(save_path, f'{metric_name}.png'), dpi=300)
