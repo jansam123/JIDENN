@@ -31,12 +31,12 @@ parser.add_argument("--stat", type=str, default='count',
                     help="Statistic to plot. Options: count, density, probability.")
 parser.add_argument("--multiple", type=str, default='layer',
                     help="How to plot multiple distributions. Options: layer, stack")
-parser.add_argument("--shuffle", type=int, default=100_000, help="Shuffle buffer size")
+parser.add_argument("--shuffle", type=int, default=None, help="Shuffle buffer size")
 
 HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
 
 
-def plot_single(dataset: tf.data.Dataset,
+def plot_single(dataset: JIDENNDataset,
                 variable: str,
                 hue_var: str,
                 log_bins: bool = False,
@@ -52,15 +52,12 @@ def plot_single(dataset: tf.data.Dataset,
                 multiple: str = 'layer',
                 badge: bool = True,
                 badge_text: Optional[str] = None):
-
-    var_dataset = dataset.map(lambda x: x[variable])
-    np_var = np.array(list(var_dataset.as_numpy_iterator()))
-    hue_dataset = dataset.map(lambda x: x[hue_var])
-    np_hue = np.array(list(hue_dataset.as_numpy_iterator()))
-    df = pd.DataFrame({variable: np_var, hue_var: np_hue})
-
+    
     if weight_var is not None:
-        df['weight'] = np.array(list(dataset.map(lambda x: x[weight_var]).as_numpy_iterator()))
+        df = dataset.to_pandas([variable, hue_var, weight_var]) 
+    else:
+        df = dataset.to_pandas([variable, hue_var])
+    
     df[hue_var] = df[hue_var].replace(HUE_MAPPER) if hue_var == 'jets_PartonTruthLabelID' else df[hue_var]
 
     print(df)
@@ -71,7 +68,7 @@ def plot_single(dataset: tf.data.Dataset,
                      hue_var=hue_var, hue_order=hue_order, badge=badge,
                      save_path=save_path, bins=bins, stat=stat, multiple=multiple,
                      ylog=ylog, xlog=xlog, xlabel=r'$p_{\mathrm{T}}$ [TeV]',
-                     badge_text=badge_text, ylim=ylim, weight_var='weight' if weight_var is not None else None
+                     badge_text=badge_text, ylim=ylim, weight_var=weight_var if weight_var is not None else None
                      )
 
 
@@ -81,7 +78,7 @@ def main(args: argparse.Namespace):
         dataset = JIDENNDataset.load(args.load_path)
         if args.take is not None and args.take > 0:
             dataset = dataset.take(args.take)
-        dataset = dataset.apply(lambda x: x.shuffle(args.shuffle).prefetch(tf.data.AUTOTUNE))
+        dataset = dataset.apply(lambda x: x.shuffle(args.shuffle).prefetch(tf.data.AUTOTUNE)) if args.shuffle is not None else dataset
     elif args.load_paths is not None and args.load_path is None:
         print(f'Files: {args.load_paths}')
         dataset = JIDENNDataset.load_parallel(args.load_paths, take=None if args.take == 0 else args.take)
@@ -89,17 +86,16 @@ def main(args: argparse.Namespace):
     else:
         raise ValueError('Either load_path or load_paths needs to be specified.')
 
-    ds = dataset.dataset
-    ds_size = ds.cardinality().numpy()
+    ds_size = dataset.length
     print(f'Dataset size: {ds_size:,}')
 
     # badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None
 
     if args.plot_single:
-        plot_single(ds,
+        plot_single(dataset,
                     variable=args.variables[0], hue_var=args.hue_variable,
                     save_path=args.save_path,
-                    # badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n',
+                    badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n',
                     multiple=args.multiple,
                     badge=not args.no_badge,
                     weight_var=args.weight, ylog=args.ylog, ylim=args.ylim, xlim=args.xlim, stat=args.stat,
