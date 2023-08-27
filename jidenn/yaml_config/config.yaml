@@ -38,8 +38,7 @@ data:
   variable_unknown_labels: [-1, -999]
   label_weights:
   cut: jets_PFO_n<100
-  cached:
-  weight: #weight
+  weight: weight_spectrum/10000
 
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB, Lion.
@@ -61,10 +60,11 @@ dataset:
   dev_size: 0.05 # Size of dev dataset.
   test_size: 0.1 # Size of test dataset.
   shuffle_buffer: 100_000 # Size of shuffler buffer.
+  cache: mem # Cache dataset in memory (`mem`) or on disk (`disk`).
 
 preprocess:
   normalization_size: 500 # Size of normalization dataset (if normalize is True).
-  draw_distribution: 5_000 # Size of the distribution to draw.
+  draw_distribution: 200_000 # Size of the distribution to draw.
 
 models:
   fc:

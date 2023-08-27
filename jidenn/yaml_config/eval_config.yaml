@@ -27,28 +27,28 @@ data:
   label_weights:
   cut: jets_PFO_n<100
   cached:
-  weight: #weight
+  weight: weight
 
 logdir: logs/stepwise_flat/eval
 models_path: logs/stepwise_flat
+cache_scores: score_dataset.csv
 seed: 42
-draw_distribution: 400_000
+draw_distribution: 200_000
 test_subfolder: test
-batch_size: 384
-take: 500_000
+batch_size: 512
+take: 1_124_739
 binning:
   variable: jets_pt
-  bins: 10
-  max_bin: 2_500_000
+  bins: 20
+  max_bin: 4_600_000
   min_bin: 60_000
-  log_bin_base: 0
+  log_bin_base: 
 metrics_to_plot:
   [
     "gluon_efficiency",
     "quark_efficiency",
     "binary_accuracy",
     "auc",
-    "effective_tagging_efficiency",
   ]
 reference_model: transformer
 validation_plots_in_bins: False

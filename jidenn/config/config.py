@@ -41,7 +41,6 @@ from typing import List, Optional, Literal
 from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN
 
 
-
 @dataclass
 class Data:
     """ Data configuration for loading the data, constructing a `tf.data.Dataset` and
@@ -91,10 +90,8 @@ class Data:
 
         subfolder_weights (Optional[List[float]]): Weights to apply to the individual subfolders separately when combining. 
             `None` is viable only if `subfolders` is `None`. 
-
-        cached (Optional[str]): **Untested.** Path to cached data. If `None`, no cached data is used. If `cached` is not `None`, the `path` is ignored.
     """
-    path: str   
+    path: str
     target: str
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
@@ -102,7 +99,6 @@ class Data:
     label_weights: Optional[List[float]]
     weight: Optional[str]
     cut: Optional[str]
-    cached: Optional[str]   # Path to cached data.
 
 
 @dataclass
@@ -119,6 +115,8 @@ class Dataset:
             If `take` is `None`, the size is omitted and whole `test` dataset is used.
         shuffle_buffer (Optional[int]): Size of shuffler buffer, if `None`, no shuffling is used.
             `shullfe_buffer` samples are shuffled before each epoch.
+        cache (Optional[str]): Use 'mem' to cache the dataset in memory, 'disk' to cache it on disk,
+            or `None` (`null`) to not cache it. Default is `None`.
     """
     epochs: int  # Number of epochs.
     batch_size: int   # Batch size.
@@ -126,6 +124,7 @@ class Dataset:
     dev_size: float   # Size of dev dataset.
     test_size: float  # Size of test dataset.
     shuffle_buffer: Optional[int]   # Size of shuffler buffer.
+    cache: Optional[str]   # Path to cached data.
 
 
 @dataclass

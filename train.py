@@ -169,6 +169,16 @@ def main(args: config.JIDENNConfig) -> None:
     if args.general.model == 'bdt' and args.dataset.epochs > 1:
         log.warning("BDT does not support multiple epochs. Setting epochs to 1")
         args.dataset.epochs = 1
+        
+    if args.dataset.cache == 'mem':
+        train = train.cache()
+        dev = dev.cache()
+    elif args.dataset.cache == 'disk':
+        os.makedirs(f'{args.general.logdir}/cache/train', exist_ok=True)
+        os.makedirs(f'{args.general.logdir}/cache/dev', exist_ok=True)
+        train = train.cache(f'{args.general.logdir}/cache/train')
+        dev = dev.cache(f'{args.general.logdir}/cache/dev')
+        
     # running training
     history = model.fit(train,
                         epochs=args.dataset.epochs,
