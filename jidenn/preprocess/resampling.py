@@ -143,8 +143,8 @@ def compute_uniform_weights(bin_counts: tf.Tensor) -> tf.Tensor:
 
 
 def write_weight(binning_fn: Callable[[ROOTVariables], tf.Tensor],
-                        weight_var: str,
-                        weights: tf.Tensor,) -> tf.data.Dataset:
+                 weight_var: str,
+                 weights: tf.Tensor,) -> tf.data.Dataset:
     @tf.function
     def _reweight(data: ROOTVariables) -> ROOTVariables:
         bin_idx = binning_fn(data)
@@ -193,7 +193,7 @@ def resampler(dataset: tf.data.Dataset,
         bin_counts = dataset.map(binning_fn, deterministic=True)
         bin_counts = bin_counts.reduce(tf.zeros((bins), dtype=tf.int64),
                                        lambda x, y: x + tf.one_hot(y, bins, dtype=tf.int64))
-        min_count = tf.reduce_min(bin_counts).numpy()
+        min_count = tf.reduce_min(bin_counts)
         min_count = tf.cast(min_count, dtype=tf.int64)
         bin_counts = tf.cast(bin_counts, dtype=tf.float64)
         print(f'Min count: {min_count:,}')

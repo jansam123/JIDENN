@@ -307,7 +307,7 @@ class JIDENNDataset:
     def load(path: Union[str, List[str]],
              element_spec_path: Optional[str] = None,
              metadata_path: Optional[str] = None,
-             shuffle_reading: bool = True) -> JIDENNDataset:
+             shuffle_reading: bool = False) -> JIDENNDataset:
         """Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
         The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
 
