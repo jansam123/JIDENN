@@ -307,7 +307,7 @@ class JIDENNDataset:
     def load(path: Union[str, List[str]],
              element_spec_path: Optional[str] = None,
              metadata_path: Optional[str] = None,
-             shuffle_reading: bool = True) -> JIDENNDataset:
+             shuffle_reading: bool = False) -> JIDENNDataset:
         """Loads a dataset from a file. The dataset is stored in the `tf.data.Dataset` format.
         The assumed dataset elements are `ROOTVariables` dictionaries or a tuple of `ROOTVariables`, `label` and `weight`.
 
@@ -831,7 +831,8 @@ class JIDENNDataset:
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
                     data = {**data[0], **data[1]}
-                data = {**data, 'label': label}
+                weight = weight if weight is not None else tf.ones_like(label)
+                data = {**data, 'label': label, 'weight': weight}
                 return data
 
         elif isinstance(self._element_spec, tuple) and variables is not None:
@@ -839,8 +840,9 @@ class JIDENNDataset:
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
                     data = {**data[0], **data[1]}
-                data = {**data, 'label': label}
-                return {k: data[k] for k in variables + ['label']}
+                weight = weight if weight is not None else tf.ones_like(label)
+                data = {**data, 'label': label, 'weight': weight}
+                return {k: data[k] for k in variables + ['label', 'weight']}
 
         elif isinstance(self._element_spec, dict) and variables is not None:
             @tf.function
@@ -886,6 +888,7 @@ class JIDENNDataset:
                                 variables: Optional[List[str]] = None,
                                 hue_variable: Optional[str] = None,
                                 named_labels: Optional[Dict[int, str]] = None,
+                                bins: int = 70,
                                 xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
         """Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
         The function uses `jidenn.evaluation.plotter.plot_data_distributions` to plot the data distributions.
@@ -910,10 +913,11 @@ class JIDENNDataset:
             variables = list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
         else:
             variables = list(self.element_spec[0].keys())
+        
 
         df = self.to_pandas(variables)
-        plot_data_distributions(df, folder=folder, named_labels=named_labels,
-                                xlabel_mapper=xlabel_mapper, hue_variable=hue_variable)
+        plot_data_distributions(df, folder=folder, named_labels=named_labels, weight_variable='weight' if 'weight' in df.columns else None,
+                                xlabel_mapper=xlabel_mapper, hue_variable=hue_variable, bins=bins)
 
     def plot_single_variable(self,
                              variable: str,
@@ -927,7 +931,7 @@ class JIDENNDataset:
             convert_variables += [self.weight] if self.weight is not None else []
         else:
             convert_variables += [weight_variable]
-        df = pd.DataFrame(self.to_numpy(convert_variables))
+        df = self.to_pandas(convert_variables)
         plot_single_dist(df=df, variable=variable, save_path=save_path,
                          hue_var=hue_variable, weight_var=weight_variable, **kwargs)
 

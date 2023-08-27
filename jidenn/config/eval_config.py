@@ -63,6 +63,7 @@ class EvalConfig:
     """
     data: Data
     logdir: str
+    cache_scores: str
     models_path: str
     model_names: List[str]
     model_input_types: List[str]

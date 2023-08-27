@@ -156,7 +156,7 @@ class ValidationScoreHistogram(ValidationFigure):
         self._data = self._df[['score', 'Truth Label']]
         ax = sns.histplot(data=self._df, x='score', hue='Truth Label',
                           palette='Set1', stat='count' if weights is None else 'density',
-                          element="step", fill=True,
+                          element="step", fill=True, bins=100,
                           hue_order=self._class_names, weights=weights)
         sns.move_legend(ax, 'upper center')
         plt.xlabel('Score')
@@ -313,7 +313,7 @@ def plot_data_distributions(df: pd.DataFrame,
                             variables: Optional[List[str]] = None,
                             named_labels: Optional[Dict[int, str]] = None,
                             weight_variable: Optional[str] = None,
-                            n_bins: Optional[int] = 100,
+                            bins: Optional[Union[int, str]] = 100,
                             xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
     r"""Plot the data distributions of the variables in a DataFrame for different truth values.
 
@@ -331,19 +331,25 @@ def plot_data_distributions(df: pd.DataFrame,
 
     """
     # hue_order = named_labels.values() if named_labels is not None else None
-    df['Truth Label'] = df[hue_variable].apply(
-        lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
-    hue_order = set(named_labels.values()) if named_labels is not None else None
     color_column = 'Truth Label'
+    weight_column = '_weight'
+    df[color_column] = df[hue_variable].apply(
+        lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
+    df[weight_column] = df[weight_variable] if weight_variable is not None else 1
+    hue_order = set(named_labels.values()) if named_labels is not None else None
     var_names = list(df.columns) if variables is None else variables
     var_names.remove(color_column) if color_column in var_names else None
+    var_names.remove(weight_column) if weight_column in var_names else None
     os.makedirs(os.path.join(folder, 'jpg'), exist_ok=True)
     os.makedirs(os.path.join(folder, 'pdf'), exist_ok=True)
     os.makedirs(os.path.join(folder, 'jpg_log'), exist_ok=True)
     os.makedirs(os.path.join(folder, 'pdf_log'), exist_ok=True)
-    iter_var_names = var_names + [hue_variable, 'weight'] if weight_variable is not None else var_names + [hue_variable]
+    iter_var_names = [*var_names, hue_variable,
+                      weight_variable] if weight_variable is not None else [*var_names, hue_variable]
     for var_name in iter_var_names:
-        small_df = df[[var_name, color_column]].copy()
+        local_names = [var_name, color_column, weight_column] if weight_variable is not None else [
+            var_name, color_column]
+        small_df = df[local_names].copy()
         dtype = small_df[var_name].dtype
 
         if dtype == 'object':
@@ -351,12 +357,12 @@ def plot_data_distributions(df: pd.DataFrame,
             small_df = small_df.loc[small_df[var_name] != 0]
         try:
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                              stat='density', element="step", fill=True,
-                              palette='Set1', common_norm=False, hue_order=hue_order)
+                              stat='density', element="step", fill=True, weights=weight_column,
+                              palette='Set1', common_norm=False, hue_order=hue_order, bins=bins)
         except:
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                              stat='density', element="step", fill=True,
-                              palette='Set1', common_norm=False, hue_order=hue_order, bins=n_bins if n_bins is not None else 'auto')
+                              stat='density', element="step", fill=True, weights=weight_column,
+                              palette='Set1', common_norm=False, hue_order=hue_order, bins=100)
 
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
@@ -512,5 +518,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
 
         plot.draw_hline(h_line_position[i]) if h_line_position is not None and h_line_position[i] is not None else None
         plot.draw()
-        os.makedirs(save_path, exist_ok=True)
-        plot.savefig(os.path.join(save_path, f'{metric_name}.png'), dpi=300)
+        os.makedirs(os.path.join(save_path, 'png'), exist_ok=True)
+        os.makedirs(os.path.join(save_path, 'pdf'), exist_ok=True)
+        plot.savefig(os.path.join(save_path, 'png', f'{metric_name}.png'), dpi=400)
+        plot.savefig(os.path.join(save_path, 'pdf', f'{metric_name}.pdf'))

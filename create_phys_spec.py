@@ -68,17 +68,6 @@ def main(args: argparse.Namespace) -> None:
     dataset = JIDENNDataset.load(args.save_path)
     size = dataset.length
     print(f"Number of jets: {size}")
-    dataset.plot_single_variable('jets_pt', os.path.join(args.save_path, 'pt.png'), bins=100,
-                                 weight_variable='weight', multiple='stack',
-                                 ylog=True, hue_variable='JZ_slice', xlabel=r'$p_\mathrm{T}$ [TeV]')
-
-    dataset.plot_single_variable('jets_pt', os.path.join(args.save_path, 'pt_noW.png'), bins=100,
-                                 badge_text=f'N = {size:,}', badge=True, multiple='stack',
-                                 ylog=True, hue_variable='JZ_slice', xlabel=r'$p_\mathrm{T}$ [TeV]')
-
-    dataset.plot_single_variable('weight', os.path.join(args.save_path, 'weight.png'), bins=100,
-                                 badge=False, multiple='stack', stat='count',
-                                 ylog=True, hue_variable='JZ_slice', xlabel=r'weight')
 
 
 if __name__ == "__main__":
