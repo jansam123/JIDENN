@@ -129,7 +129,7 @@ def read_ttree(tree: uproot.TTree, backend: Literal['pd', 'ak'] = 'pd', downcast
 
         if downcast:
             if tensor.dtype == tf.float64:
-                tensor = tf.cast(tensor, PRECISION)
+                tensor = tf.cast(tensor, FLOAT_PRECISION)
             elif tensor.dtype == tf.int64:
                 tensor = tf.cast(tensor, INT_PRECISION)
             elif tensor.dtype == tf.uint64:
@@ -159,10 +159,10 @@ def dict_to_stacked_tensor(data: Union[ROOTVariables, Tuple[ROOTVariables, ROOTV
     """
 
     if isinstance(data, tuple):
-        interaction = tf.stack([tf.cast(data[1][var], FLOAT_PRECISION) for var in data[1]], axis=-1)
-        interaction = tf.where(tf.math.logical_or(tf.math.is_inf(interaction), tf.math.is_nan(interaction)),
-                               tf.zeros_like(interaction), interaction)
-        return tf.stack([tf.cast(data[0][var], FLOAT_PRECISION) for var in data[0].keys()], axis=-1), interaction
+        output_data = []
+        for data_input in data:
+            output_data.append(tf.stack([tf.cast(data_input[var], FLOAT_PRECISION) for var in data_input.keys()], axis=-1))
+        return tuple(output_data)
     else:
         return tf.stack([tf.cast(data[var], FLOAT_PRECISION) for var in data.keys()], axis=-1)
 
@@ -913,7 +913,6 @@ class JIDENNDataset:
             variables = list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
         else:
             variables = list(self.element_spec[0].keys())
-        
 
         df = self.to_pandas(variables)
         plot_data_distributions(df, folder=folder, named_labels=named_labels, weight_variable='weight' if 'weight' in df.columns else None,

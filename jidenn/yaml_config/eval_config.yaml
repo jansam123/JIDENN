@@ -25,8 +25,7 @@ data:
     - [1, 2, 3, 4, 5, 6]
   variable_unknown_labels: [-1, -999]
   label_weights:
-  cut: jets_PFO_n<100
-  cached:
+  cut: 
   weight: weight
 
 logdir: logs/stepwise_flat/eval

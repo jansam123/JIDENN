@@ -79,7 +79,7 @@ def compare_ml_models(overall_metrics_path: str,
     for label, acc in zip(sorted_labels, accuracies):
         print(f'{label}: {acc:.4f}')
     pd.DataFrame({'Model': sorted_labels, 'Accuracy': accuracies}).to_csv(
-        os.path.join(save_path, 'soreted_accuracies.csv'), index=False)
+        os.path.join(save_path, 'sorted_accuracies.csv'), index=False)
     print(sorted_labels)
     metric_names = ["gluon_efficiency", "quark_efficiency",
                     "binary_accuracy", "auc",
