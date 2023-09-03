@@ -31,8 +31,9 @@ class TrainInput(ABC):
 
     """
 
-    def __init__(self, variables: Optional[List[str]] = None):
+    def __init__(self, variables: Optional[List[str]] = None, max_constituents: Optional[int] = 100):
         self.variables = variables
+        self.max_constituents = max_constituents
 
     @abstractproperty
     def input_shape(self) -> Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]:
@@ -320,6 +321,12 @@ class ConstituentVariables(TrainInput):
         pt_const = sample['jets_PFO_pt']
         eta_const = sample['jets_PFO_eta']
         phi_const = sample['jets_PFO_phi']
+        
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
 
         m_jet = sample['jets_m']
         pt_jet = sample['jets_pt']
@@ -349,6 +356,78 @@ class ConstituentVariables(TrainInput):
         return (None, 8)
 
 
+class GNNVariables(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if self.max_constituents is None:
+            raise ValueError('max_constituents must be set in GNNVariables')
+    
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m_const = sample['jets_PFO_m']
+        pt_const = sample['jets_PFO_pt']
+        eta_const = sample['jets_PFO_eta']
+        phi_const = sample['jets_PFO_phi']
+
+
+        m_const = m_const[..., :self.max_constituents]
+        pt_const = pt_const[..., :self.max_constituents]
+        eta_const = eta_const[..., :self.max_constituents]
+        phi_const = phi_const[..., :self.max_constituents]
+
+
+        m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+
+        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(PFO_E)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
+        m = m_const
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        fts = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+               'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+        
+        mask = tf.ones_like(fts['deltaEta'])
+        mask = tf.pad(mask, [[0, self.max_constituents - tf.shape(mask)[-1]]])
+        
+        for fts_name, fts_value in fts.items():
+            fts[fts_name] = tf.pad(fts_value, [[0, self.max_constituents - tf.shape(fts_value)[-1]]])
+        
+        points = {'deltaEta': fts['deltaEta'], 'deltaPhi': fts['deltaPhi']}
+        mask = {'mask': mask}
+        return points, fts, mask
+
+    @property
+    def input_shape(self) -> Tuple[None, int]:
+        """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent."""
+        return (self.max_constituents, 2), (self.max_constituents, 8), (self.max_constituents, 1)
+
+
 class IRCSVariables(TrainInput):
     """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
     These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
@@ -365,36 +444,43 @@ class IRCSVariables(TrainInput):
     - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
     """
 
+
     def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
         m_const = sample['jets_PFO_m']
         pt_const = sample['jets_PFO_pt']
         eta_const = sample['jets_PFO_eta']
         phi_const = sample['jets_PFO_phi']
 
+        if self.max_constituents is not None:
+            m_const = m_const[...,:self.max_constituents]
+            pt_const = pt_const[...,:self.max_constituents]
+            eta_const = eta_const[...,:self.max_constituents]
+            phi_const = phi_const[...,:self.max_constituents]
+
         m_jet = sample['jets_m']
         pt_jet = sample['jets_pt']
         eta_jet = sample['jets_eta']
         phi_jet = sample['jets_phi']
 
-        PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
-        jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        # PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        # jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
         deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
         deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
         deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
 
         PT_PTjet = pt_const / tf.math.reduce_mean(pt_jet)
-        E_Ejet = PFO_E / tf.math.reduce_mean(jet_E)
+        # E_Ejet = PFO_E / tf.math.reduce_mean(jet_E)
 
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
         angular = {'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
-        energy = {'pT': pt_const * 1e-6, 'E': PFO_E * 1e-6, 'PT|PTjet': PT_PTjet, 'E|Ejet': E_Ejet}
+        energy = {'PT|PTjet': PT_PTjet, }
         return angular, energy
 
     @property
     def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, int]]:
         """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
         and `8` is the number of variables per constituent."""
-        return (None, 3), (None, 4)
+        return (None, 3), (None, 1)
 
 
 class InteractingRelativeConstituentVariables(TrainInput):
@@ -411,11 +497,18 @@ class InteractingRelativeConstituentVariables(TrainInput):
     - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
     """
 
+
     def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
         m = sample['jets_PFO_m']
         pt = sample['jets_PFO_pt']
         eta = sample['jets_PFO_eta']
         phi = sample['jets_PFO_phi']
+        
+        if self.max_constituents is not None:
+            m = m[..., :self.max_constituents]
+            pt = pt[..., :self.max_constituents]
+            eta = eta[..., :self.max_constituents]
+            phi = phi[..., :self.max_constituents]
 
         m_jet = sample['jets_m']
         pt_jet = sample['jets_pt']
@@ -455,7 +548,12 @@ class InteractingRelativeConstituentVariables(TrainInput):
             tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
         m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
         m2 = tf.math.log(m2)
-
+        
+        delta = tf.where(tf.math.logical_or(tf.math.is_inf(delta), tf.math.is_nan(delta)), tf.zeros_like(delta), delta)
+        k_t = tf.where(tf.math.logical_or(tf.math.is_inf(k_t), tf.math.is_nan(k_t)), tf.zeros_like(k_t), k_t)
+        z = tf.where(tf.math.logical_or(tf.math.is_inf(z), tf.math.is_nan(z)), tf.zeros_like(z), z)
+        m2 = tf.where(tf.math.logical_or(tf.math.is_inf(m2), tf.math.is_nan(m2)), tf.zeros_like(m2), m2)
+        
         interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
         deltaR = tf.math.sqrt(eta**2 + phi**2)
@@ -498,11 +596,18 @@ class InteractionConstituentVariables(TrainInput):
 
     """
 
+
     def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
         m = sample['jets_PFO_m']
         pt = sample['jets_PFO_pt']
         eta = sample['jets_PFO_eta']
         phi = sample['jets_PFO_phi']
+
+        if self.max_constituents is not None:
+            m = m[..., :self.max_constituents]
+            pt = pt[..., :self.max_constituents]
+            eta = eta[..., :self.max_constituents]
+            phi = phi[..., :self.max_constituents]
 
         E, px, py, pz = tf.unstack(to_e_px_py_pz(
             tf.stack([m, pt, eta, phi], axis=-1)), axis=-1)
@@ -524,7 +629,11 @@ class InteractionConstituentVariables(TrainInput):
             tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
         m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
         m2 = tf.math.log(m2)
-
+        
+        delta = tf.where(tf.math.logical_or(tf.math.is_inf(delta), tf.math.is_nan(delta)), tf.zeros_like(delta), delta)
+        k_t = tf.where(tf.math.logical_or(tf.math.is_inf(k_t), tf.math.is_nan(k_t)), tf.zeros_like(k_t), k_t)
+        z = tf.where(tf.math.logical_or(tf.math.is_inf(z), tf.math.is_nan(z)), tf.zeros_like(z), z)
+        m2 = tf.where(tf.math.logical_or(tf.math.is_inf(m2), tf.math.is_nan(m2)), tf.zeros_like(m2), m2)
         interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
 
         m_jet = sample['jets_m']
@@ -581,6 +690,7 @@ def input_classes_lookup(class_name: Literal['highlevel',
                    'irelative_constituents': InteractingRelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
                    'irc_safe': IRCSVariables,
+                   'gnn': GNNVariables,
                    'qr': QR,
                    'qr_interaction': QRInteraction}
 

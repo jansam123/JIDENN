@@ -143,6 +143,24 @@ def calculate_binned_metrics(df: pd.DataFrame,
     return metrics
 
 
+def benchmark(func):
+    num_gpus = len(tf.config.list_physical_devices("GPU"))
+    def wrapper(*args, **kwargs):
+        [tf.config.experimental.reset_memory_stats(f'GPU:{i}') for i in range(num_gpus)]
+        start = time.time()
+        ret = func(*args, **kwargs)
+        stop = time.time()
+        max_memory = sum([tf.config.experimental.get_memory_info(f'GPU:{i}')['peak'] for i in range(num_gpus)])
+        total_time = stop - start
+        return ret, total_time, max_memory
+    return wrapper
+
+@benchmark
+def predict(model: tf.keras.Model, dataset: tf.data.Dataset):
+    score = model.predict(dataset).ravel()
+    return score
+
+
 def evaluate_multiple_models(model_paths: List[str],
                              model_names: List[str],
                              dataset: JIDENNDataset,
@@ -206,9 +224,12 @@ def evaluate_multiple_models(model_paths: List[str],
             log.info(f'----- Loading model took: {stop-start:.2f} s') if log is not None else None
             log.info(f'----- Predicting with model: {model_name}') if log is not None else None
             start = time.time()
-            score = model.predict(ds).ravel()
+            score, total_time, max_memory = predict(model, ds)
             stop = time.time()
-            log.info(f'----- Predicting took: {stop-start:.2f} s') if log is not None else None
+            log.info(f'----- Predicting took: {total_time:.2f} s') if log is not None else None
+            log.info(f'----- Max memory used: {max_memory*1e-6:.2f} MB') if log is not None else None
             dataset = add_score_to_dataset(dataset, score, f'{model_name}_{score_name}')
 
     return dataset
+
+

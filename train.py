@@ -110,8 +110,10 @@ def main(args: config.JIDENNConfig) -> None:
     train = train.get_prepared_dataset(batch_size=args.dataset.batch_size,
                                        shuffle_buffer_size=args.dataset.shuffle_buffer,
                                        take=train_size,
+                                       ragged=False if args.general.model == 'particlenet' else True,
                                        assert_length=True)
     dev = dev.get_prepared_dataset(batch_size=args.dataset.batch_size,
+                                   ragged=False if args.general.model == 'particlenet' else True,
                                    take=dev_size)
 
     # this is only to get rid of some warnings
@@ -169,7 +171,7 @@ def main(args: config.JIDENNConfig) -> None:
     if args.general.model == 'bdt' and args.dataset.epochs > 1:
         log.warning("BDT does not support multiple epochs. Setting epochs to 1")
         args.dataset.epochs = 1
-        
+
     if args.dataset.cache == 'mem':
         train = train.cache()
         dev = dev.cache()
@@ -178,7 +180,7 @@ def main(args: config.JIDENNConfig) -> None:
         os.makedirs(f'{args.general.logdir}/cache/dev', exist_ok=True)
         train = train.cache(f'{args.general.logdir}/cache/train')
         dev = dev.cache(f'{args.general.logdir}/cache/dev')
-        
+
     # running training
     history = model.fit(train,
                         epochs=args.dataset.epochs,

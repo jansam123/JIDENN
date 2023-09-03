@@ -19,6 +19,7 @@ from ..models.DeParT import DeParTModel
 from ..models.PFN import PFNModel
 from ..models.EFN import EFNModel
 from ..models.BDT import bdt_model
+from ..models.ParticleNet import ParticleNetModel
 
 
 def get_activation(activation: Literal['relu', 'gelu', 'tanh', 'swish']) -> Callable[[tf.Tensor], tf.Tensor]:
@@ -248,6 +249,24 @@ def get_depart_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int],
         activation=get_activation(args_model.activation))
 
 
+def get_particlenet_model(input_size: Tuple[Tuple[int, int], Tuple[int, int]],
+                          output_layer: tf.keras.layers.Layer,
+                          args_model: model_config.ParticleNet,
+                          preprocess: Optional[tf.keras.layers.Layer] = None) -> ParticleNetModel:
+
+    return ParticleNetModel(
+        input_shape=input_size,
+        output_layer=output_layer,
+        activation=get_activation(args_model.activation),
+        preprocess=preprocess,
+        pooling=args_model.pooling,
+        fc_layers=list(args_model.fc_layers),
+        fc_dropout=list(args_model.fc_dropout),
+        edge_knn=list(args_model.edge_knn),
+        edge_layers=list([list(layer) for layer in args_model.edge_layers]),
+    )
+
+
 def get_bdt_model(input_size: int,
                   output_layer: tf.keras.layers.Layer,
                   args_model: model_config.BDT,
@@ -270,10 +289,10 @@ def get_bdt_model(input_size: int,
 def model_getter_lookup(model_name: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']
                         ) -> Callable[[Any, tf.keras.layers.Layer, model_config.Model, Optional[tf.keras.layers.Layer]], tf.keras.Model]:
     """Get a model getter function.
-    
+
     Args:
         model_name (str): Name of the model. Options are 'fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'.
-        
+
     Returns:
         Callable[[Any, tf.keras.layers.Layer, model_config.Model, Optional[tf.keras.layers.Layer]], tf.keras.Model]: Model getter function.
     """
@@ -283,11 +302,12 @@ def model_getter_lookup(model_name: Literal['fc', 'highway', 'pfn', 'efn', 'tran
                     'pfn': get_pfn_model,
                     'efn': get_efn_model,
                     'transformer': get_transformer_model,
+                    'particlenet': get_particlenet_model,
                     'part': get_part_model,
                     'depart': get_depart_model,
                     'bdt': get_bdt_model, }
 
     if model_name not in lookup_model:
-        raise ValueError(f'Unknown model {model_name}')
+        raise ValueError(f'Unknown model {model_name}. Possible options are {list(lookup_model.keys())}')
 
     return lookup_model[model_name]

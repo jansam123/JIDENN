@@ -27,7 +27,7 @@ general:
   load_checkpoint_path:
 
 data:
-  path: ./data/pythia_stepwise # Path to data folder containing folder of *.root files.
+  path: ./data/pythia_W_flat_70_JZ10_noL # Path to data folder containing folder of *.root files.
   target: jets_PartonTruthLabelID
   labels: # list of labels to use.
     - gluon
@@ -37,7 +37,7 @@ data:
     - [1, 2, 3, 4, 5, 6]
   variable_unknown_labels: [-1, -999]
   label_weights:
-  cut: jets_PFO_n<100
+  cut: jets_pt<4600000
   weight: weight_spectrum/10000
 
 optimizer:
@@ -60,11 +60,11 @@ dataset:
   dev_size: 0.05 # Size of dev dataset.
   test_size: 0.1 # Size of test dataset.
   shuffle_buffer: 100_000 # Size of shuffler buffer.
-  cache: mem # Cache dataset in memory (`mem`) or on disk (`disk`).
+  cache: disk # Cache dataset in memory (`mem`) or on disk (`disk`).
 
 preprocess:
   normalization_size: 500 # Size of normalization dataset (if normalize is True).
-  draw_distribution: 200_000 # Size of the distribution to draw.
+  draw_distribution: 2000 # Size of the distribution to draw.
 
 models:
   fc:
@@ -92,7 +92,7 @@ models:
     train_input: constituents
 
   part:
-    self_attn_layers: 11 #,12
+    self_attn_layers: 11
     embed_dim: 128 #256
     class_attn_layers: 2
     expansion: 4 #4,  number of hidden units in FFN is expansion * embed_dim
@@ -111,10 +111,10 @@ models:
     expansion: 4 # 4,  number of hidden units in FFN is expansion * embed_dim
     heads: 8 # 12, must divide embed_dim
     class_attn_layers: 2
-    dropout: 0. # Dropout after FFN layer.
+    dropout: 0.3 # Dropout after FFN layer.
     class_dropout: 0. # Dropout after FFN layer.
     layer_scale_init_value: 5.0e-3
-    stochastic_depth_drop_rate: 0.1
+    stochastic_depth_drop_rate: 0.4
     class_stochastic_depth_drop_rate: 0.
     interaction_embedding_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
@@ -135,7 +135,7 @@ models:
     Phi_sizes: [512, 512, 512, 512, 136] # Sizes of the per particle mapping.
     F_sizes: [512, 512, 512, 512, 512, 512] # Sizes of jet mapping.
     Phi_backbone: fc #  Backbone network to use, options: cnn, fc.
-    batch_norm: True #  Use batch normalization before PHI.
+    batch_norm: False #  Use batch normalization before PHI.
     activation: gelu #  Activation function to use (relu/elu/gelu/silu).
     Phi_dropout: #  Dropout after PHI.
     F_dropout: #  Dropout after F.
@@ -153,3 +153,23 @@ models:
     l2_regularization: 0.1 #  L2 regularization.
     tmp_dir: ${general.logdir}/backup #  Temporary directory for BDT.
     train_input: highlevel_constituents
+
+  particlenet:
+    pooling: average #  Convolutional pooling, options: max, average.
+    fc_layers: [768, 768] #  Hidden layer sizes.
+    fc_dropout: [0.3, 0.3] #  Dropout after FC layers.
+    edge_knn:
+      - 16 #  Number of neighbors.
+      - 16 #  Number of neighbors.
+      - 16 #  Number of neighbors.
+      - 16 #  Number of neighbors.
+      - 16 #  Number of neighbors.
+    edge_layers:
+      - [128, 128, 128] #  Number of channels.
+      - [128, 128, 128] #  Number of channels.
+      - [256, 256, 256] #  Number of channels.
+      - [256, 256, 256] #  Number of channels.
+      - [512, 512, 512]
+    train_input: gnn
+    activation: gelu #  Activation function to use (relu/elu/gelu/silu).
+

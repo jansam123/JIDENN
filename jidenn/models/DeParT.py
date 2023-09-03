@@ -529,7 +529,7 @@ class DeParT(tf.keras.layers.Layer):
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
 
-        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True, name="class_token")
 
     def stochastic_prob(self, step, total_steps, drop_rate):
         return drop_rate * step / total_steps

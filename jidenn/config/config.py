@@ -38,7 +38,7 @@ The saved datasets are expected to be flattened to the jet level.
 from dataclasses import dataclass
 from typing import List, Optional, Literal
 
-from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN
+from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN, ParticleNet
 
 
 @dataclass
@@ -217,6 +217,7 @@ class Models:
     part: ParT
     depart: DeParT
     pfn: PFN
+    particle_net: ParticleNet
 
 
 @dataclass

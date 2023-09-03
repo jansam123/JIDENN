@@ -31,6 +31,19 @@ cs.store(name="args", node=eval_config.EvalConfig)
 @hydra.main(version_base="1.2", config_path="jidenn/yaml_config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
+    
+    # GPU logging
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        log.warning("No GPU found, using CPU")
+    for i, gpu in enumerate(gpus):
+        gpu_info = tf.config.experimental.get_device_details(gpu)
+        log.info(
+            f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+
+    # CUDA logging
+    system_config = tf.sysconfig.get_build_info()
+    log.info(f"System Config: {system_config}")
 
     log.info(f'Using models: {args.model_names}')
     variable = args.binning.variable
@@ -42,6 +55,7 @@ def main(args: eval_config.EvalConfig) -> None:
         if args.cache_scores is None:
             raise FileNotFoundError
         df = pd.read_csv(os.path.join(args.logdir, args.cache_scores))
+        log.info(f'Using cached scores from {args.logdir}/{args.cache_scores}')
     except FileNotFoundError:
         log.warning(f"No cached scores found at '{args.logdir}/{args.cache_scores}'. Calculating scores.")
         log.info('Evaluating models')
@@ -70,6 +84,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                                 take=args.take,
                                                 distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
                                                 )
+        
         variables = [f'{model}_score' for model in args.model_names] + [variable]
         variables += [args.data.weight] if args.data.weight is not None else []
         log.info('Converting to pandas')
@@ -164,12 +179,16 @@ def main(args: eval_config.EvalConfig) -> None:
                     wp.save(os.path.join(args.logdir, 'models', model_name, f'{col}.pkl'))
 
         dfs.append(model_df)
-        
+
     overall_metrics.to_csv(f'{args.logdir}/overall_metrics.csv')
-    overall_metrics = overall_metrics[['binary_accuracy', 'auc', 'gluon_efficiency', 'quark_efficiency', 'gluon_rejection_at_quark_50wp', 'gluon_rejection_at_quark_80wp']]
-    overall_metrics = overall_metrics.rename(columns=METRIC_NAMING_SCHEMA, index=MODEL_NAMING_SCHEMA)
-    overall_metrics.index.name = 'Model'
-    overall_metrics.to_latex(buf=f'{args.logdir}/overall_metrics.tex', float_format="{:.4f}".format, column_format='l' + 'c' * len(overall_metrics.columns), escape=False)
+    latex_metrics = overall_metrics[['binary_accuracy', 'auc', 'gluon_efficiency',
+                                     'quark_efficiency', 'gluon_rejection_at_quark_50wp', 'gluon_rejection_at_quark_80wp']]
+    latex_metrics.index.name = 'Model'
+    latex_metrics = latex_metrics.rename(columns=METRIC_NAMING_SCHEMA, index=MODEL_NAMING_SCHEMA)
+    latex_metrics = latex_metrics.reset_index()
+    latex_metrics.to_latex(buf=f'{args.logdir}/overall_metrics.tex', float_format="{:.4f}".format,
+                           column_format='l' + 'c' * (len(latex_metrics.columns) - 1), label='results', index=False,
+                           escape=False, caption="Results of the different models. The best results are highlighted in bold.")
     log.info('Overall metrics for all models:')
     log.info(overall_metrics)
 
