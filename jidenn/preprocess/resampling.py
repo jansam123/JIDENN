@@ -134,9 +134,9 @@ def resample_from_min_bin_count(dataset: tf.data.Dataset,
 
 
 def compute_uniform_weights(bin_counts: tf.Tensor) -> tf.Tensor:
-    bin_counts = tf.cast(bin_counts, dtype=tf.float32)
+    bin_counts = tf.cast(bin_counts, dtype=tf.float64)
     total_events = tf.reduce_sum(bin_counts)
-    target_events_per_bin = total_events / tf.cast(tf.shape(bin_counts)[0], dtype=tf.float32)
+    target_events_per_bin = total_events / tf.cast(tf.shape(bin_counts)[0], dtype=tf.float64)
     bin_weights = target_events_per_bin / bin_counts
     bin_weights = bin_weights * tf.reduce_sum(bin_counts) / tf.reduce_sum(bin_weights)
     return bin_weights
@@ -199,6 +199,7 @@ def resampler(dataset: tf.data.Dataset,
         print(f'Min count: {min_count:,}')
         print(f'Estimated number of samples: {min_count * bins:,}')
         weights = compute_uniform_weights(bin_counts)
+        print(weights)
         initial_dist = bin_counts / tf.reduce_sum(bin_counts)
         print(initial_dist)
     else:

@@ -17,7 +17,7 @@ parser.add_argument("--save_path", type=str, default='plots', help="Path to save
 parser.add_argument("--take", type=int, default=100_000, help="Number of samples to plot")
 parser.add_argument("-v", "--variables", type=str, nargs='*', help="Variables to plot")
 parser.add_argument("-w", "--weight", type=str, default=None, help="Weight variable")
-parser.add_argument("--hue_variable", type=str, default='jets_PartonTruthLabelID',
+parser.add_argument("--hue_variable", type=str, default=None,#'jets_PartonTruthLabelID',
                     help="Variable to use for hue. Needs to be categorical/integer.")
 parser.add_argument("--plot_single", action='store_true', help="Whether to plot a single distribution")
 parser.add_argument("--bins", type=int, default=50, help="Number of bins for the histograms")
@@ -53,12 +53,13 @@ def plot_single(dataset: JIDENNDataset,
                 badge: bool = True,
                 badge_text: Optional[str] = None):
     
-    if weight_var is not None:
-        df = dataset.to_pandas([variable, hue_var, weight_var]) 
-    else:
-        df = dataset.to_pandas([variable, hue_var])
-    
-    df[hue_var] = df[hue_var].replace(HUE_MAPPER) if hue_var == 'jets_PartonTruthLabelID' else df[hue_var]
+    variables = [variable]
+    variables += [hue_var] if hue_var is not None else []
+    variables += [weight_var] if weight_var is not None else []
+    df = dataset.to_pandas(variables=variables)
+        
+    if hue_var is not None and  hue_var == 'jets_PartonTruthLabelID':
+        df[hue_var] = df[hue_var].replace(HUE_MAPPER)
 
     print(df)
     if 'pt' in variable:
@@ -87,7 +88,9 @@ def main(args: argparse.Namespace):
         raise ValueError('Either load_path or load_paths needs to be specified.')
 
     ds_size = dataset.length
-    print(f'Dataset size: {ds_size:,}')
+    if ds_size is not None:
+        print(f'Dataset size: {ds_size:,}')
+    
 
     # badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None
 
@@ -95,7 +98,7 @@ def main(args: argparse.Namespace):
         plot_single(dataset,
                     variable=args.variables[0], hue_var=args.hue_variable,
                     save_path=args.save_path,
-                    badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n',
+                    badge_text='$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None,
                     multiple=args.multiple,
                     badge=not args.no_badge,
                     weight_var=args.weight, ylog=args.ylog, ylim=args.ylim, xlim=args.xlim, stat=args.stat,

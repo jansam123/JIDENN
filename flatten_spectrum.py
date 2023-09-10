@@ -26,6 +26,7 @@ parser.add_argument("--dataset_type", type=str, default='test', help="train/dev/
 parser.add_argument("--shuffle", type=int, default=1_000, required=False, help="Shuffle buffer size")
 parser.add_argument("--max_jz", type=int, default=10, help="Maximum JZ to use")
 parser.add_argument("--min_jz", type=int, default=2, help="Maximum JZ to use")
+parser.add_argument("--eta_cut", type=float, default=2.1, help="Eta cut")
 parser.add_argument("--jz_low_cut", action='store_true', help="Cut the dataset")
 parser.add_argument("--cut", action='store_true', help="Cut the dataset")
 parser.add_argument("--xlim", type=float, nargs=2, default=None, help="X-axis limits")
@@ -92,6 +93,8 @@ def main(args: argparse.Namespace) -> None:
                                           file_labels=file_labels, stop_on_empty_dataset=True)
 
     dataset = dataset.filter(get_cut_fn('jets_pt', args.xlim[0], args.xlim[1])) if args.cut else dataset
+    dataset = dataset.filter(get_cut_fn('jets_eta', -args.eta_cut, args.eta_cut)
+                             ) if args.eta_cut is not None else dataset
     dataset = dataset.take(args.take) if args.take is not None else dataset
 
     if args.flatten:

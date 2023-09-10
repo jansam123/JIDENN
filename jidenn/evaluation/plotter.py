@@ -411,7 +411,10 @@ def plot_single_dist(df: pd.DataFrame,
         ax = sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
                           stat=stat, element=element, fill=True, multiple=multiple,
                           palette=palette, common_norm=common_norm, hue_order=hue_order, bins=list(binning))
-    ax.legend_.set_title(None)
+
+    if ax.legend_ is not None:
+        ax.legend_.set_title(None)
+
     plt.ylim(ylim) if ylim is not None else None
     plt.savefig(save_path)
     plt.yscale('log') if ylog else plt.yscale('linear')

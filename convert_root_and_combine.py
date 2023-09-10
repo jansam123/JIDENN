@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, help="Path to save the dataset")
 parser.add_argument("--load_dir", type=str, help="Path to the root file")
 parser.add_argument("--backend", type=str, default='pd', help="Backend to use for loading the dataset")
-parser.add_argument("--max_size", type=int, default=100_000, help="Maximum number of samples to use")
+parser.add_argument("--max_size", type=int, default=10_000, help="Maximum number of samples to use")
 parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
                     help="Variable to use as reference for flattening")
 parser.add_argument("--wanted_values", type=int, nargs='+',
@@ -84,8 +84,8 @@ def main(args: argparse.Namespace) -> None:
     dataset = JIDENNDataset.load_parallel(ds_file_names, file_labels=None)
     norm = dataset.metadata['sum_AOD_w']
 
-    dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
-                            wanted_values=args.wanted_values))
+    # dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
+    #                         wanted_values=args.wanted_values))
     dataset = dataset.remap_data(write_new_variable(dssid, variable_name='dssid'))
     dataset = dataset.remap_data(write_weights(cross_section, filt_eff, lumi, norm))
     dataset = dataset.apply(lambda x: x.shuffle(args.shuflle).prefetch(tf.data.AUTOTUNE))
