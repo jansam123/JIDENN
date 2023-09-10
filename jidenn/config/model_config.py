@@ -201,3 +201,13 @@ class ParT(Model):
     class_attn_layers: int
     interaction_embedding_layers: int
     interaction_embedding_layer_size: int
+
+
+@dataclass
+class ParticleNet(Model):
+
+    pooling: Literal['average', 'max']
+    fc_layers: List[int]
+    fc_dropout: List[float]
+    edge_knn: List[int]
+    edge_layers: List[List[int]]

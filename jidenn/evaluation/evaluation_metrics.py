@@ -45,13 +45,15 @@ class BinaryEfficiency(tf.keras.metrics.Metric):
 
         values = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
         values = tf.cast(values, self.dtype)
+
         if sample_weight is not None:
             sample_weight = tf.cast(sample_weight, self.dtype)
-            sample_weight = tf.broadcast_weights(sample_weight, values)
-            values = tf.multiply(values, sample_weight)
-
-        self.tp.assign_add(tf.reduce_sum(values))
-        self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
+            self.tp.assign_add(tf.reduce_sum(values*sample_weight))
+            self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)*sample_weight))
+        else:
+            self.tp.assign_add(tf.reduce_sum(values))
+            self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
+            
 
     def result(self):
         return self.tp / self.total
@@ -104,10 +106,11 @@ class BinaryRejection(tf.keras.metrics.Metric):
         values = tf.cast(values, self.dtype)
         if sample_weight is not None:
             sample_weight = tf.cast(sample_weight, self.dtype)
-            sample_weight = tf.broadcast_weights(sample_weight, values)
-            values = tf.multiply(values, sample_weight)
-        self.tp.assign_add(tf.reduce_sum(values))
-        self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
+            self.tp.assign_add(tf.reduce_sum(values*sample_weight))
+            self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)*sample_weight))
+        else:
+            self.tp.assign_add(tf.reduce_sum(values))
+            self.total.assign_add(tf.reduce_sum(tf.cast(y_true, self.dtype)))
 
     def result(self):
         tpr = self.tp / self.total
@@ -436,7 +439,7 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
         List[tf.keras.metrics.Metric]: The list of selected metrics.
     """
     metrics = [
-        tf.keras.metrics.BinaryCrossentropy(name='loss'),
+        # tf.keras.metrics.BinaryCrossentropy(name='loss'),
         tf.keras.metrics.BinaryAccuracy(
             name='binary_accuracy', threshold=threshold),
         BinaryEfficiency(name='gluon_efficiency',
@@ -463,8 +466,8 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
                                      fixed_label_id=1, working_point=0.8, returned_label_id=0),
         ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_80wp',
                                      fixed_label_id=1, working_point=0.8),
-        EffectiveTaggingEfficiency(
-            name='effective_tagging_efficiency', threshold=threshold),
+        # EffectiveTaggingEfficiency(
+        #     name='effective_tagging_efficiency', threshold=threshold),
         tf.keras.metrics.AUC(name='auc')]
     return metrics
 

@@ -1,7 +1,4 @@
-from dataclasses import dataclass
 import tensorflow as tf
-import tensorflow_addons as tfa
-# this is necessary for the BDT model to work
 import numpy as np
 import os
 import logging
@@ -21,7 +18,7 @@ from jidenn.evaluation.evaluation_metrics import EffectiveTaggingEfficiency
 from jidenn.evaluation.evaluation_metrics import calculate_metrics
 from jidenn.evaluation.WorkingPoint import WorkingPoint
 from jidenn.evaluation.evaluator import evaluate_multiple_models, calculate_binned_metrics
-from utils.const import METRIC_NAMING_SCHEMA, LATEX_NAMING_CONVENTION, MODEL_NAMING_SCHEMA
+from jidenn.const import METRIC_NAMING_SCHEMA, LATEX_NAMING_CONVENTION, MODEL_NAMING_SCHEMA
 
 CUSTOM_OBJECTS = {'LinearWarmup': LinearWarmup,
                   'EffectiveTaggingEfficiency': EffectiveTaggingEfficiency}
@@ -34,42 +31,66 @@ cs.store(name="args", node=eval_config.EvalConfig)
 @hydra.main(version_base="1.2", config_path="jidenn/yaml_config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
+    
+    # GPU logging
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        log.warning("No GPU found, using CPU")
+    for i, gpu in enumerate(gpus):
+        gpu_info = tf.config.experimental.get_device_details(gpu)
+        log.info(
+            f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+
+    # CUDA logging
+    system_config = tf.sysconfig.get_build_info()
+    log.info(f"System Config: {system_config}")
 
     log.info(f'Using models: {args.model_names}')
     variable = args.binning.variable
     log.info(f'Binning in variable: {variable}')
     labels = args.data.labels
-
     data_path = os.path.join(args.data.path, args.test_subfolder)
-    dataset = get_preprocessed_dataset(file=data_path, args_data=args.data, input_creator=None, shuffle_reading=False)
 
-    if args.draw_distribution is not None:
-        os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
+    try:
+        if args.cache_scores is None:
+            raise FileNotFoundError
+        df = pd.read_csv(os.path.join(args.logdir, args.cache_scores))
+        log.info(f'Using cached scores from {args.logdir}/{args.cache_scores}')
+    except FileNotFoundError:
+        log.warning(f"No cached scores found at '{args.logdir}/{args.cache_scores}'. Calculating scores.")
+        log.info('Evaluating models')
+        dataset = get_preprocessed_dataset(file=data_path, args_data=args.data,
+                                           input_creator=None, shuffle_reading=False)
 
-    def distribution_drawer(x: JIDENNDataset):
-        print('Convert to pandas')
-        df = x.apply(lambda ds: ds.take(args.draw_distribution)).to_pandas()
-        return plot_data_distributions(df,
-                                       folder=f'{args.logdir}/data_dist',
-                                       named_labels={i: label for i, label in enumerate(labels)},
-                                       xlabel_mapper=LATEX_NAMING_CONVENTION)
-    log.info('Evaluating models')
-    full_dataset = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],
-                                            model_names=args.model_names,
-                                            model_input_name=args.model_input_types,
-                                            dataset=dataset,
-                                            custom_objects=CUSTOM_OBJECTS,
-                                            batch_size=args.batch_size,
-                                            log=log,
-                                            take=args.take,
-                                            distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
-                                            )
-    variables = [f'{model}_score' for model in args.model_names] + [variable]
-    variables += [args.data.weight] if args.data.weight is not None else []
-    log.info('Converting to pandas')
-    df = full_dataset.to_pandas(variables=variables)
-    df = df.rename(columns={args.data.weight: 'weight'}) if args.data.weight is not None else df
-    df.to_csv(f'{args.logdir}/score_dataset.csv')
+        if args.draw_distribution is not None:
+            os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
+
+        def distribution_drawer(x: JIDENNDataset):
+            print('Convert to pandas')
+            df = x.apply(lambda ds: ds.take(args.draw_distribution)).to_pandas()
+            return plot_data_distributions(df,
+                                           folder=f'{args.logdir}/data_dist',
+                                           named_labels={i: label for i, label in enumerate(labels)},
+                                           weight_variable='weight' if args.data.weight is not None else None,
+                                           bins=100,
+                                           xlabel_mapper=LATEX_NAMING_CONVENTION)
+        full_dataset = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],
+                                                model_names=args.model_names,
+                                                model_input_name=args.model_input_types,
+                                                dataset=dataset,
+                                                custom_objects=CUSTOM_OBJECTS,
+                                                batch_size=args.batch_size,
+                                                log=log,
+                                                take=args.take,
+                                                distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
+                                                )
+        
+        variables = [f'{model}_score' for model in args.model_names] + [variable]
+        variables += [args.data.weight] if args.data.weight is not None else []
+        log.info('Converting to pandas')
+        df = full_dataset.to_pandas(variables=variables)
+        df = df.rename(columns={args.data.weight: 'weight'}) if args.data.weight is not None else df
+        df.to_csv(os.path.join(args.logdir, args.cache_scores)) if args.cache_scores is not None else None
 
     if args.binning.log_bin_base is not None:
         min_val = np.log(args.binning.min_bin) / \
@@ -81,6 +102,9 @@ def main(args: eval_config.EvalConfig) -> None:
     else:
         bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins + 1)
 
+    df = df[df[args.binning.variable] < args.binning.max_bin]
+    df = df[df[args.binning.variable] > args.binning.min_bin]
+    log.info(f'Using {len(df)} events for evaluation after binning cuts')
     overall_metrics = pd.DataFrame()
     dfs = []
 
@@ -112,8 +136,12 @@ def main(args: eval_config.EvalConfig) -> None:
                              score_name=f'{model_name}_score',
                              class_names=labels)
 
-        overall_metrics = pd.concat([overall_metrics,
-                                    pd.DataFrame(calculate_metrics(df['label'], df[f'{model_name}_score']), index=[model_name])])
+        overall_metrics: pd.DataFrame = pd.concat([overall_metrics,
+                                                  pd.DataFrame(calculate_metrics(df['label'], df[f'{model_name}_score'], weights=df['weight'] if args.data.weight is not None else None), index=[model_name])])
+        # nicely print metrics
+        log.info(f'Metrics for model {model_name}:')
+        log.info(''.join([f'{metric_name} = {metric:.4}\n' for metric_name,
+                 metric in dict(overall_metrics.loc[model_name]).items()]))
 
         def validation_plotter(x: pd.DataFrame):
             bin_center_name = x['bin'].apply(lambda x: x.mid * 1e-6).iloc[0]
@@ -123,9 +151,8 @@ def main(args: eval_config.EvalConfig) -> None:
                                  logdir=os.path.join(args.logdir, 'models', model_name, f'{bin_center_name:.2f}'),
                                  score_name=f'{model_name}_score',
                                  class_names=labels)
-
         model_df = calculate_binned_metrics(df=df,
-                                            binned_variable=variable,
+                                            binned_variable=args.binning.variable,
                                             score_variable=f'{model_name}_score',
                                             weights_variable=args.data.weight,
                                             bins=bins,
@@ -144,7 +171,6 @@ def main(args: eval_config.EvalConfig) -> None:
             model_df['bin_width'] = model_df['bin'].apply(lambda x: x.length)
 
         model_df.to_csv(f'{args.logdir}/models/{model_name}/binned_metrics.csv')
-        log.info(model_df)
 
         if args.working_point_path is None and args.working_point_file_name is None:
             for col in model_df.columns:
@@ -155,6 +181,14 @@ def main(args: eval_config.EvalConfig) -> None:
         dfs.append(model_df)
 
     overall_metrics.to_csv(f'{args.logdir}/overall_metrics.csv')
+    latex_metrics = overall_metrics[['binary_accuracy', 'auc', 'gluon_efficiency',
+                                     'quark_efficiency', 'gluon_rejection_at_quark_50wp', 'gluon_rejection_at_quark_80wp']]
+    latex_metrics.index.name = 'Model'
+    latex_metrics = latex_metrics.rename(columns=METRIC_NAMING_SCHEMA, index=MODEL_NAMING_SCHEMA)
+    latex_metrics = latex_metrics.reset_index()
+    latex_metrics.to_latex(buf=f'{args.logdir}/overall_metrics.tex', float_format="{:.4f}".format,
+                           column_format='l' + 'c' * (len(latex_metrics.columns) - 1), label='results', index=False,
+                           escape=False, caption="Results of the different models. The best results are highlighted in bold.")
     log.info('Overall metrics for all models:')
     log.info(overall_metrics)
 

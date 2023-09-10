@@ -73,25 +73,28 @@ def compare_ml_models(overall_metrics_path: str,
 
     os.makedirs(save_path, exist_ok=True)
     dfs = [pd.read_csv(path) for path in paths]
-    overall_metrics = pd.read_csv(overall_metrics_path, index_col=0)
-    acc_sorted_models = overall_metrics.sort_values(by='binary_accuracy', ascending=False).index
-    print(acc_sorted_models)
-    colours = sns.color_palette("coolwarm", len(labels))
-    sorted_labels, sorted_dfs = zip(*sorted(zip(labels, dfs), key=lambda x: acc_sorted_models.get_loc(x[0])))
-    # sorted_dfs = sorted(dfs, key=lambda x: acc_sorted_models.get_loc(x['model'].iloc[0]))
+    accuracies = [df['binary_accuracy'].mean() for df in dfs]
+    sorted_labels, sorted_dfs, accuracies = zip(*sorted(zip(labels, dfs, accuracies),
+                                                        key=lambda x: x[2], reverse=True))
+    for label, acc in zip(sorted_labels, accuracies):
+        print(f'{label}: {acc:.4f}')
+    pd.DataFrame({'Model': sorted_labels, 'Accuracy': accuracies}).to_csv(
+        os.path.join(save_path, 'sorted_accuracies.csv'), index=False)
     print(sorted_labels)
     metric_names = ["gluon_efficiency", "quark_efficiency",
-                    "binary_accuracy", "auc", "effective_tagging_efficiency",
+                    "binary_accuracy", "auc",
+                    # "effective_tagging_efficiency",
                     'gluon_rejection_at_quark_80wp', 'gluon_rejection_at_quark_50wp',
                     'gluon_efficiency_at_quark_80wp', 'gluon_efficiency_at_quark_50wp']
 
-    ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
-             [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
-    # ylims = None
+    # ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
+    #          [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
+    ylims = None
     reference = 'transformer'
+    colours = sns.color_palette('coolwarm', len(sorted_labels))
 
     plot_var_dependence(dfs=sorted_dfs,
-                        labels=[MODEL_NAMING_SCHEMA[model] for model in list(acc_sorted_models)],
+                        labels=[MODEL_NAMING_SCHEMA[model] for model in list(sorted_labels)],
                         bin_midpoint_name='bin_mid',
                         bin_width_name='bin_width',
                         metric_names=metric_names,
@@ -100,43 +103,10 @@ def compare_ml_models(overall_metrics_path: str,
                         xlabel=r'$p_T$ [TeV]',
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
-                        xlog=True,
+                        xlog=False,
+                        leg_loc='upper center',
                         colours=colours)
 
-    def interval_to_cut(string_interval):
-
-        # left, right = string_interval.split(',')
-        # left = float(left[1:]) * 1e-6
-        # right = float(right[:-1]) * 1e-6
-        # mid = (left + right) / 2
-        return f'{string_interval:.3f}'
-
-    dfs_new = []
-    rel_dfs = []
-    reference_df = sorted_dfs[sorted_labels.index(reference)]
-    for df, model_name in zip(sorted_dfs, sorted_labels):
-        print(df)
-        df['Model'] = MODEL_NAMING_SCHEMA[model_name]
-        df['cut'] = df['bin_mid'].apply(interval_to_cut)
-        dfs_new.append(df)
-        rel_df = df.copy()
-        for metric in metric_names:
-            rel_df[metric] = df[metric] / reference_df[metric]
-        rel_dfs.append(rel_df)
-
-    df = pd.concat(dfs_new)
-    rel_df = pd.concat(rel_dfs)
-    print(df)
-    ylims = [None] * len(metric_names)  # if ylims is None else ylims
-    for metric, ylim in zip(metric_names, ylims):
-        plot_metric(df=df,
-                    relative_df=rel_df,
-                    metric=metric,
-                    x_label=r'$p_T$ [TeV]',
-                    save_dir=os.path.join(save_path, f'old_{metric}.png'),
-                    title=METRIC_NAMING_SCHEMA[metric] if metric in METRIC_NAMING_SCHEMA else metric,
-                    order=[MODEL_NAMING_SCHEMA[model] for model in list(acc_sorted_models)],
-                    ylim=ylim)
 
 def main(args: argparse.Namespace):
 

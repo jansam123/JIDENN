@@ -53,19 +53,19 @@ def main(args):
         logy=False,
         leg_ncol=2,
         # logx=True if binning.log_bin_base is not None else False,
-        # atlas_second_tag="$\\sqrt{s}=13$ TeV, dummy jets \ndummy sample, $f_{c}=0.018$",
+        atlas_second_tag="50% WP",
         figsize=(8, 6),
         draw_errors=False,
         n_ratio_panels=1,
     )
     plot_sig_eff = VarVsEffPlot(
-        mode="sig_eff",
-        ylabel="Quark efficiency",
+        mode="bkg_eff",
+        ylabel="Gluon efficiency",
         xlabel=r"$p_{T}$ [GeV]",
         leg_ncol=2,
         logy=False,
         # logx=True if binning.log_bin_base is not None else False,
-        # atlas_second_tag="$\\sqrt{s}=13$ TeV, dummy jets, \ndummy sample, $f_{c}=0.018$",
+        atlas_second_tag="50% WP",
         figsize=(8, 6),
         draw_errors=False,
         n_ratio_panels=1,
@@ -74,7 +74,6 @@ def main(args):
         n_ratio_panels=0,
         ylabel="Gluon rejection",
         xlabel="Quark efficiency",
-        # atlas_second_tag="$\\sqrt{s}=13$ TeV, dummy jets \ndummy sample, $f_{c}=0.018$",
         figsize=(6.5, 6),
         y_scale=1.4,
     )
@@ -120,8 +119,8 @@ def main(args):
     plot_sig_eff.draw()
     plot_roc.draw()
     plot_roc.savefig(os.path.join(args.save_path, 'roc.png'), transparent=False, dpi=400)
-    plot_bkg_rej.savefig(os.path.join(args.save_path, 'bkg_rej.png'), dpi=400)
-    plot_sig_eff.savefig(os.path.join(args.save_path, 'sig_eff.png'), dpi=400)
+    plot_bkg_rej.savefig(os.path.join(args.save_path, 'bkg_rej_50.png'), dpi=400)
+    plot_sig_eff.savefig(os.path.join(args.save_path, 'sig_eff_50.png'), dpi=400)
 
 
 if __name__ == '__main__':
