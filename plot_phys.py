@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import atlasify
 
+from jidenn.data.JIDENNDataset import JIDENNDataset
+
 def sns_label_plotting(df):
     pt_name = r"$p_{\mathrm{T}}$ [TeV]"
     label_name = "label"
@@ -94,10 +96,18 @@ def sns_label_plotting_phys(df):
     plt.clf()
     plt.close()
 
+def load_dataframe(path):
+    ds = JIDENNDataset.load(path)
+    ds = ds.map(lambda x: {'jets_pt':x['jets_pt'], 'weight_spectrum':x['weight_spectrum'], 'jets_PartonTruthLabelID':x['jets_PartonTruthLabelID']}).to_pandas()
+    return ds
 
 if __name__ == "__main__":
     HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
-    df = pd.read_csv("data/pythia_W_flat_70_JZ10/train/dataset.csv")
+    try:
+        df = pd.read_csv("data/pythia_W_flat_70_JZ10/train/dataset.csv")
+    except FileNotFoundError:
+        df = load_dataframe("data/pythia_W_flat_70_JZ10/train")
+        df.to_csv("data/pythia_W_flat_70_JZ10/train/dataset.csv")
     df['jets_pt'] *= 1e-6
     df['weight_spectrum'] /= 1e4
     df = df[df['jets_pt'] > 0.07]
