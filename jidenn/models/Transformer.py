@@ -123,14 +123,14 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         """
-        attented = self.mhsa_ln(inputs)
-        attented = self.mhsa(attented, mask)
-        attented = self.mhsa_dropout(attented)
-        attented = attented + inputs
+        attended = self.mhsa_ln(inputs)
+        attended = self.mhsa(attended, mask)
+        attended = self.mhsa_dropout(attended)
+        attended = attended + inputs
 
-        ffned = self.ffn_ln(attented)
+        ffned = self.ffn_ln(attended)
         ffned = self.ffn(ffned)
-        output = ffned + attented
+        output = ffned + attended
         return output
 
 

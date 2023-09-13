@@ -387,17 +387,17 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         """
-        attented = self.pre_mhsa_ln(inputs)
-        attented = self.mhsa(attented, mask, interaction)
-        attented = self.post_mhsa_scale(attented)
-        attented = self.post_mhsa_stoch_depth(attented)
-        attented = attented + inputs
+        attended = self.pre_mhsa_ln(inputs)
+        attended = self.mhsa(attended, mask, interaction)
+        attended = self.post_mhsa_scale(attended)
+        attended = self.post_mhsa_stoch_depth(attended)
+        attended = attended + inputs
 
-        ffned = self.pre_ffn_ln(attented)
+        ffned = self.pre_ffn_ln(attended)
         ffned = self.ffn(ffned)
         ffned = self.post_ffn_scale(ffned)
         ffned = self.post_ffn_stoch_depth(ffned)
-        output = ffned + attented
+        output = ffned + attended
 
         return output
 
@@ -407,7 +407,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
     It allows the class token to attend to the input particles, and then feed the attended class token
     to the feed-forward network with residual connections and layer normalizations.
 
-    This extracts the class information from the attented particles more effectively.
+    This extracts the class information from the attended particles more effectively.
 
     Args:
         dim (int): dimension of the input and output
@@ -456,18 +456,18 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, 1, dim)`, an updated class token
         """
-        attented = tf.concat([class_token, inputs], axis=1)
-        attented = self.pre_mhca_ln(attented)
-        attented = self.mhca(class_token=class_token, inputs=attented, mask=mask)
-        attented = self.post_mhca_scale(attented)
-        attented = self.post_mhca_stoch_depth(attented)
-        attented = attented + class_token
+        attended = tf.concat([class_token, inputs], axis=1)
+        attended = self.pre_mhca_ln(attended)
+        attended = self.mhca(class_token=class_token, inputs=attended, mask=mask)
+        attended = self.post_mhca_scale(attended)
+        attended = self.post_mhca_stoch_depth(attended)
+        attended = attended + class_token
 
-        ffned = self.pre_ffn_ln(attented)
+        ffned = self.pre_ffn_ln(attended)
         ffned = self.ffn(ffned)
         ffned = self.post_ffn_scale(ffned)
         ffned = self.post_ffn_stoch_depth(ffned)
-        output = ffned + attented
+        output = ffned + attended
         return output
 
 
@@ -529,7 +529,8 @@ class DeParT(tf.keras.layers.Layer):
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
 
-        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True, name="class_token")
+        self.class_token = tf.Variable(tf.random.truncated_normal(
+            (1, 1, dim), stddev=0.02), trainable=True, name="class_token")
 
     def stochastic_prob(self, step, total_steps, drop_rate):
         return drop_rate * step / total_steps
