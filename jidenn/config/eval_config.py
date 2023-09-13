@@ -24,7 +24,7 @@ class Binning:
             Use `0` for natural logarithm.
     """
     variable: str
-    bins: int
+    bins: Union[int, List[int]]
     max_bin: Union[float, int]
     min_bin: Union[float, int]
     log_bin_base: Optional[int]

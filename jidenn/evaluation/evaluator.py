@@ -145,6 +145,7 @@ def calculate_binned_metrics(df: pd.DataFrame,
 
 def benchmark(func):
     num_gpus = len(tf.config.list_physical_devices("GPU"))
+
     def wrapper(*args, **kwargs):
         [tf.config.experimental.reset_memory_stats(f'GPU:{i}') for i in range(num_gpus)]
         start = time.time()
@@ -154,6 +155,7 @@ def benchmark(func):
         total_time = stop - start
         return ret, total_time, max_memory
     return wrapper
+
 
 @benchmark
 def predict(model: tf.keras.Model, dataset: tf.data.Dataset):
@@ -212,7 +214,9 @@ def evaluate_multiple_models(model_paths: List[str],
         if distribution_drawer is not None:
             log.info(f'----- Drawing data distribution for: {input_type}') if log is not None else None
             distribution_drawer(ds)
-        ds = ds.get_prepared_dataset(batch_size=batch_size, take=take)
+        ds = ds.get_prepared_dataset(batch_size=batch_size,
+                                     ragged=False if input_type == 'gnn' else True,
+                                     take=take)
 
         # iterate over all models with the same input type
         idxs = np.array(model_input_name) == input_type
@@ -231,5 +235,3 @@ def evaluate_multiple_models(model_paths: List[str],
             dataset = add_score_to_dataset(dataset, score, f'{model_name}_{score_name}')
 
     return dataset
-
-

@@ -24,17 +24,19 @@ class BinnedVariable:
             max_val = np.log(binning.max_bin) / \
                 np.log(binning.log_bin_base) if binning.log_bin_base != 0 else np.log(binning.max_bin)
             bins = np.logspace(min_val, max_val,
-                            binning.bins + 1, base=binning.log_bin_base if binning.log_bin_base != 0 else np.e)
-        else:
+                               binning.bins + 1, base=binning.log_bin_base if binning.log_bin_base != 0 else np.e)
+        elif binning.min_bin is not None and binning.max_bin is not None:
             bins = np.linspace(binning.min_bin, binning.max_bin, binning.bins + 1)
+        else:
+            bins = np.array(binning.bins)
         return bins
 
     def _create_intervals(self) -> pd.IntervalIndex:
         return pd.IntervalIndex.from_breaks(self.bins)
 
     def set_values(self, values: Union[List[float], np.ndarray]) -> None:
-        if len(values) != self.binning.bins:
-            raise ValueError(f'Length of thresholds {len(values)} does not match number of bins {self.binning.bins}')
+        # if len(values) != self.binning.bins:
+        #     raise ValueError(f'Length of thresholds {len(values)} does not match number of bins {self.binning.bins}')
         if isinstance(values, list):
             values = np.array(values)
         self._values = values

@@ -138,7 +138,8 @@ def compute_uniform_weights(bin_counts: tf.Tensor) -> tf.Tensor:
     total_events = tf.reduce_sum(bin_counts)
     target_events_per_bin = total_events / tf.cast(tf.shape(bin_counts)[0], dtype=tf.float64)
     bin_weights = target_events_per_bin / bin_counts
-    bin_weights = bin_weights * tf.reduce_sum(bin_counts) / tf.reduce_sum(bin_weights)
+    bin_weights = bin_weights / tf.reduce_sum(bin_weights)
+    bins_weights = bin_weights * total_events
     return bin_weights
 
 

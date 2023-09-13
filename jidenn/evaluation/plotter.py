@@ -221,12 +221,16 @@ def plot_validation_figs(df: pd.DataFrame,
     figure_names = ['roc', 'confusion_matrix', 'score_hist', 'prediction_hist']
 
     for validation_fig, name in zip(figure_classes, figure_names):
-        log.info(f"Generating figure {name}") if log else None
-        val_fig = validation_fig(df, name, class_names=class_names)
-        for fmt, path in zip(formats, format_path):
-            val_fig.save_fig(path, fmt)
-        val_fig.save_data(csv_path)
-        val_fig.to_tensorboard(tb_base_path)
+        try:
+            log.info(f"Generating figure {name}") if log else None
+            val_fig = validation_fig(df, name, class_names=class_names)
+            for fmt, path in zip(formats, format_path):
+                val_fig.save_fig(path, fmt)
+            val_fig.save_data(csv_path)
+            val_fig.to_tensorboard(tb_base_path)
+        except Exception as e:
+            log.error(f"Failed to generate figure {name}: {e}") if log else print(
+                f"Failed to generate figure {name}: {e}")
     plt.close('all')
 
 
@@ -480,18 +484,27 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
     """
 
     for i, metric_name in enumerate(metric_names):
-
+        second_tag = f'13 TeV, {title}' if title is not None else '13 TeV'
+        second_tag += f', 50% WP' if '50wp' in metric_name else ''
+        second_tag += f', 80% WP' if '80wp' in metric_name else ''
+        ylabel = ylabel_mapper[metric_name] if ylabel_mapper is not None and metric_name in ylabel_mapper else metric_name
+        ylabel = ylabel.split('@')[0] + '$' if '@' in ylabel else ylabel
         plot = puma.VarVsVarPlot(
-            ylabel=ylabel_mapper[metric_name] if ylabel_mapper is not None and metric_name in ylabel_mapper else metric_name,
+            ylabel=ylabel,
             xlabel=xlabel,
             logy=False,
             logx=xlog,
-            ymin=ylims[i][0] if ylims is not None else None,
-            ymax=ylims[i][1] if ylims is not None else None,
+            ymin=ylims[i][0] if ylims is not None and ylims[i] is not None else None,
+            ymax=ylims[i][1] if ylims is not None and ylims[i] is not None else None,
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
             figsize=figsize,
-            atlas_second_tag=f'13 TeV \n {title}' if title is not None else '13 TeV',
+            atlas_second_tag=second_tag,
+            atlas_first_tag='Simulation Internal',
             leg_loc=leg_loc,
+            label_fontsize=14,
+            fontsize=12,
+            # atlas_fontsize=12,
+            leg_fontsize=11,
             leg_ncol=2,
         )
 

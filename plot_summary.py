@@ -73,7 +73,7 @@ def compare_ml_models(overall_metrics_path: str,
 
     os.makedirs(save_path, exist_ok=True)
     dfs = [pd.read_csv(path) for path in paths]
-    accuracies = [df['binary_accuracy'].mean() for df in dfs]
+    accuracies = [df['gluon_rejection_at_quark_80wp'].mean() for df in dfs]
     sorted_labels, sorted_dfs, accuracies = zip(*sorted(zip(labels, dfs, accuracies),
                                                         key=lambda x: x[2], reverse=True))
     for label, acc in zip(sorted_labels, accuracies):
@@ -90,7 +90,7 @@ def compare_ml_models(overall_metrics_path: str,
     # ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
     #          [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
     ylims = None
-    reference = 'transformer'
+    reference = 'highway'
     colours = sns.color_palette('coolwarm', len(sorted_labels))
 
     plot_var_dependence(dfs=sorted_dfs,
@@ -99,12 +99,13 @@ def compare_ml_models(overall_metrics_path: str,
                         bin_width_name='bin_width',
                         metric_names=metric_names,
                         save_path=save_path,
-                        ratio_reference_label=MODEL_NAMING_SCHEMA[reference],
-                        xlabel=r'$p_T$ [TeV]',
+                        ratio_reference_label=None,#MODEL_NAMING_SCHEMA[reference],
+                        xlabel=r'$p_T$ [TeV]', 
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
-                        leg_loc='upper center',
+                        figsize=(7, 5),
+                        leg_loc='upper right',
                         colours=colours)
 
 
@@ -128,6 +129,7 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     # args.load_dir = 'logs/stepwise_flat/eval'
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
-    args.model_names = ["idepart", "ipart", "depart",
+    args.model_names = ["idepart", "ipart", "depart", "particle_net",
                         "part", "transformer", "efn", "pfn", "fc", "highway"]
+    # args.model_names = ["idepart", "depart", "particle_net", "pfn", "highway"]
     main(args)

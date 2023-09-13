@@ -48,7 +48,6 @@ class FFN(tf.keras.layers.Layer):
         output = self.wide_dense(inputs)
         output = self.dense(output)
         output = self.layer_dropout(output)
-        output = self.layer_dropout(output)
         return output
 
 

@@ -31,7 +31,7 @@ cs.store(name="args", node=eval_config.EvalConfig)
 @hydra.main(version_base="1.2", config_path="jidenn/yaml_config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
     log = logging.getLogger(__name__)
-    
+
     # GPU logging
     gpus = tf.config.list_physical_devices("GPU")
     if len(gpus) == 0:
@@ -49,7 +49,7 @@ def main(args: eval_config.EvalConfig) -> None:
     variable = args.binning.variable
     log.info(f'Binning in variable: {variable}')
     labels = args.data.labels
-    data_path = os.path.join(args.data.path, args.test_subfolder)
+    data_path = os.path.join(args.data.path, args.test_subfolder) if args.test_subfolder is not None else args.data.path
 
     try:
         if args.cache_scores is None:
@@ -84,7 +84,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                                 take=args.take,
                                                 distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
                                                 )
-        
+
         variables = [f'{model}_score' for model in args.model_names] + [variable]
         variables += [args.data.weight] if args.data.weight is not None else []
         log.info('Converting to pandas')
@@ -99,11 +99,16 @@ def main(args: eval_config.EvalConfig) -> None:
             np.log(args.binning.log_bin_base) if args.binning.log_bin_base != 0 else np.log(args.binning.max_bin)
         bins = np.logspace(min_val, max_val,
                            args.binning.bins + 1, base=args.binning.log_bin_base if args.binning.log_bin_base != 0 else np.e)
-    else:
+    elif args.binning.min_bin is not None and args.binning.max_bin is not None:
         bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins + 1)
-
-    df = df[df[args.binning.variable] < args.binning.max_bin]
-    df = df[df[args.binning.variable] > args.binning.min_bin]
+        df = df[df[args.binning.variable] < args.binning.max_bin]
+        df = df[df[args.binning.variable] > args.binning.min_bin]
+    else:
+        bins = np.array(args.binning.bins)
+        df = df[df[args.binning.variable] < bins[-1]]
+        df = df[df[args.binning.variable] > bins[0]]
+        
+    print(df)
     log.info(f'Using {len(df)} events for evaluation after binning cuts')
     overall_metrics = pd.DataFrame()
     dfs = []
@@ -187,7 +192,7 @@ def main(args: eval_config.EvalConfig) -> None:
     latex_metrics = latex_metrics.rename(columns=METRIC_NAMING_SCHEMA, index=MODEL_NAMING_SCHEMA)
     latex_metrics = latex_metrics.reset_index()
     latex_metrics.to_latex(buf=f'{args.logdir}/overall_metrics.tex', float_format="{:.4f}".format,
-                           column_format='l' + 'c' * (len(latex_metrics.columns) - 1), label='results', index=False,
+                           column_format='l' + 'c' * (len(latex_metrics.columns) - 1), label='tab:results', index=False,
                            escape=False, caption="Results of the different models. The best results are highlighted in bold.")
     log.info('Overall metrics for all models:')
     log.info(overall_metrics)
