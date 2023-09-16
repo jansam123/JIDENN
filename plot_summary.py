@@ -103,7 +103,7 @@ def compare_ml_models(overall_metrics_path: str,
                         metric_names=metric_names,
                         save_path=save_path,
                         ratio_reference_label=None,#MODEL_NAMING_SCHEMA[reference],
-                        xlabel=LATEX_NAMING_CONVENTION[x_var]
+                        xlabel=LATEX_NAMING_CONVENTION[x_var],
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
