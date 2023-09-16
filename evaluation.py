@@ -8,6 +8,7 @@ from multiprocessing import Pool
 from hydra.core.config_store import ConfigStore
 import seaborn as sns
 from functools import partial
+from sklearn.metrics import roc_curve
 #
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.config import eval_config
@@ -46,8 +47,8 @@ def main(args: eval_config.EvalConfig) -> None:
     log.info(f"System Config: {system_config}")
 
     log.info(f'Using models: {args.model_names}')
-    variable = args.binning.variable
-    log.info(f'Binning in variable: {variable}')
+    binning_variables = args.binning.variable
+    log.info(f'Binning in variable: {binning_variables}')
     labels = args.data.labels
     data_path = os.path.join(args.data.path, args.test_subfolder) if args.test_subfolder is not None else args.data.path
 
@@ -56,6 +57,8 @@ def main(args: eval_config.EvalConfig) -> None:
             raise FileNotFoundError
         df = pd.read_csv(os.path.join(args.logdir, args.cache_scores))
         log.info(f'Using cached scores from {args.logdir}/{args.cache_scores}')
+        if 'jets_eta' in df.columns:
+            df['jets_eta'] = df['jets_eta'].abs()
     except FileNotFoundError:
         log.warning(f"No cached scores found at '{args.logdir}/{args.cache_scores}'. Calculating scores.")
         log.info('Evaluating models')
@@ -85,12 +88,20 @@ def main(args: eval_config.EvalConfig) -> None:
                                                 distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
                                                 )
 
-        variables = [f'{model}_score' for model in args.model_names] + [variable]
+        variables = [f'{model}_score' for model in args.model_names]
+        try:
+            variables += binning_variables
+        except TypeError:
+            variables += [binning_variables]
         variables += [args.data.weight] if args.data.weight is not None else []
         log.info('Converting to pandas')
         df = full_dataset.to_pandas(variables=variables)
         df = df.rename(columns={args.data.weight: 'weight'}) if args.data.weight is not None else df
         df.to_csv(os.path.join(args.logdir, args.cache_scores)) if args.cache_scores is not None else None
+    ##########################################################################################################################################
+
+    
+    binning_variable = binning_variables if isinstance(binning_variables, str) else binning_variables[0]
 
     if args.binning.log_bin_base is not None:
         min_val = np.log(args.binning.min_bin) / \
@@ -101,13 +112,13 @@ def main(args: eval_config.EvalConfig) -> None:
                            args.binning.bins + 1, base=args.binning.log_bin_base if args.binning.log_bin_base != 0 else np.e)
     elif args.binning.min_bin is not None and args.binning.max_bin is not None:
         bins = np.linspace(args.binning.min_bin, args.binning.max_bin, args.binning.bins + 1)
-        df = df[df[args.binning.variable] < args.binning.max_bin]
-        df = df[df[args.binning.variable] > args.binning.min_bin]
+        df = df[df[binning_variable] < args.binning.max_bin]
+        df = df[df[binning_variable] > args.binning.min_bin]
     else:
         bins = np.array(args.binning.bins)
-        df = df[df[args.binning.variable] < bins[-1]]
-        df = df[df[args.binning.variable] > bins[0]]
-        
+        df = df[df[binning_variable] < bins[-1]]
+        # df = df[df[binning_variable] > bins[0]]
+
     print(df)
     log.info(f'Using {len(df)} events for evaluation after binning cuts')
     overall_metrics = pd.DataFrame()
@@ -117,7 +128,12 @@ def main(args: eval_config.EvalConfig) -> None:
         log.warning('Validation plots in bins are not supported with multithreading. Disabling validation plots in bins.')
         args.validation_plots_in_bins = False
 
+    tprs = []
+    fprs = []
     for model_name in args.model_names:
+        tpr, fpr, _ = roc_curve(df['label'], df[f'{model_name}_score'], sample_weight=df['weight'] if args.data.weight is not None else None)
+        tprs.append(tpr)
+        fprs.append(fpr)
 
         if args.working_point_path is not None and args.working_point_file_name is not None:
             # threshold = pd.read_csv(f'{args.threshold_path}/{model_name}/{args.threshold_file_name}')
@@ -157,7 +173,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                  score_name=f'{model_name}_score',
                                  class_names=labels)
         model_df = calculate_binned_metrics(df=df,
-                                            binned_variable=args.binning.variable,
+                                            binned_variable=binning_variable,
                                             score_variable=f'{model_name}_score',
                                             weights_variable=args.data.weight,
                                             bins=bins,
@@ -168,7 +184,7 @@ def main(args: eval_config.EvalConfig) -> None:
 
         os.makedirs(f'{args.logdir}/models/{model_name}', exist_ok=True)
 
-        if variable == 'jets_pt':
+        if binning_variables == 'jets_pt':
             model_df['bin_mid'] = model_df['bin'].apply(lambda x: x.mid * 1e-6)
             model_df['bin_width'] = model_df['bin'].apply(lambda x: x.length * 1e-6)
         else:
@@ -211,7 +227,7 @@ def main(args: eval_config.EvalConfig) -> None:
                         metric_names=args.metrics_to_plot,
                         ylims=args.ylims,
                         xlog=args.binning.log_bin_base is not None,
-                        xlabel=LATEX_NAMING_CONVENTION[variable],
+                        xlabel=LATEX_NAMING_CONVENTION[binning_variable],
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         save_path=f'{args.logdir}/compare_models',
                         colours=sorted_colours,

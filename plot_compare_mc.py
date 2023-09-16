@@ -26,22 +26,22 @@ parser.add_argument("--compare_mc", default=False, type=bool,
 
 def main(args: argparse.Namespace):
 
-    # [plot_var_dependence(dfs=[pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv')) for dir in args.load_dirs],
-    #                      labels=[MC_NAMING_SCHEMA[label] for label in  args.labels],
-    #                      bin_midpoint_name='bin_mid',
-    #                      bin_width_name='bin_width',
-    #                      metric_names=args.metric_names,
-    #                      save_path=os.path.join(args.save_dir, 'models', f'{model}'),
-    #                      ratio_reference_label=MC_NAMING_SCHEMA[args.reference],
-    #                      xlabel=r'$p_T$ [TeV]',
-    #                      ylabel_mapper=METRIC_NAMING_SCHEMA,
-    #                      ylims=args.ylims1,
-    #                      figsize=(8, 6),
-    #                      xlog=args.xlog,
-    #                      h_line_position=[None, 0.5, None],
-    #                      leg_loc='upper right',
-    #                      title=f'{MODEL_NAMING_SCHEMA[model]}, {args.wp} WP',
-    #                      colours=sns.color_palette("Set1", len(args.labels))) for model in args.model_names]
+    [plot_var_dependence(dfs=[pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv')) for dir in args.load_dirs],
+                         labels=[MC_NAMING_SCHEMA[label] for label in args.labels],
+                         bin_midpoint_name='bin_mid',
+                         bin_width_name='bin_width',
+                         metric_names=args.metric_names,
+                         save_path=os.path.join(args.save_dir, 'models', f'{model}'),
+                         ratio_reference_label=MC_NAMING_SCHEMA[args.reference],
+                         xlabel=r'$p_T$ [TeV]',
+                         ylabel_mapper=METRIC_NAMING_SCHEMA,
+                         ylims=args.ylims1,
+                         figsize=(8, 6),
+                         xlog=args.xlog,
+                         h_line_position=[None, args.wp_val, None],
+                         leg_loc='upper right',
+                         title=f'{MODEL_NAMING_SCHEMA[model]}, {args.wp} WP',
+                         colours=sns.color_palette("Set1", len(args.labels))) for model in args.model_names]
 
     for metric in ['quark_efficiency', 'gluon_rejection']:
         df_big = pd.DataFrame()
@@ -65,32 +65,34 @@ def main(args: argparse.Namespace):
             labels, dfs = zip(*sorted(zip(args.model_names, dfs), key=lambda x: acc_sorted_models.get_loc(x[0])))
             labels = [MODEL_NAMING_SCHEMA[model] for model in labels]
 
-            # plot_var_dependence(dfs=dfs,
-            #                     labels=labels,
-            #                     bin_midpoint_name='bin_mid',
-            #                     bin_width_name='bin_width',
-            #                     metric_names=['diff', 'ratio'],
-            #                     save_path=os.path.join(args.save_dir, 'MCs', f'{label}', metric),
-            #                     ratio_reference_label=None,
-            #                     xlabel=r'$p_T$ [TeV]',
-            #                     ylabel_mapper={'diff': f'Difference fromn Pythia', 'ratio': f'Ratio'},
-            #                     ylims=args.ylims2,
-            #                     # ylims = None,
-            #                     xlog=args.xlog,
-            #                     figsize=(10, 4),
-            #                     h_line_position=[0.0, 1.0],
-            #                     leg_loc='upper center',
-            #                     title=label,
-            #                     colours=sns.color_palette("coolwarm", len(args.model_names)))
+            plot_var_dependence(dfs=dfs,
+                                labels=labels,
+                                bin_midpoint_name='bin_mid',
+                                bin_width_name='bin_width',
+                                metric_names=['diff', 'ratio'],
+                                save_path=os.path.join(args.save_dir, 'MCs', f'{label}', metric),
+                                ratio_reference_label=None,
+                                xlabel=r'$p_T$ [TeV]',
+                                ylabel_mapper={'diff': f'Difference fromn Pythia', 'ratio': f'Ratio'},
+                                ylims=args.ylims2,
+                                # ylims = None,
+                                xlog=args.xlog,
+                                figsize=(10, 4),
+                                h_line_position=[0.0, 1.0],
+                                leg_loc='upper center',
+                                title=f'{args.wp}, {MC_NAMING_SCHEMA[label]}',
+                                colours=sns.color_palette("coolwarm", len(args.model_names)))
 
         # df_had_difff =
 
         def calc_diff(df_big):
             df = pd.DataFrame()
             df['had_diff'] = (df_big[df_big['mc'] == 'sherpa'][metric] - df_big[df_big['mc'] ==
-                             'sherpa_lund'][metric]) / df_big[df_big['mc'] == 'pythia'][metric]
+                                                                                'sherpa_lund'][metric]) / df_big[df_big['mc'] == 'pythia'][metric]
             df['ps_diff'] = (df_big[df_big['mc'] == 'herwig7'][metric] - df_big[df_big['mc'] ==
                              'herwig7_dipole'][metric]) / df_big[df_big['mc'] == 'pythia'][metric]
+            df['ps_diff_sherpa'] = (df_big[df_big['mc'] == 'sherpa'][metric] - df_big[df_big['mc'] ==
+                                                                                      'sherpa_dire'][metric]) / df_big[df_big['mc'] == 'pythia'][metric]
             return df
 
         df_diff = df_big.copy()[['model', 'bin_mid', 'bin_width', 'mc', metric]].groupby(
@@ -123,7 +125,8 @@ def main(args: argparse.Namespace):
                             labels=labels,
                             bin_midpoint_name='bin_mid',
                             bin_width_name='bin_width',
-                            metric_names=['ratio_mean', 'diff_mean', 'ratio_max', 'diff_max', 'had_diff', 'ps_diff'],
+                            metric_names=['ratio_mean', 'diff_mean', 'ratio_max',
+                                          'diff_max', 'had_diff', 'ps_diff', 'ps_diff_sherpa'],
                             save_path=os.path.join(args.save_dir, 'envelope', metric),
                             ratio_reference_label=None,
                             xlabel=r'$p_T$ [TeV]',
@@ -133,13 +136,16 @@ def main(args: argparse.Namespace):
                                            'diff_max': r'Envelope of models, max $\left(' + model_label + r' - ' + py_label + r'\right)$',
                                            'had_diff': f'{diff_label} difference, (Cluster - String Had.) / Pythia',
                                            'ps_diff': f'{diff_label} difference, (Ang. ord. - Dipole PS) / Pythia',
+                                           'ps_diff_sherpa': f'{diff_label} difference, (CSS (dipole) - DIRE PS) / Pythia'
                                            },
-                            h_line_position=[None, None, None, None, 0.0, 0.0],
+                            h_line_position=[None, None, None, None, 0.0, 0.0, 0.0],
                             xlog=args.xlog,
                             figsize=(7, 5),
-                            ylims=[None, None, None, None, (-0.16, 0.16), (-0.16, 0.16)] if metric == 'quark_efficiency' else [None, None, (0.2, 0.8), None, (-0.25,0.25), (-0.01,0.65)],
+                            ylims=[None, None, (0.03, 0.2), None, (-0.16, 0.16), (-0.16, 0.16), None] if metric == 'quark_efficiency' else [
+                                None, None, (0.1, 0.8), None, (-0.25, 0.25), (-0.2, 0.7), None],
                             leg_loc='upper right',
-                            title=f'{args.wp} WP',
+                            title=[f'{args.wp} WP', f'{args.wp} WP', f'{args.wp} WP', f'{args.wp} WP',
+                                   f'{args.wp} WP, Sherpa2.2.5', f'{args.wp} WP, Herwig7', f'{args.wp} WP, Sherpa2.2.11'],
                             colours=sns.color_palette("coolwarm", len(args.model_names)))
 
         df_big = df_big[['mc', 'model', metric]]
@@ -166,25 +172,36 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
 
     # mc comparison
-    load_dir = '/home/jankovys/JIDENN/logs/pythia_Wflat_JZ10/evaluation/50wp'
-    args.save_dir = '/home/jankovys/JIDENN/logs/pythia_Wflat_JZ10/evaluation/50wp/comparison'
-    args.mc_names = ['pythia', 'herwig7_dipole', 'sherpa_dire', 'herwig7',
-                     'sherpa_enh_cluster_tune', 'sherpa', 'sherpa_lund', 'powheg+pythia',
-                     'powheg+herwig7']
-    args.load_dirs = ['Pythia8EvtGen_A14NNPDF23LO_jetjet', 'H7EG_jetjet_Cluster_dipole', 'Sh_2211_jj_DIRE', 'H7EG_jetjet_Cluster',
-                      'Sh_2211_Enh_clusterTune', 'Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 'Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets',
-                      'PhPy8EG_jj', 'PhH7EG_jj']
-    args.load_dirs = [os.path.join(load_dir, mc) for mc in args.load_dirs]
-    args.labels = args.mc_names
-    args.model_names = ["idepart", "ipart", "depart", "particle_net",
-                        "part", "transformer", "efn", "pfn", "fc", "highway"]
-    args.metric_names = ["gluon_rejection", "quark_efficiency", 'gluon_efficiency']
-    args.reference = 'pythia'
-    args.ref_dir = os.path.join(load_dir, 'Pythia8EvtGen_A14NNPDF23LO_jetjet')
-    args.ylims1 = [(5, 40), (0.1, 1.), (0.1, 1.)]
-    args.ylims2 = [(-0.1, 0.175), (0.7, 1.3)]
-    args.xlog = False
-    args.wp = '50%'
+    # wp = '50'
+    for wp_val in [0.8, 0.5]:
+        print(wp_val)
+        args.wp_val = wp_val
+        wp = str(int(wp_val * 100))
+        args.wp = wp
+        load_dir = f'/home/jankovys/JIDENN/logs/pythia_Wflat_JZ10/evaluation/{wp}wp'
+        args.save_dir = f'/home/jankovys/JIDENN/logs/pythia_Wflat_JZ10/evaluation/{wp}wp/comparison'
+        args.mc_names = ['pythia', 'herwig7_dipole', 'sherpa_dire', 'herwig7',
+                         'sherpa_enh_cluster_tune', 'sherpa', 'sherpa_lund', 'powheg+pythia',
+                         'powheg+herwig7']
+        args.load_dirs = ['Pythia8EvtGen_A14NNPDF23LO_jetjet', 'H7EG_jetjet_Cluster_dipole', 'Sh_2211_jj_DIRE', 'H7EG_jetjet_Cluster',
+                          'Sh_2211_Enh_clusterTune', 'Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 'Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets',
+                          'PhPy8EG_jj', 'PhH7EG_jj']
+        args.load_dirs = [os.path.join(load_dir, mc) for mc in args.load_dirs]
+        args.labels = args.mc_names
+        args.model_names = ["idepart", "ipart", "depart", "particle_net",
+                            "part", "transformer", "efn", "pfn", "fc", "highway"]
+        args.metric_names = ["gluon_rejection", "quark_efficiency", 'gluon_efficiency']
+        args.reference = 'pythia'
+        args.ref_dir = os.path.join(load_dir, 'Pythia8EvtGen_A14NNPDF23LO_jetjet')
+        if wp == '50':
+            args.ylims1 = [(5, 40), (0.1, 1.), (0.4, 1.)]
+            args.ylims2 = [(-0.1, 0.175), (0.7, 1.3)]
+        else:
+            args.ylims1 = [(2, 7), (0.6, 1.), (0.4, 1.)]
+            args.ylims2 = [(-0.1, 0.175), (0.7, 1.3)]
+        args.xlog = False
+        args.wp = f'{wp}%'
+        main(args)
 
     # pt init dist comparison
     # args.labels = ['flat', 'log flat', 'weight flat']
@@ -199,5 +216,3 @@ if __name__ == "__main__":
     # args.ylims1 = None
     # args.ylims2 = None
     # args.xlog = False
-
-    main(args)

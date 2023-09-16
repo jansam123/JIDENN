@@ -25,6 +25,8 @@ parser.add_argument("--model_names", nargs='*', type=str,
                     help="names of the models.")
 parser.add_argument("--save_dir", default=".", type=str,
                     help="Directory to save the plots to.")
+parser.add_argument("--var", default="jets_pt", type=str,
+                    help="Variable to plot.")
 parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 parser.add_argument("--compare_mc", default=False, type=bool,
                     help="Compare MC models.")
@@ -69,7 +71,8 @@ def plot_metric(df: pd.DataFrame,
 def compare_ml_models(overall_metrics_path: str,
                       paths: List[str],
                       labels: List[str],
-                      save_path: str,):
+                      save_path: str,
+                      x_var = 'jets_pt',):
 
     os.makedirs(save_path, exist_ok=True)
     dfs = [pd.read_csv(path) for path in paths]
@@ -100,7 +103,7 @@ def compare_ml_models(overall_metrics_path: str,
                         metric_names=metric_names,
                         save_path=save_path,
                         ratio_reference_label=None,#MODEL_NAMING_SCHEMA[reference],
-                        xlabel=r'$p_T$ [TeV]', 
+                        xlabel=LATEX_NAMING_CONVENTION[x_var]
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
@@ -122,7 +125,8 @@ def main(args: argparse.Namespace):
     compare_ml_models(overall_metrics_path=overall_metrics_path,
                       paths=paths,
                       labels=args.model_names,
-                      save_path=args.save_dir)
+                      save_path=args.save_dir,
+                      x_var=args.var)
 
 
 if __name__ == "__main__":

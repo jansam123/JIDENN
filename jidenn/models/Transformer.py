@@ -111,6 +111,12 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
 
         self.ffn_ln = tf.keras.layers.LayerNormalization()
         self.ffn = FFN(dim, expansion, activation, dropout)
+    
+    def get_config(self):
+        config = super(SelfAttentionBlock, self).get_config()
+        config.update({"dim": self.dim, "heads": self.heads, "expansion": self.expansion,
+                      "activation": self.activation, "dropout": self.dropout})
+        return config
 
     def call(self, inputs: tf.Tensor, mask: tf.Tensor) -> tf.Tensor:
         """Forward pass of the self-attention block

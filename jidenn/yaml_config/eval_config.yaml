@@ -25,26 +25,26 @@ data:
     - [1, 2, 3, 4, 5, 6]
   variable_unknown_labels: [-1, -999]
   label_weights:
-  cut: 
+  cut: (jets_eta<2.1) && (jets_eta>-2.1)
   weight: weight
 
 logdir: logs/stepwise_flat/eval
 models_path: logs/stepwise_flat
 cache_scores: score_dataset.csv
 seed: 42
-draw_distribution: 2_000
+draw_distribution: 1_124_739
 test_subfolder: test
 batch_size: 512
 take: 1_124_739
 binning:
-  variable: jets_pt
-  bins: [200000, 300000, 400000, 600000, 850000, 1100000, 1400000, 1750000, 2120000, 2500000]
+  variable: ['jets_pt', 'jets_eta', 'JZ_slice', 'corrected_averageInteractionsPerCrossing']
+  bins: [200000, 300000, 400000, 600000, 850000, 1100000, 1400000, 1750000, 2500000]
   max_bin: 
   min_bin:
   log_bin_base: 
 metrics_to_plot:
   [
-    "gluon_efficiency",
+    "gluon_efficiency", 
     "quark_efficiency",
     "binary_accuracy",
     "auc",

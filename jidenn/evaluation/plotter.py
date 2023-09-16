@@ -447,7 +447,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         bin_width_name: str,
                         metric_names: List[str],
                         save_path: str,
-                        title: str = None,
+                        title: Union[str, List[str]] = None,
                         ratio_reference_label: Optional[str] = None,
                         xlabel: Optional[str] = None,
                         ylabel_mapper: Optional[Dict[str, str]] = None,
@@ -484,7 +484,10 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
     """
 
     for i, metric_name in enumerate(metric_names):
-        second_tag = f'13 TeV, {title}' if title is not None else '13 TeV'
+        if isinstance(title, list):
+            second_tag = f'13 TeV, {title[i]}' if title is not None else '13 TeV'
+        else:
+            second_tag = f'13 TeV, {title}' if title is not None else '13 TeV'
         second_tag += f', 50% WP' if '50wp' in metric_name else ''
         second_tag += f', 80% WP' if '80wp' in metric_name else ''
         ylabel = ylabel_mapper[metric_name] if ylabel_mapper is not None and metric_name in ylabel_mapper else metric_name

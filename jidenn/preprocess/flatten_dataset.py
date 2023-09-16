@@ -83,9 +83,58 @@ def get_filter_ragged_values_fn(reference_variable: str = 'jets_PartonTruthLabel
     return _filter_unwanted_ragged_values_fn
 
 
+def get_filter_ragged_cut(variable: str = 'jets_eta',
+                          upper_cut: float = 2.5,
+                          lower_cut: float = -2.5,
+                          key_phrase: str = 'jets') -> Callable[[ROOTVariables], ROOTVariables]:
+    """Get a function that filters out unwanted values from a ROOTVariables dictionary containg a RaggedTensor. The
+    intended use is to use this function in a tf.data.Dataset.map call to filter out unwanted values from a dataset.
+    the `get_filter_empty_fn` function should be used after this function to filter out empty events.
+
+    Args:
+        reference_variable (str, optional): The variable whose values to filter. Defaults to 'jets_PartonTruthLabelID'.
+        wanted_values (List[int], optional): The values to keep. Defaults to [1, 2, 3, 4, 5, 6, 21].
+
+    Returns:
+        Callable[[ROOTVariables], ROOTVariables]: A function that filters out unwanted values from a ROOTVariables
+    """
+    # lower_cut = tf.broadcast_to(lower_cut, [])
+    # if upper_cut is not None and lower_cut is not None:
+    #     @tf.function
+    #     def cut_fn(x):
+    #         return 
+    # elif upper_cut is not None:
+    #     @tf.function
+    #     def cut_fn(x):
+    #         return tf.math.greater(x, lower_cut)
+    # elif lower_cut is not None:
+    #     @tf.function
+    #     def cut_fn(x):
+    #         return tf.math.less(x, upper_cut)
+    # else:
+    #     raise ValueError('Both upper_cut and lower_cut cannot be None')
+
+    @tf.function
+    def _filter_unwanted_ragged_cut_fn(sample: ROOTVariables) -> ROOTVariables:
+        sample = sample.copy()
+        reference_tensor = sample[variable]
+        mask = tf.math.logical_and(tf.math.greater(reference_tensor, lower_cut), tf.math.less(reference_tensor, upper_cut))
+        for key, item in sample.items():
+            if item.shape.num_elements() == 0 or item.shape.num_elements() == 1:
+                continue
+            if key_phrase in key:
+                sample[key] = tf.ragged.boolean_mask(item, mask)
+        return sample
+    return _filter_unwanted_ragged_cut_fn
+
+
 def flatten_dataset(dataset: tf.data.Dataset,
                     reference_variable: str = 'jets_PartonTruthLabelID',
-                    wanted_values: Optional[List[int]] = None) -> tf.data.Dataset:
+                    wanted_values: Optional[List[int]] = None,
+                    key_phrase: str = 'jets',
+                    variable: Optional[str] = None,
+                    upper_cut: Optional[float] = None,
+                    lower_cut: Optional[float] = None,) -> tf.data.Dataset:
     """Apply a series of transformations to a tf.data.Dataset to flatten it. The flattening is done by the reference
     variable, which is assumed to be a tf.RaggedTensor. The shape of the reference variable is used to infer the shape
     of the other variables. The other variables are tiled to match the shape of the reference variable. The dataset is
@@ -106,12 +155,20 @@ def flatten_dataset(dataset: tf.data.Dataset,
         return (
             dataset
             .filter(get_filter_empty_fn(reference_variable))
-            .interleave(get_ragged_to_dataset_fn(reference_variable))
+            .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
+        )
+    elif variable is None and upper_cut is None and lower_cut is None:
+        return (
+            dataset
+            .map(get_filter_ragged_values_fn(reference_variable, wanted_values, key_phrase))
+            .filter(get_filter_empty_fn(reference_variable))
+            .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
         )
     else:
         return (
             dataset
-            .map(get_filter_ragged_values_fn(reference_variable, wanted_values))
+            .map(get_filter_ragged_cut(variable, upper_cut, lower_cut, key_phrase))
+            .map(get_filter_ragged_values_fn(reference_variable, wanted_values, key_phrase))
             .filter(get_filter_empty_fn(reference_variable))
-            .interleave(get_ragged_to_dataset_fn(reference_variable))
+            .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
         )

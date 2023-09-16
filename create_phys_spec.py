@@ -23,7 +23,8 @@ parser.add_argument("--take", type=int, default=200_000, help="Number of jets to
 parser.add_argument("--num_shards", type=int, default=256, required=False,
                     help="Number of shards to save the dataset in")
 parser.add_argument("--min_jz", type=int, default=2, help="Maximum JZ to use")
-parser.add_argument("--max_jz", type=int, default=10, help="Maximum JZ to use")
+parser.add_argument("--max_jz", type=int, default=7, help="Maximum JZ to use")
+parser.add_argument("--eta_cut", type=float, default=2.1, help="Eta cut")
 parser.add_argument("--dataset_type", type=str, default='test', help="train/dev/test")
 parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
                     help="Variable to use as reference for flattening")
@@ -103,7 +104,7 @@ def main(args: argparse.Namespace) -> None:
                                           file_labels=weight_info, weights=sampling_weights)
     dataset = dataset.take(args.take)
     dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
-                                    wanted_values=args.wanted_values))
+                                    wanted_values=args.wanted_values, variable='jets_eta', lower_cut=-args.eta_cut, upper_cut=args.eta_cut))
     # dataset = dataset.filter(lambda x: tf.random.uniform([]) < TAKE_FRAC)
 
     dataset = dataset.apply(lambda x: x.shuffle(args.shuffle).prefetch(tf.data.AUTOTUNE))
@@ -142,6 +143,13 @@ def main(args: argparse.Namespace) -> None:
                                  bins=100,
                                  multiple='stack',
                                  hue_variable='jets_PartonTruthLabelID')
+
+    dataset.plot_single_variable('weight',
+                                 save_path=os.path.join(args.save_path, 'weight.png'),
+                                 ylog=True,
+                                 bins=100,
+                                 multiple='stack',
+                                 hue_variable='JZ_slice')
 
 
 if __name__ == "__main__":

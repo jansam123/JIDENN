@@ -211,7 +211,7 @@ def evaluate_multiple_models(model_paths: List[str],
         train_input_class = train_input_class()
         model_input = tf.function(func=train_input_class)
         ds = dataset.remap_data(model_input)
-        if distribution_drawer is not None:
+        if distribution_drawer is not None and input_type != 'interaction_constituents':
             log.info(f'----- Drawing data distribution for: {input_type}') if log is not None else None
             distribution_drawer(ds)
         ds = ds.get_prepared_dataset(batch_size=batch_size,
