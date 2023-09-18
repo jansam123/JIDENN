@@ -37,8 +37,8 @@ data:
     - [1, 2, 3, 4, 5, 6]
   variable_unknown_labels: [-1, -999]
   label_weights:
-  cut: jets_pt<4600000
-  weight: weight_spectrum/10000
+  cut: jets_pt<2500000
+  weight: #weight_spectrum/10000
 
 optimizer:
   name: LAMB # Optimizer to use, options: Adam, LAMB, Lion.

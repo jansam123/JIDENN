@@ -48,19 +48,22 @@ def main(args: argparse.Namespace):
         overall_metrics = pd.read_csv(os.path.join(args.ref_dir, 'overall_metrics.csv'), index_col=0)
         acc_sorted_models = overall_metrics.sort_values(by='binary_accuracy', ascending=False).index
 
-        for label, dir in zip(args.labels, args.load_dirs):
-            dfs = []
-            for model in args.model_names:
-                ref_df = pd.read_csv(os.path.join(args.ref_dir, 'models', f'{model}', 'binned_metrics.csv'))
-                if model == args.reference:
-                    continue
-                df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
-                df['ratio'] = df[metric] / ref_df[metric]
-                df['diff'] = ref_df[metric] - df[metric]
-                dfs.append(df)
-                df['mc'] = label
-                df['model'] = model
-                df_big = pd.concat([df_big, df])
+    overall_metrics = pd.read_csv(os.path.join(args.ref_dir, 'overall_metrics.csv'), index_col=0)
+    acc_sorted_models = overall_metrics.sort_values(by='binary_accuracy', ascending=False).index
+
+    for label, dir in zip(args.labels, args.load_dirs):
+        dfs = []
+        for model in args.model_names:
+            ref_df = pd.read_csv(os.path.join(args.ref_dir, 'models', f'{model}', 'binned_metrics.csv'))
+            if model == args.reference:
+                continue
+            df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
+            df['ratio'] = df[metric] / ref_df[metric]
+            df['diff'] = ref_df[metric] - df[metric]
+            dfs.append(df)
+            df['mc'] = label
+            df['model'] = model
+            df_big = pd.concat([df_big, df])
 
             labels, dfs = zip(*sorted(zip(args.model_names, dfs), key=lambda x: acc_sorted_models.get_loc(x[0])))
             labels = [MODEL_NAMING_SCHEMA[model] for model in labels]
@@ -125,6 +128,7 @@ def main(args: argparse.Namespace):
                             labels=labels,
                             bin_midpoint_name='bin_mid',
                             bin_width_name='bin_width',
+<<<<<<< HEAD
                             metric_names=['ratio_mean', 'diff_mean', 'ratio_max',
                                           'diff_max', 'had_diff', 'ps_diff', 'ps_diff_sherpa'],
                             save_path=os.path.join(args.save_dir, 'envelope', metric),
@@ -139,6 +143,15 @@ def main(args: argparse.Namespace):
                                            'ps_diff_sherpa': f'{diff_label} difference, (CSS (dipole) - DIRE PS) / Pythia'
                                            },
                             h_line_position=[None, None, None, None, 0.0, 0.0, 0.0],
+=======
+                            metric_names=['diff', 'ratio'],
+                            save_path=os.path.join(args.save_dir, 'MCs', f'{label}'),
+                            ratio_reference_label=None,
+                            xlabel=r'$p_T$ [TeV]',
+                            ylabel_mapper={'diff': f'Difference fromn Pythia', 'ratio': f'Ratio'},
+                            ylims=args.ylims2,
+                            # ylims = None,
+>>>>>>> e15fb54 (hm)
                             xlog=args.xlog,
                             figsize=(7, 5),
                             ylims=[None, None, (0.03, 0.2), None, (-0.16, 0.16), (-0.16, 0.16), None] if metric == 'quark_efficiency' else [
@@ -148,6 +161,7 @@ def main(args: argparse.Namespace):
                                    f'{args.wp} WP, Sherpa2.2.5', f'{args.wp} WP, Herwig7', f'{args.wp} WP, Sherpa2.2.11'],
                             colours=sns.color_palette("coolwarm", len(args.model_names)))
 
+<<<<<<< HEAD
         df_big = df_big[['mc', 'model', metric]]
         df_big = df_big.groupby(['mc', 'model']).mean().reset_index()
         df_big['model'] = df_big['model'].map(MODEL_NAMING_SCHEMA)
@@ -157,6 +171,48 @@ def main(args: argparse.Namespace):
         ax = sns.histplot(data=df_big, hue='MC Sample', x='Deep Learning Model',
                           multiple='dodge', palette='Set1', weights=metric,
                           shrink=.8, hue_order=[MC_NAMING_SCHEMA[mc] for mc in args.mc_names])
+=======
+    df_en = df_big.copy()[['model', 'bin_mid', 'bin_width', 'ratio', 'diff']]
+    df_en['ratio'] = (df_en['ratio'] - 1).abs()
+    df_en['diff'] = df_en['diff'].abs()
+
+    df_envel = df_en.groupby(['model', 'bin_mid', 'bin_width']).mean().reset_index()
+    df_envel = df_envel.rename(columns={'ratio': 'ratio_mean', 'diff': 'diff_mean'})
+
+    df_envel2 = df_en.groupby(['model', 'bin_mid', 'bin_width']).max().reset_index()
+    df_envel2 = df_envel2.rename(columns={'ratio': 'ratio_max', 'diff': 'diff_max'})
+
+    df_envel = df_envel.merge(df_envel2, on=['model', 'bin_mid', 'bin_width'])
+    dfs_eval = []
+    labels = []
+    for model in df_envel['model'].unique():
+        df = df_envel[df_envel['model'] == model]
+        labels.append(model)
+        dfs_eval.append(df)
+
+    labels, dfs_eval = zip(*sorted(zip(labels, dfs_eval), key=lambda x: acc_sorted_models.get_loc(x[0])))
+    labels = [MODEL_NAMING_SCHEMA[model] for model in labels]
+    plot_var_dependence(dfs=dfs_eval,
+                        labels=labels,
+                        bin_midpoint_name='bin_mid',
+                        bin_width_name='bin_width',
+                        metric_names=['ratio_mean', 'diff_mean', 'ratio_max', 'diff_max'],
+                        save_path=os.path.join(args.save_dir, 'envelope'),
+                        ratio_reference_label=None,
+                        xlabel=r'$p_T$ [TeV]',
+                        ylabel_mapper={'ratio_mean': r'mean $\left(\frac{\varepsilon^{-1}_{g,\mathrm{model}}}{\varepsilon^{-1}_{g,\mathrm{Pythia}}}\right)$',
+                                       'diff_mean': r'mean $\left(\varepsilon^{-1}_{g,\mathrm{model}} - \varepsilon^{-1}_{g,\mathrm{Pythia}}\right)$',
+                                       'ratio_max': r'max $\left(\frac{\varepsilon^{-1}_{g,\mathrm{model}}}{\varepsilon^{-1}_{g,\mathrm{Pythia}}}\right)$',
+                                       'diff_max': r'max $\left(\varepsilon^{-1}_{g,\mathrm{model}} - \varepsilon^{-1}_{g,\mathrm{Pythia}}\right)$',
+                                       },
+                        ylims=None,
+                        xlog=args.xlog,
+                        figsize=(7, 5),
+                        h_line_position=None,
+                        leg_loc='upper right',
+                        # title='Envelope',
+                        colours=sns.color_palette("coolwarm", len(args.model_names)))
+>>>>>>> e15fb54 (hm)
 
         ax.legend_.set_title(None)
         plt.ylim(0., 0.8)

@@ -68,8 +68,8 @@ def compare_ml_models(overall_metrics_path: str,
                         bin_width_name='bin_width',
                         metric_names=metric_names,
                         save_path=save_path,
-                        ratio_reference_label=None,#MODEL_NAMING_SCHEMA[reference],
-                        xlabel=LATEX_NAMING_CONVENTION[x_var],
+                        ratio_reference_label=MODEL_NAMING_SCHEMA[reference],
+                        xlabel=r'$\eta$',  # r'$p_T$ [TeV]',
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
@@ -99,7 +99,18 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     # args.load_dir = 'logs/stepwise_flat/eval'
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
+<<<<<<< HEAD
     # args.model_names = ["idepart", "ipart", "depart", "particle_net",
     #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
     args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
+=======
+<<<<<<< HEAD
+    args.model_names = ["idepart", "ipart", "depart", "particle_net",
+                        "part", "transformer", "efn", "pfn", "fc", "highway"]
+    # args.model_names = ["idepart", "depart", "particle_net", "pfn", "highway"]
+=======
+    args.model_names = ["idepart", "ipart", "depart",
+                        "part", "transformer", "efn", "pfn", "fc", "highway", "particle_net"]
+>>>>>>> e15fb54 (hm)
+>>>>>>> 03ec285b2d9d07a252b00dce8e205da103b172d4
     main(args)
