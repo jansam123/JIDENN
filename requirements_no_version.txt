@@ -1,20 +1,20 @@
-tensorflow # ==2.13
-tensorflow_decision_forests # ==1.2.0
-tensorflow-addons # ==0.20.0
-Jinja2 # ==3.1.2
-tensorboard-plugin-profile # ==2.11.2
-tensorflow-datasets # ==4.9.1
-scikit-learn # ==1.2.2
-uproot # ==5.0.7
-vector # ==1.0.0
-awkward # ==2.1.3
-pandas # ==2.0.1
-matplotlib # ==3.7.1
-seaborn # ==0.12.2
-typed-argument-parser # ==1.8.0
-hydra-core # ==1.3.2
-pdoc3 # ==0.10.0
-atlas-ftag-tools # ==0.1.5
-puma-hep # ==0.2.6
-atlasify # ==0.8.0
+tensorflow 
+# tensorflow_decision_forests 
+tensorflow-addons 
+Jinja2 
+tensorboard-plugin-profile 
+tensorflow-datasets 
+scikit-learn 
+uproot 
+vector 
+awkward 
+pandas 
+matplotlib 
+seaborn 
+typed-argument-parser 
+hydra-core 
+pdoc3 
+atlas-ftag-tools 
+puma-hep 
+atlasify 
 pytest
