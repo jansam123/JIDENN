@@ -25,11 +25,16 @@ parser.add_argument("--model_names", nargs='*', type=str,
                     help="names of the models.")
 parser.add_argument("--save_dir", default=".", type=str,
                     help="Directory to save the plots to.")
+<<<<<<< HEAD
 parser.add_argument("--var", default="jets_pt", type=str,
                     help="Variable to plot.")
 parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 parser.add_argument("--compare_mc", default=False, type=bool,
                     help="Compare MC models.")
+=======
+parser.add_argument("--order_metric", default="binary_accuracy", type=str,
+                    help="Metric to order the models by.")
+>>>>>>> e15fb54 (hm)
 
 
 def plot_metric(df: pd.DataFrame,
@@ -76,7 +81,8 @@ def compare_ml_models(overall_metrics_path: str,
 
     os.makedirs(save_path, exist_ok=True)
     dfs = [pd.read_csv(path) for path in paths]
-    accuracies = [df['gluon_rejection_at_quark_80wp'].mean() for df in dfs]
+    accuracies = [df['binary_accuracy'].mean() for df in dfs]
+    # accuracies = [pd.read_csv(overall_metrics_path, index_col=0).loc[label, 'binary_accuracy'] for label in labels]
     sorted_labels, sorted_dfs, accuracies = zip(*sorted(zip(labels, dfs, accuracies),
                                                         key=lambda x: x[2], reverse=True))
     for label, acc in zip(sorted_labels, accuracies):
@@ -102,8 +108,8 @@ def compare_ml_models(overall_metrics_path: str,
                         bin_width_name='bin_width',
                         metric_names=metric_names,
                         save_path=save_path,
-                        ratio_reference_label=None,#MODEL_NAMING_SCHEMA[reference],
-                        xlabel=LATEX_NAMING_CONVENTION[x_var],
+                        ratio_reference_label=MODEL_NAMING_SCHEMA[reference],
+                        xlabel=r'$\eta$',  # r'$p_T$ [TeV]',
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
@@ -133,7 +139,12 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     # args.load_dir = 'logs/stepwise_flat/eval'
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
+<<<<<<< HEAD
     args.model_names = ["idepart", "ipart", "depart", "particle_net",
                         "part", "transformer", "efn", "pfn", "fc", "highway"]
     # args.model_names = ["idepart", "depart", "particle_net", "pfn", "highway"]
+=======
+    args.model_names = ["idepart", "ipart", "depart",
+                        "part", "transformer", "efn", "pfn", "fc", "highway", "particle_net"]
+>>>>>>> e15fb54 (hm)
     main(args)

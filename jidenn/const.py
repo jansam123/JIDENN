@@ -80,6 +80,7 @@ MODEL_NAMING_SCHEMA = {
     'transformer': 'Transformer',
     'bdt': 'BDT',
     'depart_100M': 'iDeParT (100M jets)',
+    'pnet': 'ParticleNet',
     'particle_net': 'ParticleNet',
 }
 
