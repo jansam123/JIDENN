@@ -99,18 +99,7 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     # args.load_dir = 'logs/stepwise_flat/eval'
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
-<<<<<<< HEAD
     # args.model_names = ["idepart", "ipart", "depart", "particle_net",
     #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
     args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
-=======
-<<<<<<< HEAD
-    args.model_names = ["idepart", "ipart", "depart", "particle_net",
-                        "part", "transformer", "efn", "pfn", "fc", "highway"]
-    # args.model_names = ["idepart", "depart", "particle_net", "pfn", "highway"]
-=======
-    args.model_names = ["idepart", "ipart", "depart",
-                        "part", "transformer", "efn", "pfn", "fc", "highway", "particle_net"]
->>>>>>> e15fb54 (hm)
->>>>>>> 03ec285b2d9d07a252b00dce8e205da103b172d4
     main(args)
