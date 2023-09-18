@@ -8,7 +8,9 @@ from multiprocessing import Pool
 from hydra.core.config_store import ConfigStore
 import seaborn as sns
 from functools import partial
-from sklearn.metrics import roc_curve
+import hashlib
+import pickle
+
 #
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.config import eval_config
@@ -31,6 +33,9 @@ cs.store(name="args", node=eval_config.EvalConfig)
 
 @hydra.main(version_base="1.2", config_path="jidenn/yaml_config", config_name="eval_config")
 def main(args: eval_config.EvalConfig) -> None:
+    config_hash = hashlib.sha256(str(args).encode('utf-8')).hexdigest()
+    checkpoint_path = os.path.join(args.logdir, 'tmp', config_hash)
+    os.makedirs(checkpoint_path, exist_ok=True)
     log = logging.getLogger(__name__)
 
     # GPU logging
@@ -85,6 +90,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                                 batch_size=args.batch_size,
                                                 log=log,
                                                 take=args.take,
+                                                checkpoint_path=checkpoint_path,
                                                 distribution_drawer=distribution_drawer if args.draw_distribution is not None else None,
                                                 )
 
@@ -121,20 +127,27 @@ def main(args: eval_config.EvalConfig) -> None:
 
     print(df)
     log.info(f'Using {len(df)} events for evaluation after binning cuts')
-    overall_metrics = pd.DataFrame()
     dfs = []
+    overall_metrics = []
 
     if args.threads is not None and args.threads > 1 and args.validation_plots_in_bins:
         log.warning('Validation plots in bins are not supported with multithreading. Disabling validation plots in bins.')
         args.validation_plots_in_bins = False
 
-    tprs = []
-    fprs = []
-    for model_name in args.model_names:
-        tpr, fpr, _ = roc_curve(df['label'], df[f'{model_name}_score'], sample_weight=df['weight'] if args.data.weight is not None else None)
-        tprs.append(tpr)
-        fprs.append(fpr)
 
+    for model_name in args.model_names:
+        try:
+            with open(os.path.join(checkpoint_path, f'{model_name}.pkl'), 'rb') as f:
+                model_df = pickle.load(f)
+                dfs.append(model_df)
+            with open(os.path.join(checkpoint_path, f'{model_name}_overall_metrics.pkl'), 'rb') as f:
+                metrics = pickle.load(f)
+                overall_metrics.append(metrics)
+            log.info(f'Loaded binned metrics for model {model_name} from cache')
+            continue
+        except FileNotFoundError:
+            pass
+        
         if args.working_point_path is not None and args.working_point_file_name is not None:
             # threshold = pd.read_csv(f'{args.threshold_path}/{model_name}/{args.threshold_file_name}')
             threshold = WorkingPoint.load(os.path.join(args.working_point_path,
@@ -157,12 +170,12 @@ def main(args: eval_config.EvalConfig) -> None:
                              score_name=f'{model_name}_score',
                              class_names=labels)
 
-        overall_metrics: pd.DataFrame = pd.concat([overall_metrics,
-                                                  pd.DataFrame(calculate_metrics(df['label'], df[f'{model_name}_score'], weights=df['weight'] if args.data.weight is not None else None), index=[model_name])])
+        metrics = pd.DataFrame(calculate_metrics(df['label'], df[f'{model_name}_score'], weights=df['weight'] if args.data.weight is not None else None), index=[model_name])
+        overall_metrics.append(metrics)
+        
         # nicely print metrics
         log.info(f'Metrics for model {model_name}:')
-        log.info(''.join([f'{metric_name} = {metric:.4}\n' for metric_name,
-                 metric in dict(overall_metrics.loc[model_name]).items()]))
+        log.info(metrics)
 
         def validation_plotter(x: pd.DataFrame):
             bin_center_name = x['bin'].apply(lambda x: x.mid * 1e-6).iloc[0]
@@ -198,9 +211,15 @@ def main(args: eval_config.EvalConfig) -> None:
                 if col.startswith('threshold'):
                     wp = WorkingPoint(binning=args.binning, thresholds=model_df[col].values)
                     wp.save(os.path.join(args.logdir, 'models', model_name, f'{col}.pkl'))
+        
+        with open(os.path.join(checkpoint_path, f'{model_name}.pkl'), 'wb') as f:
+            pickle.dump(model_df, f)
+        with open(os.path.join(checkpoint_path, f'{model_name}_overall_metrics.pkl'), 'wb') as f:
+            pickle.dump(metrics, f)
 
         dfs.append(model_df)
 
+    overall_metrics = pd.concat(overall_metrics)
     overall_metrics.to_csv(f'{args.logdir}/overall_metrics.csv')
     latex_metrics = overall_metrics[['binary_accuracy', 'auc', 'gluon_efficiency',
                                      'quark_efficiency', 'gluon_rejection_at_quark_50wp', 'gluon_rejection_at_quark_80wp']]
@@ -233,6 +252,9 @@ def main(args: eval_config.EvalConfig) -> None:
                         colours=sorted_colours,
                         )
     logging.info('DONE')
+    #remove whole tmp dir
+    os.system(f'rm -rf {checkpoint_path}')
+    
 
 
 if __name__ == "__main__":

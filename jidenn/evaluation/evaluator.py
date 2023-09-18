@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 import logging
 import time
+import hashlib
+import pickle
+import os
 #
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 from jidenn.data.TrainInput import input_classes_lookup
@@ -176,6 +179,7 @@ def evaluate_multiple_models(model_paths: List[str],
                              score_name: str = 'score',
                              log: Optional[logging.Logger] = None,
                              custom_objects: Optional[Dict[str, Callable]] = None,
+                             checkpoint_path: Optional[str] = None,
                              distribution_drawer: Optional[Callable[[JIDENNDataset], None]] = None) -> JIDENNDataset:
     """Evaluate multiple Keras models on a JIDENNDataset. The explicit training inputs are created automatically
     from the JIDENNDataset. Input type for each model is deduced from the `model_input_name` argument. The order of 
@@ -213,7 +217,19 @@ def evaluate_multiple_models(model_paths: List[str],
         ds = dataset.remap_data(model_input)
         if distribution_drawer is not None and input_type != 'interaction_constituents':
             log.info(f'----- Drawing data distribution for: {input_type}') if log is not None else None
-            distribution_drawer(ds)
+            input_type_hash = hashlib.sha256(input_type.encode('utf-8')).hexdigest()
+            if checkpoint_path is not None:
+                try:
+                    with open(os.path.join(checkpoint_path, f'{input_type_hash}'), 'rb') as f:
+                        pickle.load(f)
+                    log.info(f'----- Data distribution already drawn for: {input_type}') if log is not None else None
+                except FileNotFoundError:
+                    distribution_drawer(ds)
+                    with open(os.path.join(checkpoint_path, f'{input_type_hash}'), 'wb') as f:
+                        pickle.dump(True, f)
+            else:
+                distribution_drawer(ds)
+            
         ds = ds.get_prepared_dataset(batch_size=batch_size,
                                      ragged=False if input_type == 'gnn' else True,
                                      take=take)
@@ -221,6 +237,16 @@ def evaluate_multiple_models(model_paths: List[str],
         # iterate over all models with the same input type
         idxs = np.array(model_input_name) == input_type
         for model_path, model_name in zip(np.array(model_paths)[idxs], np.array(model_names)[idxs]):
+            model_name_hash = hashlib.sha256(model_name.encode('utf-8')).hexdigest()
+            if checkpoint_path is not None:
+                try:
+                    with open(os.path.join(checkpoint_path, f'{model_name_hash}.pkl'), 'rb') as f:
+                        score = pickle.load(f)
+                    log.info(f'----- Score already calculated for: {model_name}') if log is not None else None
+                    dataset = add_score_to_dataset(dataset, score, f'{model_name}_{score_name}')
+                    continue
+                except FileNotFoundError:
+                    pass
             log.info(f'----- Loading model: {model_name}') if log is not None else None
             start = time.time()
             model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
@@ -232,6 +258,9 @@ def evaluate_multiple_models(model_paths: List[str],
             stop = time.time()
             log.info(f'----- Predicting took: {total_time:.2f} s') if log is not None else None
             log.info(f'----- Max memory used: {max_memory*1e-6:.2f} MB') if log is not None else None
+            if checkpoint_path is not None:
+                with open(os.path.join(checkpoint_path, f'{model_name_hash}.pkl'), 'wb') as f:
+                    pickle.dump(score, f)
             dataset = add_score_to_dataset(dataset, score, f'{model_name}_{score_name}')
 
     return dataset

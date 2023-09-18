@@ -2,10 +2,8 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from abc import abstractmethod
 import tensorflow as tf
 import numpy as np
-from sklearn.metrics import roc_curve, confusion_matrix, auc
 from io import BytesIO
 from typing import List, Union, Dict, Optional, Tuple
 import atlasify
@@ -32,42 +30,6 @@ parser.add_argument("--compare_mc", default=False, type=bool,
                     help="Compare MC models.")
 
 
-def plot_metric(df: pd.DataFrame,
-                relative_df: pd.DataFrame,
-                metric: str,
-                x_label: str,
-                save_dir: str,
-                title: str,
-                order: Optional[List[str]] = None,
-                ylim: Optional[Tuple[float, float]] = None,):
-
-    palette = 'coolwarm'
-    fig_big = plt.figure(figsize=(16, 10))
-    gs = fig_big.add_gridspec(2, hspace=0.07, height_ratios=[2.5, 1])
-    ax1, ax2 = gs.subplots(sharex=True, sharey=False)
-    sns.pointplot(x='cut', y=metric, data=df, hue='Model', errorbar=None,
-                    palette=palette, hue_order=order, ax=ax1)
-
-    ax1.set(ylabel=METRIC_NAMING_SCHEMA[metric]
-            if metric in METRIC_NAMING_SCHEMA else metric, xlabel=None)
-    handles, labels = ax1.get_legend_handles_labels()
-    ax1.legend(handles=handles, labels=labels, loc='upper right', ncol=2)
-
-    sns.pointplot(x='cut', y=metric, data=relative_df, hue='Model', errorbar=None,
-                    palette=palette, hue_order=order, ax=ax2, estimator=np.mean)
-    ax2.set(ylabel='Ratio', xlabel=x_label)
-    ax2.get_legend().set_visible(False)
-    if ylim is not None:
-        ax1.set_ylim(ylim)
-
-    # make a gap between the two plots
-    atlasify.atlasify("Simulation Internal", axes=ax1, subtext='13 TeV')
-    atlasify.atlasify(atlas=False, axes=ax2)
-
-    fig_big.savefig(save_dir, bbox_inches='tight', dpi=400)
-    plt.close(fig_big)
-
-
 def compare_ml_models(overall_metrics_path: str,
                       paths: List[str],
                       labels: List[str],
@@ -75,7 +37,7 @@ def compare_ml_models(overall_metrics_path: str,
                       x_var = 'jets_pt',):
 
     os.makedirs(save_path, exist_ok=True)
-    dfs = [pd.read_csv(path) for path in paths]
+    dfs = [pd.read_csv(path) for path in paths] 
     accuracies = [df['gluon_rejection_at_quark_80wp'].mean() for df in dfs]
     sorted_labels, sorted_dfs, accuracies = zip(*sorted(zip(labels, dfs, accuracies),
                                                         key=lambda x: x[2], reverse=True))
@@ -95,6 +57,10 @@ def compare_ml_models(overall_metrics_path: str,
     ylims = None
     reference = 'highway'
     colours = sns.color_palette('coolwarm', len(sorted_labels))
+    if x_var == 'jets_pt':
+        for df in sorted_dfs:
+            df['bin_mid'] = df['bin_mid'] * 1e-6
+            df['bin_width'] = df['bin_width'] * 1e-6
 
     plot_var_dependence(dfs=sorted_dfs,
                         labels=[MODEL_NAMING_SCHEMA[model] for model in list(sorted_labels)],
@@ -133,7 +99,7 @@ if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     # args.load_dir = 'logs/stepwise_flat/eval'
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
-    args.model_names = ["idepart", "ipart", "depart", "particle_net",
-                        "part", "transformer", "efn", "pfn", "fc", "highway"]
-    # args.model_names = ["idepart", "depart", "particle_net", "pfn", "highway"]
+    # args.model_names = ["idepart", "ipart", "depart", "particle_net",
+    #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
+    args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
     main(args)

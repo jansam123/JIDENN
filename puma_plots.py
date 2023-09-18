@@ -5,6 +5,7 @@ import os
 import numpy as np
 import seaborn as sns
 import argparse
+from sklearn.metrics import roc_curve, precision_recall_curve, precision_score
 
 from jidenn.config.eval_config import Binning
 from jidenn.const import MODEL_NAMING_SCHEMA
@@ -25,28 +26,24 @@ parser.add_argument("--stat", type=str, default='count',
                     help="Statistic to plot. Options: count, density, probability.")
 parser.add_argument("--multiple", type=str, default='layer',
                     help="How to plot multiple distributions. Options: layer, stack")
+parser.add_argument("--cut", type=str, default=None,
+                    help="Cut to apply to the dataset.")
+parser.add_argument("--title", type=str, default=None,
+                    help="Cut to apply to the dataset.")
+parser.add_argument("--pt_bins", type=int, default=None,
+                    nargs='+', help="Bins for the pt plots")
 
 HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
 
 
 def main(args):
-    os.makedirs(os.path.join(args.save_path, 'puma_plots'), exist_ok=True)
+    os.makedirs(args.save_path, exist_ok=True)
     score_dataset = pd.read_csv(args.load_path, index_col=0)
+    score_dataset = score_dataset.query(args.cut) if args.cut is not None else score_dataset
     score_dataset['jets_pt'] = score_dataset['jets_pt'] * \
         1e-3 if 'jets_pt' == 'jets_pt' else score_dataset['jets_pt']
     is_quark = score_dataset['label'] == 1
     is_gluon = score_dataset['label'] == 0
-    binning = Binning(min_bin=60_000, max_bin=2_500_000, bins=7, log_bin_base=0, variable='jets_pt')
-
-    if binning.log_bin_base is not None:
-        min_val = np.log(binning.min_bin) / \
-            np.log(binning.log_bin_base) if binning.log_bin_base != 0 else np.log(binning.min_bin)
-        max_val = np.log(binning.max_bin) / \
-            np.log(binning.log_bin_base) if binning.log_bin_base != 0 else np.log(binning.max_bin)
-        bins = np.logspace(min_val, max_val,
-                           binning.bins + 1, base=binning.log_bin_base if binning.log_bin_base != 0 else np.e)
-    else:
-        bins = np.linspace(binning.min_bin, binning.max_bin, binning.bins + 1)
 
     plot_bkg_rej = VarVsEffPlot(
         mode="bkg_rej",
@@ -54,8 +51,12 @@ def main(args):
         xlabel=r"$p_{T}$ [GeV]",
         logy=False,
         leg_ncol=2,
+        xmin=200,
+        xmax=2500,
+        ymin=6,
+        ymax=35,
         # logx=True if binning.log_bin_base is not None else False,
-        atlas_second_tag="50% WP",
+        atlas_second_tag="50% WP" if args.title is None else f"50% WP, {args.title}",
         figsize=(7, 5),
         draw_errors=False,
         n_ratio_panels=0,
@@ -67,7 +68,7 @@ def main(args):
         leg_ncol=2,
         logy=False,
         # logx=True if binning.log_bin_base is not None else False,
-        atlas_second_tag="50% WP",
+        atlas_second_tag="50% WP" if args.title is None else f"50% WP, {args.title}",
         figsize=(7, 5),
         draw_errors=False,
         n_ratio_panels=0,
@@ -79,7 +80,7 @@ def main(args):
         leg_ncol=2,
         logy=False,
         # logx=True if binning.log_bin_base is not None else False,
-        atlas_second_tag="50% WP",
+        atlas_second_tag="50% WP" if args.title is None else f"50% WP, {args.title}",
         figsize=(7, 5),
         draw_errors=False,
         n_ratio_panels=0,
@@ -90,8 +91,12 @@ def main(args):
         xlabel=r"$p_{T}$ [GeV]",
         logy=False,
         leg_ncol=2,
+        xmin=200,
+        xmax=2500,
+        ymin=2,
+        ymax=6.2,
         # logx=True if binning.log_bin_base is not None else False,
-        atlas_second_tag="80% WP",
+        atlas_second_tag="80% WP" if args.title is None else f"80% WP, {args.title}",
         figsize=(7, 5),
         draw_errors=False,
         n_ratio_panels=0,
@@ -103,7 +108,7 @@ def main(args):
         leg_ncol=2,
         logy=False,
         # logx=True if binning.log_bin_base is not None else False,
-        atlas_second_tag="80% WP",
+        atlas_second_tag="80% WP" if args.title is None else f"80% WP, {args.title}",
         figsize=(7, 5),
         draw_errors=False,
         n_ratio_panels=0,
@@ -115,7 +120,7 @@ def main(args):
         leg_ncol=2,
         logy=False,
         # logx=True if binning.log_bin_base is not None else False,
-        atlas_second_tag="80% WP",
+        atlas_second_tag="80% WP" if args.title is None else f"80% WP, {args.title}",
         figsize=(7, 5),
         draw_errors=False,
         n_ratio_panels=0,
@@ -125,7 +130,7 @@ def main(args):
         n_ratio_panels=0,
         ylabel=r"$\varepsilon_g^{-1}$",
         xlabel=r"$\varepsilon_q$",
-        atlas_second_tag="13 TeV",
+        atlas_second_tag="13 TeV" if args.title is None else f"13 TeV, {args.title}",
         figsize=(5, 4),
         ymin=1,
         ymax=2e3,
@@ -140,8 +145,9 @@ def main(args):
     plots = []
     sig_eff = np.linspace(0.1, 1, 100)
     # score_dataset.columns:
-    scores = ["idepart_score", "ipart_score", "particle_net_score", "depart_score",
-              "transformer_score", "part_score", "pfn_score", "highway_score", "fc_score", "efn_score",]
+    # scores = ["idepart_score", "ipart_score", "particle_net_score", "depart_score",
+    #           "transformer_score", "part_score", "pfn_score", "highway_score", "fc_score", "efn_score",]
+    scores = ["idepart_score", "ipart_score", "particle_net_score", "pfn_score", "highway_score", "fc_score", "efn_score",]
     score_dataset['jets_eta'] = score_dataset['jets_eta'].abs()
     colors = sns.color_palette('coolwarm', len(scores))
     colours = sns.color_palette('coolwarm', len(scores))
@@ -157,7 +163,7 @@ def main(args):
             disc_bkg=score_dataset[score_name][is_gluon],
             weights_bkg=score_dataset[args.weight][is_gluon] if args.weight is not None else None,
             # bins=bins,
-            bins=[200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
+            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
             working_point=0.5,
             disc_cut=None,
             fixed_eff_bin=True,
@@ -176,7 +182,7 @@ def main(args):
             disc_bkg=score_dataset[score_name][is_gluon],
             weights_bkg=score_dataset[args.weight][is_gluon] if args.weight is not None else None,
             # bins=bins,
-            bins=[200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
+            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
             working_point=0.8,
             disc_cut=None,
             fixed_eff_bin=True,
@@ -263,12 +269,15 @@ def main(args):
             colour=colours[i],
 
         )
-        rejs = calc_rej(score_dataset[score_name][is_quark], score_dataset[score_name][is_gluon], sig_eff, score_dataset[args.weight][is_gluon] if args.weight is not None else None)
+        
+        
+        rejs = calc_rej(score_dataset[score_name][is_quark], score_dataset[score_name][is_gluon],
+                        sig_eff, score_dataset[args.weight][is_gluon] if args.weight is not None else None)
         plot_roc.add_roc(
             Roc(
                 sig_eff,
                 rejs,
-                n_test=sum(is_gluon),
+                n_test=None,
 
                 # rej_class="gluon",
                 # signal_class="quark",
@@ -291,15 +300,28 @@ def main(args):
     plot_bkg_rej_mu.draw()
     plot_bkg_rej_80_mu.draw()
     plot_roc.draw()
-    plot_roc.savefig(os.path.join(args.save_path, 'roc.png'), transparent=False, dpi=400)
-    plot_bkg_rej.savefig(os.path.join(args.save_path, 'puma_plots', 'bkg_rej_50.png'), dpi=400)
-    plot_bkg_rej_80.savefig(os.path.join(args.save_path, 'puma_plots', 'bkg_rej_80.png'), dpi=400)
-    plot_bkg_rej_eta.savefig(os.path.join(args.save_path, 'puma_plots', 'bkg_rej_eta_50.png'), dpi=400)
-    plot_bkg_rej_80_eta.savefig(os.path.join(args.save_path, 'puma_plots', 'bkg_rej_eta_80.png'), dpi=400)
-    plot_bkg_rej_mu.savefig(os.path.join(args.save_path, 'puma_plots', 'bkg_rej_mu_50.png'), dpi=400)
-    plot_bkg_rej_80_mu.savefig(os.path.join(args.save_path, 'puma_plots', 'bkg_rej_mu_80.png'), dpi=400)
+    for ending in ['png', 'pdf']:
+        plot_roc.savefig(os.path.join(args.save_path, f'roc.{ending}'), transparent=False, dpi=400)
+        plot_bkg_rej.savefig(os.path.join(args.save_path, f'bkg_rej_50.{ending}'), dpi=400)
+        plot_bkg_rej_80.savefig(os.path.join(args.save_path, f'bkg_rej_80.{ending}'), dpi=400)
+        plot_bkg_rej_eta.savefig(os.path.join(args.save_path, f'bkg_rej_eta_50.{ending}'), dpi=400)
+        plot_bkg_rej_80_eta.savefig(os.path.join(args.save_path, f'bkg_rej_eta_80.{ending}'), dpi=400)
+        plot_bkg_rej_mu.savefig(os.path.join(args.save_path, f'bkg_rej_mu_50.{ending}'), dpi=400)
+        plot_bkg_rej_80_mu.savefig(os.path.join(args.save_path, f'bkg_rej_mu_80.{ending}'), dpi=400)
 
 
 if __name__ == '__main__':
     args = parser.parse_args([] if "__file__" not in globals() else None)
+    # original_path = args.save_path
+    # for i in range(3, 8):
+    #     args.cut = f'JZ_slice == {i}'
+    #     args.save_path = f'{original_path}/JZ{i}'
+    #     args.title = f'JZ{i}'
+    #     args.pt_bins = [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500]
+    #     for i in range(len(args.pt_bins)):
+    #         try:
+    #             main(args)
+    #             break
+    #         except:
+    #             args.pt_bins = args.pt_bins[:-1]
     main(args)

@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     # mc comparison
     # wp = '50'
-    for wp_val in [0.8, 0.5]:
+    for wp_val in [0.5]:
         print(wp_val)
         args.wp_val = wp_val
         wp = str(int(wp_val * 100))

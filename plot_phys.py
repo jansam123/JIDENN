@@ -107,27 +107,34 @@ def load_dataframe(path, vars):
 
 if __name__ == "__main__":
     HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
-    train_path = "/home/jankovys/JIDENN/data/pythia_nW_flat_100_JZ7/train"
-    try:
-        df = pd.read_csv(os.path.join(train_path, "dataset.csv"))
-    except FileNotFoundError:
-        df = load_dataframe(train_path, ["jets_pt", "jets_PartonTruthLabelID", "weight_spectrum"])
-        df.to_csv(os.path.join(train_path, "dataset.csv"))
+    # train_path = "/home/jankovys/JIDENN/data/pythia_nW_flat_100_JZ7/train"
+    # try:
+    #     df = pd.read_csv(os.path.join(train_path, "dataset.csv"))
+    # except FileNotFoundError:
+    #     df = load_dataframe(train_path, ["jets_pt", "jets_PartonTruthLabelID", "weight_spectrum"])
+    #     df.to_csv(os.path.join(train_path, "dataset.csv"))
 
-    df['jets_pt'] *= 1e-6
-    df = df[df['jets_pt'] > 0.06]
-    df = df[df['jets_pt'] < 2.6]
-    # remap the labels
-    df['jets_PartonTruthLabelID'] = df['jets_PartonTruthLabelID'].replace(HUE_MAPPER)
-    sns_label_plotting(df, train_path)
-    sns_label_plotting_noW(df, train_path)
+    # df['jets_pt'] *= 1e-6
+    # df = df[df['jets_pt'] > 0.06]
+    # df = df[df['jets_pt'] < 2.6]
+    # # remap the labels
+    # df['jets_PartonTruthLabelID'] = df['jets_PartonTruthLabelID'].replace(HUE_MAPPER)
+    # sns_label_plotting(df, train_path)
+    # sns_label_plotting_noW(df, train_path)
 
-    phys_path = "/home/jankovys/JIDENN/data/altMC_phys/Pythia8EvtGen_A14NNPDF23LO_jetjet"
-    try:
-        df = pd.read_csv(os.path.join(phys_path, "pythia_physical.csv"))
-    except FileNotFoundError:
-        df = load_dataframe(phys_path, ["jets_pt", "jets_PartonTruthLabelID", "weight"])
-        df.to_csv(os.path.join(phys_path, "pythia_physical.csv"))
-    df['jets_pt'] *= 1e-6
-    df['jets_PartonTruthLabelID'] = df['jets_PartonTruthLabelID'].replace(HUE_MAPPER)
-    sns_label_plotting_phys(df, phys_path)
+    # phys_path = "/home/jankovys/JIDENN/data/altMC_phys/Pythia8EvtGen_A14NNPDF23LO_jetjet"
+    phys_path_dir = "/home/jankovys/JIDENN/data/altMC_phys_JZ2/"
+    for file in os.listdir(phys_path_dir):
+        phys_path = os.path.join(phys_path_dir, file)
+        try:
+            try:
+                df = pd.read_csv(os.path.join(phys_path, "pythia_physical.csv"))
+            except FileNotFoundError:
+                df = load_dataframe(phys_path, ["jets_pt", "jets_PartonTruthLabelID", "weight"])
+                df.to_csv(os.path.join(phys_path, "pythia_physical.csv"))
+            df['jets_pt'] *= 1e-6
+            df['jets_PartonTruthLabelID'] = df['jets_PartonTruthLabelID'].replace(HUE_MAPPER)
+            sns_label_plotting_phys(df, phys_path)
+        except:
+            print(f"Failed to plot {file}")
+            continue

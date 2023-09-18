@@ -81,3 +81,5 @@ class EvalConfig:
     ylims: List[List[float]]
     threads: Optional[int]
     validation_plots_in_bins: bool
+
+    
