@@ -506,7 +506,6 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             leg_loc=leg_loc,
             label_fontsize=14,
             fontsize=12,
-            # atlas_fontsize=12,
             leg_fontsize=11,
             leg_ncol=2,
         )

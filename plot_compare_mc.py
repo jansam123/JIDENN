@@ -25,48 +25,56 @@ parser.add_argument("--compare_mc", default=False, type=bool,
 
 
 def main(args: argparse.Namespace):
+    dfs = []
+    for model in args.model_names:
+        for dir in args.load_dirs :
+            df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
+            df['bin_mid'] = df['bin_mid'] * 1e-6
+            df['bin_width'] = df['bin_width'] * 1e-6
+            dfs.append(df)
 
-    [plot_var_dependence(dfs=[pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv')) for dir in args.load_dirs],
-                         labels=[MC_NAMING_SCHEMA[label] for label in args.labels],
-                         bin_midpoint_name='bin_mid',
-                         bin_width_name='bin_width',
-                         metric_names=args.metric_names,
-                         save_path=os.path.join(args.save_dir, 'models', f'{model}'),
-                         ratio_reference_label=MC_NAMING_SCHEMA[args.reference],
-                         xlabel=r'$p_T$ [TeV]',
-                         ylabel_mapper=METRIC_NAMING_SCHEMA,
-                         ylims=args.ylims1,
-                         figsize=(8, 6),
-                         xlog=args.xlog,
-                         h_line_position=[None, args.wp_val, None],
-                         leg_loc='upper right',
-                         title=f'{MODEL_NAMING_SCHEMA[model]}, {args.wp} WP',
-                         colours=sns.color_palette("Set1", len(args.labels))) for model in args.model_names]
+        plot_var_dependence(dfs=dfs,
+                            labels=[MC_NAMING_SCHEMA[label] for label in args.labels],
+                            bin_midpoint_name='bin_mid',
+                            bin_width_name='bin_width',
+                            metric_names=args.metric_names,
+                            save_path=os.path.join(args.save_dir, 'models', f'{model}'),
+                            ratio_reference_label=MC_NAMING_SCHEMA[args.reference],
+                            xlabel=r'$p_T$ [TeV]',
+                            ylabel_mapper=METRIC_NAMING_SCHEMA,
+                            ylims=args.ylims1,
+                            figsize=(8, 6),
+                            xlog=args.xlog,
+                            h_line_position=[None, args.wp_val, None],
+                            leg_loc='upper right',
+                            title=f'{MODEL_NAMING_SCHEMA[model]}, {args.wp} WP',
+                            colours=sns.color_palette("Set1", len(args.labels)))
 
     for metric in ['quark_efficiency', 'gluon_rejection']:
         df_big = pd.DataFrame()
-        overall_metrics = pd.read_csv(os.path.join(args.ref_dir, 'overall_metrics.csv'), index_col=0)
-        acc_sorted_models = overall_metrics.sort_values(by='binary_accuracy', ascending=False).index
+        overall_metrics = pd.read_csv(args.overall_metrics, index_col=0)
+        acc_sorted_models = overall_metrics.sort_values(by='gluon_rejection_at_quark_80wp', ascending=False).index
 
-    overall_metrics = pd.read_csv(os.path.join(args.ref_dir, 'overall_metrics.csv'), index_col=0)
-    acc_sorted_models = overall_metrics.sort_values(by='binary_accuracy', ascending=False).index
+        for label, dir in zip(args.labels, args.load_dirs):
+            dfs = []
+            for model in args.model_names:
+                ref_df = pd.read_csv(os.path.join(args.ref_dir, 'models', f'{model}', 'binned_metrics.csv'))
+                ref_df['bin_mid'] = ref_df['bin_mid'] *1e-6
+                ref_df['bin_width'] = ref_df['bin_width'] *1e-6
+                if model == args.reference:
+                    continue
+                df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
+                df['bin_mid'] = df['bin_mid'] * 1e-6
+                df['bin_width'] = df['bin_width'] * 1e-6
+                df['ratio'] = df[metric] / ref_df[metric]
+                df['diff'] = ref_df[metric] - df[metric]
+                dfs.append(df)
+                df['mc'] = label
+                df['model'] = model
+                df_big = pd.concat([df_big, df])
 
-    for label, dir in zip(args.labels, args.load_dirs):
-        dfs = []
-        for model in args.model_names:
-            ref_df = pd.read_csv(os.path.join(args.ref_dir, 'models', f'{model}', 'binned_metrics.csv'))
-            if model == args.reference:
-                continue
-            df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
-            df['ratio'] = df[metric] / ref_df[metric]
-            df['diff'] = ref_df[metric] - df[metric]
-            dfs.append(df)
-            df['mc'] = label
-            df['model'] = model
-            df_big = pd.concat([df_big, df])
-
-            labels, dfs = zip(*sorted(zip(args.model_names, dfs), key=lambda x: acc_sorted_models.get_loc(x[0])))
-            labels = [MODEL_NAMING_SCHEMA[model] for model in labels]
+            # labels, dfs = zip(*sorted(zip(args.model_names, dfs), key=lambda x: acc_sorted_models.get_loc(x[0])))
+            labels = [MODEL_NAMING_SCHEMA[model] for model in args.model_names]
 
             plot_var_dependence(dfs=dfs,
                                 labels=labels,
@@ -77,7 +85,7 @@ def main(args: argparse.Namespace):
                                 ratio_reference_label=None,
                                 xlabel=r'$p_T$ [TeV]',
                                 ylabel_mapper={'diff': f'Difference fromn Pythia', 'ratio': f'Ratio'},
-                                ylims=args.ylims2,
+                                ylims=args.ylims2[metric],
                                 # ylims = None,
                                 xlog=args.xlog,
                                 figsize=(10, 4),
@@ -119,7 +127,7 @@ def main(args: argparse.Namespace):
             labels.append(model)
             dfs_eval.append(df)
 
-        labels, dfs_eval = zip(*sorted(zip(labels, dfs_eval), key=lambda x: acc_sorted_models.get_loc(x[0])))
+        labels, dfs_eval = zip(*sorted(zip(labels, dfs_eval), key=lambda x: args.model_names.index(x[0])))
         labels = [MODEL_NAMING_SCHEMA[model] for model in labels]
         model_label = r'\varepsilon^{-1}_{g,\mathrm{model}}' if metric == 'gluon_rejection' else r'\varepsilon_{q,\mathrm{model}}'
         py_label = r'\varepsilon^{-1}_{g,\mathrm{Pythia}}' if metric == 'gluon_rejection' else r'\varepsilon_{q,\mathrm{Pythia}}'
@@ -162,7 +170,6 @@ def main(args: argparse.Namespace):
                           shrink=.8, hue_order=[MC_NAMING_SCHEMA[mc] for mc in args.mc_names])
 
         ax.legend_.set_title(None)
-        plt.ylim(0., 0.8)
         plt.ylabel(METRIC_NAMING_SCHEMA[metric])
         atlasify.atlasify(
             atlas=True,
@@ -176,7 +183,7 @@ if __name__ == "__main__":
 
     # mc comparison
     # wp = '50'
-    for wp_val in [0.5]:
+    for wp_val in [0.5, 0.8]:
         print(wp_val)
         args.wp_val = wp_val
         wp = str(int(wp_val * 100))
@@ -191,21 +198,26 @@ if __name__ == "__main__":
                           'PhPy8EG_jj', 'PhH7EG_jj']
         args.load_dirs = [os.path.join(load_dir, mc) for mc in args.load_dirs]
         args.labels = args.mc_names
-        args.model_names = ["idepart", "ipart", "depart", "particle_net",
-                            "part", "transformer", "efn", "pfn", "fc", "highway"]
+        # args.model_names = ["idepart", "ipart", "depart", "particle_net",
+        #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
+        args.model_names = ["idepart", "ipart", "particle_net", "pfn", "fc", "highway","efn"]
         args.metric_names = ["gluon_rejection", "quark_efficiency", 'gluon_efficiency']
         args.reference = 'pythia'
         args.ref_dir = os.path.join(load_dir, 'Pythia8EvtGen_A14NNPDF23LO_jetjet')
+        args.overall_metrics = '/home/jankovys/JIDENN/logs/pythia_Wflat_JZ10/evaluation/pythia_phys_central_JZ3/overall_metrics.csv'
+        args.ylims2 = {}
         if wp == '50':
             args.ylims1 = [(5, 40), (0.1, 1.), (0.4, 1.)]
-            args.ylims2 = [(-0.1, 0.175), (0.7, 1.3)]
+            args.ylims2['quark_efficiency'] = [(-0.1, 0.175), (0.7, 1.3)]
+            args.ylims2['gluon_rejection'] = [(-0.1, 0.175), (0.25, 1.25)]
         else:
             args.ylims1 = [(2, 7), (0.6, 1.), (0.4, 1.)]
-            args.ylims2 = [(-0.1, 0.175), (0.7, 1.3)]
+            args.ylims2['quark_efficiency'] = [(-0.1, 0.175), (0.7, 1.3)]
+            args.ylims2['gluon_rejection'] = [(-0.1, 0.175), (0.4, 1.6)]
         args.xlog = False
         args.wp = f'{wp}%'
         main(args)
-
+    print('done')
     # pt init dist comparison
     # args.labels = ['flat', 'log flat', 'weight flat']
     # args.load_dirs = ['/home/jankovys/JIDENN/logs/pythia_flat_70_JZ7/evaluation/pythia_phys',

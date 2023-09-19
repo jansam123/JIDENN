@@ -21,7 +21,7 @@ LATEX_NAMING_CONVENTION = {
     'jets_EMFrac': 'jets_EMFrac',
     'jets_Width': 'jets_Width',
     'jets_chf': 'jets_chf',
-    'jets_eta': 'jets_eta',
+    'jets_eta': r'$|\eta|$',
     'jets_m': 'jets_m',
     'jets_phi': 'jets_phi',
     'jets_pt': r'$p_{\mathrm{T}}$ [TeV]',

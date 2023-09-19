@@ -96,8 +96,8 @@ def main(args: argparse.Namespace) -> None:
         dataset = dataset.map(write_weights(cross_section, filt_eff, lumi, norm))
         dataset = dataset.map(write_new_variable(variable_name='JZ_slice',
                               variable_value=tf.constant(jz, dtype=tf.int32)))
-        # if jz == 4:
-        #     dataset = dataset.skip(10_000_000)
+        if jz == 4:
+            dataset = dataset.skip(10_000_000)
         return dataset
 
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_cutter,
