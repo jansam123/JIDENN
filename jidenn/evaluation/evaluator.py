@@ -72,6 +72,7 @@ def _calculate_metrics_in_bin(x):
     ret = calculate_metrics(x['label'], x[score_variable], threshold=threshold,
                             weights=x[weights_variable] if weights_variable is not None else None)
     ret['num_events'] = len(x)
+    ret['eff_num_events'] = np.sum(x[weights_variable])**2/np.sum(x[weights_variable]**2) if weights_variable is not None else len(x)
     ret['bin'] = inter
     return ret
 
