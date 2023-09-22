@@ -56,7 +56,7 @@ def compare_ml_models(overall_metrics_path: str,
     #          [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
     ylims = None
     reference = 'highway'
-    colours = sns.color_palette('coolwarm', len(sorted_labels))
+    colours = sns.color_palette('Set2', len(sorted_labels))
     if x_var == 'jets_pt':
         for df in sorted_dfs:
             df['bin_mid'] = df['bin_mid'] * 1e-6
@@ -66,6 +66,7 @@ def compare_ml_models(overall_metrics_path: str,
                         labels=[MODEL_NAMING_SCHEMA[model] for model in list(sorted_labels)],
                         bin_midpoint_name='bin_mid',
                         bin_width_name='bin_width',
+                        n_counts = 'eff_num_events',
                         metric_names=metric_names,
                         save_path=save_path,
                         ratio_reference_label=None,

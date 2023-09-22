@@ -82,7 +82,7 @@ def get_noisify_fn(variable, mean, std):
     @tf.function
     def noisify(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
-        sample[variable] = tf.random.normal(tf.shape(sample[variable]), mean=mean, stddev=std)
+        sample[variable] = tf.random.uniform(tf.shape(sample[variable]), minval=mean - tf.sqrt(3.) * std, maxval=mean + tf.sqrt(3.) * std)
         return sample
     return noisify
 

@@ -448,6 +448,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         metric_names: List[str],
                         save_path: str,
                         title: Union[str, List[str]] = None,
+                        n_counts: str = None,
                         ratio_reference_label: Optional[str] = None,
                         xlabel: Optional[str] = None,
                         ylabel_mapper: Optional[Dict[str, str]] = None,
@@ -514,15 +515,22 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             x_var = df[bin_midpoint_name].to_numpy()
             x_width = df[bin_width_name].to_numpy()
             y_var_mean = df[metric_name].to_numpy()
-            y_var_std = np.zeros_like(y_var_mean)
-            # np.sqrt(y_var_mean * (1 - y_var_mean) / df['num_events'].to_numpy())
+
+            counts = df[n_counts].to_numpy()
+            if 'eff' in metric_name:
+                y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts) 
+            elif 'rej' in metric_name:
+                y_var_std = np.sqrt(1/y_var_mean * (1 - 1/y_var_mean) / counts) * y_var_mean**2
+            else:
+                y_var_std = np.zeros_like(y_var_mean)
+            
             plot.add(
                 puma.VarVsVar(
                     x_var=x_var,
                     x_var_widths=x_width,
                     y_var_mean=y_var_mean,
                     y_var_std=y_var_std,
-                    plot_y_std=False,
+                    plot_y_std=True,
                     marker='o',
                     markersize=20,
                     markeredgewidth=20,

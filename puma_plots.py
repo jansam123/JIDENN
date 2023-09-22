@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--load_path", type=str, help="Path to the saved tf.data.Dataset file")
 parser.add_argument("--save_path", type=str, default='plots', help="Path to save the plots")
 parser.add_argument("-v", "--variable", type=str, default='jets_pt', help="Variables to plot")
-parser.add_argument("-w", "--weight", type=str, default=None, help="Weight variable")
+parser.add_argument("-w", "--weight", type=str, default='weight', help="Weight variable")
 parser.add_argument("--bins", type=int, default=50, help="Number of bins for the histograms")
 parser.add_argument("--log_bins", action='store_true', help="Whether to use log-spaced bins")
 parser.add_argument("--ylog", action='store_true', help="Whether to use log-spaced bins")
@@ -39,7 +39,8 @@ HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'qu
 def main(args):
     os.makedirs(args.save_path, exist_ok=True)
     score_dataset = pd.read_csv(args.load_path, index_col=0)
-    score_dataset = score_dataset.query(args.cut) if args.cut is not None else score_dataset
+    # if args.cut is not None else score_dataset
+    score_dataset = score_dataset.query('jets_pt < 2500000 and jets_pt > 200000 and jets_eta < 2.1 and jets_eta > -2.1')
     score_dataset['jets_pt'] = score_dataset['jets_pt'] * \
         1e-3 if 'jets_pt' == 'jets_pt' else score_dataset['jets_pt']
     is_quark = score_dataset['label'] == 1
@@ -161,14 +162,15 @@ def main(args):
     )
 
     plots = []
-    sig_eff = np.linspace(0.1, 1, 100)
+    sig_eff = np.linspace(0.1, 1, 1000)
     # score_dataset.columns:
     # scores = ["idepart_score", "ipart_score", "particle_net_score", "depart_score",
     #           "transformer_score", "part_score", "pfn_score", "highway_score", "fc_score", "efn_score",]
-    scores = ["idepart_score", "ipart_score", "particle_net_score", "pfn_score", "highway_score", "fc_score", "efn_score",]
+    scores = ["idepart_score", "ipart_score", "particle_net_score",
+              "pfn_score", "highway_score", "fc_score", "efn_score",]
     score_dataset['jets_eta'] = score_dataset['jets_eta'].abs()
-    colors = sns.color_palette('coolwarm', len(scores))
-    colours = sns.color_palette('coolwarm', len(scores))
+    colours = sns.color_palette('Set2', len(scores))
+    print(args.weight)
     for i, score_name in enumerate(scores):
         if 'score' not in score_name:
             continue
@@ -287,10 +289,9 @@ def main(args):
             colour=colours[i],
 
         )
-        
-        
+
         rejs = calc_rej(score_dataset[score_name][is_quark], score_dataset[score_name][is_gluon],
-                        sig_eff, score_dataset[args.weight][is_gluon] if args.weight is not None else None)
+                        sig_eff, bkg_weights=score_dataset[args.weight][is_gluon] if args.weight is not None else None)
         plot_roc.add_roc(
             Roc(
                 sig_eff,

@@ -27,7 +27,7 @@ parser.add_argument("--compare_mc", default=False, type=bool,
 def main(args: argparse.Namespace):
     dfs = []
     for model in args.model_names:
-        for dir in args.load_dirs :
+        for dir in args.load_dirs:
             df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
             df['bin_mid'] = df['bin_mid'] * 1e-6
             df['bin_width'] = df['bin_width'] * 1e-6
@@ -59,8 +59,8 @@ def main(args: argparse.Namespace):
             dfs = []
             for model in args.model_names:
                 ref_df = pd.read_csv(os.path.join(args.ref_dir, 'models', f'{model}', 'binned_metrics.csv'))
-                ref_df['bin_mid'] = ref_df['bin_mid'] *1e-6
-                ref_df['bin_width'] = ref_df['bin_width'] *1e-6
+                ref_df['bin_mid'] = ref_df['bin_mid'] * 1e-6
+                ref_df['bin_width'] = ref_df['bin_width'] * 1e-6
                 if model == args.reference:
                     continue
                 df = pd.read_csv(os.path.join(dir, 'models', f'{model}', 'binned_metrics.csv'))
@@ -92,7 +92,7 @@ def main(args: argparse.Namespace):
                                 h_line_position=[0.0, 1.0],
                                 leg_loc='upper center',
                                 title=f'{args.wp}, {MC_NAMING_SCHEMA[label]}',
-                                colours=sns.color_palette("coolwarm", len(args.model_names)))
+                                colours=sns.color_palette("Set2", len(args.model_names)))
 
         # df_had_difff =
 
@@ -157,7 +157,7 @@ def main(args: argparse.Namespace):
                             leg_loc='upper right',
                             title=[f'{args.wp} WP', f'{args.wp} WP', f'{args.wp} WP', f'{args.wp} WP',
                                    f'{args.wp} WP, Sherpa2.2.5', f'{args.wp} WP, Herwig7', f'{args.wp} WP, Sherpa2.2.11'],
-                            colours=sns.color_palette("coolwarm", len(args.model_names)))
+                            colours=sns.color_palette("Set2", len(args.model_names)))
 
         df_big = df_big[['mc', 'model', metric]]
         df_big = df_big.groupby(['mc', 'model']).mean().reset_index()
@@ -200,7 +200,7 @@ if __name__ == "__main__":
         args.labels = args.mc_names
         # args.model_names = ["idepart", "ipart", "depart", "particle_net",
         #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
-        args.model_names = ["idepart", "ipart", "particle_net", "pfn", "fc", "highway","efn"]
+        args.model_names = ["idepart", "ipart", "particle_net", "pfn", "fc", "highway", "efn"]
         args.metric_names = ["gluon_rejection", "quark_efficiency", 'gluon_efficiency']
         args.reference = 'pythia'
         args.ref_dir = os.path.join(load_dir, 'Pythia8EvtGen_A14NNPDF23LO_jetjet')
@@ -209,7 +209,7 @@ if __name__ == "__main__":
         if wp == '50':
             args.ylims1 = [(5, 40), (0.1, 1.), (0.4, 1.)]
             args.ylims2['quark_efficiency'] = [(-0.1, 0.175), (0.7, 1.3)]
-            args.ylims2['gluon_rejection'] = [(-0.1, 0.175), (0.25, 1.25)]
+            args.ylims2['gluon_rejection'] = [(-0.1, 0.175), (0.4, 1.6)]
         else:
             args.ylims1 = [(2, 7), (0.6, 1.), (0.4, 1.)]
             args.ylims2['quark_efficiency'] = [(-0.1, 0.175), (0.7, 1.3)]

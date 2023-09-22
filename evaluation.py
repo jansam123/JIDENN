@@ -123,7 +123,7 @@ def main(args: eval_config.EvalConfig) -> None:
     else:
         bins = np.array(args.binning.bins)
         df = df[df[binning_variable] < bins[-1]]
-        # df = df[df[binning_variable] > bins[0]]
+        df = df[df[binning_variable] > bins[0]]
 
     print(df)
     log.info(f'Using {len(df)} events for evaluation after binning cuts')
