@@ -81,6 +81,9 @@ MODEL_NAMING_SCHEMA = {
     'bdt': 'BDT',
     'depart_100M': 'DeParT (100M jets)',
     'particle_net': 'ParticleNet',
+    'pfn_bad': 'PFN (Bad)',
+    'pfn_noW': 'PFN (No W)',
+    'fc_noW': 'Fully Connected (No W)',
 }
 
 

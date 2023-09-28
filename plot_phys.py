@@ -26,10 +26,10 @@ def sns_label_plotting(df, save_path, bins=None):
     plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
     plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(1e3, 1e6)
-    plt.xlim(0.06, 4.6)
+    plt.xlim(0.2, 2.5)
     atlasify.atlasify(
         axes=ax,
-        subtext='13 TeV',
+        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets',
         atlas='Simulation Internal',
     )
     plt.savefig(f"{save_path}/flat_pt.pdf", bbox_inches='tight')
@@ -56,10 +56,10 @@ def sns_label_plotting_noW(df, save_path, bins=None):
     plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
     plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(1e3, 1e6)
-    plt.xlim(0.06, 4.6)
+    plt.xlim(0.2, 2.5)
     atlasify.atlasify(
         axes=ax,
-        subtext='13 TeV',
+        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets',
         atlas='Simulation Internal',
     )
     plt.savefig(f"{save_path}/flat_pt_noW.pdf", bbox_inches='tight')
@@ -86,10 +86,10 @@ def sns_label_plotting_phys(df, save_path):
     plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
     plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(4e-2, 1e9)
-    plt.xlim(0.16, 2.5)
+    plt.xlim(0.2, 2.5)
     atlasify.atlasify(
         axes=ax,
-        subtext='13 TeV',
+        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets',
         atlas='Simulation Internal',
     )
     plt.savefig(f"{save_path}/phys_pt.pdf", bbox_inches='tight')
@@ -108,7 +108,7 @@ def load_dataframe(path, vars):
 
 if __name__ == "__main__":
     HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
-    train_path = "/home/jankovys/JIDENN/data/pythia_W_flat_70_JZ10_noL/train"
+    train_path = "/home/jankovys/JIDENN/data/pythia_nW_flat_100_JZ7/train"
     try:
         df = pd.read_csv(os.path.join(train_path, "dataset.csv"))
     except FileNotFoundError:
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # print(df.query('jets_PartonTruthLabelID != 21')[['jets_pt', 'weight_spectrum']].groupby('weight_spectrum').min()['jets_pt'].values)
     # print(df.query('jets_PartonTruthLabelID != 21')[['jets_pt', 'weight_spectrum']].groupby('weight_spectrum').max()['jets_pt'].values)
     df['jets_PartonTruthLabelID'] = df['jets_PartonTruthLabelID'].replace(HUE_MAPPER)
-    df['weight_spectrum'] *= 1e-4
+    # df['weight_spectrum'] *= 1e-4
     # remap the labels
     bins = np.array(bins) 
     bins = bins[np.argsort(bins)]

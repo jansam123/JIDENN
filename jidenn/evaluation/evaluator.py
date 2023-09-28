@@ -216,7 +216,7 @@ def evaluate_multiple_models(model_paths: List[str],
         train_input_class = train_input_class()
         model_input = tf.function(func=train_input_class)
         ds = dataset.remap_data(model_input)
-        if distribution_drawer is not None and input_type != 'interaction_constituents':
+        if distribution_drawer is not None:
             log.info(f'----- Drawing data distribution for: {input_type}') if log is not None else None
             input_type_hash = hashlib.sha256(input_type.encode('utf-8')).hexdigest()
             if checkpoint_path is not None:
@@ -250,7 +250,8 @@ def evaluate_multiple_models(model_paths: List[str],
                     pass
             log.info(f'----- Loading model: {model_name}') if log is not None else None
             start = time.time()
-            model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+            model : tf.keras.Model = tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
+            model.compile()
             stop = time.time()
             log.info(f'----- Loading model took: {stop-start:.2f} s') if log is not None else None
             log.info(f'----- Predicting with model: {model_name}') if log is not None else None

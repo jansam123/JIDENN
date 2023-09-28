@@ -340,7 +340,7 @@ def plot_data_distributions(df: pd.DataFrame,
     df[color_column] = df[hue_variable].apply(
         lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
     df[weight_column] = df[weight_variable] if weight_variable is not None else 1
-    hue_order = set(named_labels.values()) if named_labels is not None else None
+    hue_order = ['quark', 'gluon'] #set(named_labels.values()) if named_labels is not None else None
     var_names = list(df.columns) if variables is None else variables
     var_names.remove(color_column) if color_column in var_names else None
     var_names.remove(weight_column) if weight_column in var_names else None
@@ -361,21 +361,36 @@ def plot_data_distributions(df: pd.DataFrame,
             small_df = small_df.loc[small_df[var_name] != 0]
         try:
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                              stat='density', element="step", fill=True, weights=weight_column,
+                              stat='probability', element="step", fill=False, weights=weight_column,
                               palette='Set1', common_norm=False, hue_order=hue_order, bins=bins)
         except:
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
-                              stat='density', element="step", fill=True, weights=weight_column,
+                              stat='probability', element="step", fill=False, weights=weight_column,
                               palette='Set1', common_norm=False, hue_order=hue_order, bins=100)
+        lss = ['-', '--']
+        handles = ax.legend_.legendHandles[::-1]
+        for line, ls, handle in zip(ax.lines, lss, handles):
+            line.set_linestyle(ls)
+            handle.set_ls(ls)
+        ax.legend_.set_title(None)
+        plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name, horizontalalignment='right', x=1.0)
+        plt.ylabel(r"a.u.", horizontalalignment='right', y=1.0)
+        
+        if var_name == 'z':
+            plt.xlim(0, 0.5)
+        elif var_name == 'delta':
+            plt.xlim(-7, 0)
+        elif var_name == 'm2':
+            plt.xlim(0, 25)
+        elif var_name == 'k_t':
+            plt.xlim(0, 14)
 
-        plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
-
-        atlasify.atlasify(subtext="Simulation Internal")
-        plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
+        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets", font_size=13)
+        plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf', f'{var_name}.pdf'), bbox_inches='tight')
         plt.yscale('log')
-        atlasify.atlasify(subtext="Simulation Internal")
-        plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=300, bbox_inches='tight')
+        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets", font_size=13)
+        plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
 
         plt.close()
@@ -489,8 +504,9 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             second_tag = f'13 TeV, {title[i]}' if title is not None else '13 TeV'
         else:
             second_tag = f'13 TeV, {title}' if title is not None else '13 TeV'
-        second_tag += f', 50% WP' if '50wp' in metric_name else ''
-        second_tag += f', 80% WP' if '80wp' in metric_name else ''
+        # second_tag += f', 50% WP' if '50wp' in metric_name else ''
+        # second_tag += f', 80% WP' if '80wp' in metric_name else ''
+
         ylabel = ylabel_mapper[metric_name] if ylabel_mapper is not None and metric_name in ylabel_mapper else metric_name
         ylabel = ylabel.split('@')[0] + '$' if '@' in ylabel else ylabel
         plot = puma.VarVsVarPlot(
@@ -501,7 +517,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             ymin=ylims[i][0] if ylims is not None and ylims[i] is not None else None,
             ymax=ylims[i][1] if ylims is not None and ylims[i] is not None else None,
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
-            figsize=figsize,
+            figsize=figsize[i] if isinstance(figsize, list) else figsize,
             atlas_second_tag=second_tag,
             atlas_first_tag='Simulation Internal',
             leg_loc=leg_loc,
@@ -516,12 +532,17 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             x_width = df[bin_width_name].to_numpy()
             y_var_mean = df[metric_name].to_numpy()
 
-            counts = df[n_counts].to_numpy()
-            if 'eff' in metric_name:
-                y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts) 
-            elif 'rej' in metric_name:
-                y_var_std = np.sqrt(1/y_var_mean * (1 - 1/y_var_mean) / counts) * y_var_mean**2
+            if n_counts is not None:
+                plot_y_std = True
+                counts = df[n_counts].to_numpy() if n_counts is not None else np.ones_like(y_var_mean)
+                if 'eff' in metric_name:
+                    y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts) 
+                elif 'rej' in metric_name:
+                    y_var_std = np.sqrt(1/y_var_mean * (1 - 1/y_var_mean) / counts) * y_var_mean**2
+                else:
+                    y_var_std = np.zeros_like(y_var_mean)
             else:
+                plot_y_std = False
                 y_var_std = np.zeros_like(y_var_mean)
             
             plot.add(
@@ -530,7 +551,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                     x_var_widths=x_width,
                     y_var_mean=y_var_mean,
                     y_var_std=y_var_std,
-                    plot_y_std=True,
+                    plot_y_std=plot_y_std,
                     marker='o',
                     markersize=20,
                     markeredgewidth=20,

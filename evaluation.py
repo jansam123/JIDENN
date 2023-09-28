@@ -243,6 +243,7 @@ def main(args: eval_config.EvalConfig) -> None:
                             args.reference_model] if args.reference_model and args.reference_model in acc_sorted_models is not None else None,
                         bin_midpoint_name='bin_mid',
                         bin_width_name='bin_width',
+                        n_counts='eff_num_events',
                         metric_names=args.metrics_to_plot,
                         ylims=args.ylims,
                         xlog=args.binning.log_bin_base is not None,

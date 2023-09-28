@@ -146,18 +146,18 @@ def main(args):
     )
 
     plot_roc = RocPlot(
-        n_ratio_panels=0,
+        n_ratio_panels=1,
         ylabel=r"$\varepsilon_g^{-1}$",
         xlabel=r"$\varepsilon_q$",
-        atlas_second_tag="13 TeV" if args.title is None else f"13 TeV, {args.title}",
-        figsize=(5, 4),
+        atlas_second_tag="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets" if args.title is None else f"13 TeV, {args.title}",
+        figsize=(6, 6),
         ymin=1,
-        ymax=2e3,
+        ymax=1e4,
         y_scale=1.4,
         grid=False,
         label_fontsize=14,
         fontsize=12,
-        atlas_fontsize=11,
+        atlas_fontsize=13,
         leg_fontsize=11,
     )
 
@@ -169,7 +169,8 @@ def main(args):
     scores = ["idepart_score", "ipart_score", "particle_net_score",
               "pfn_score", "highway_score", "fc_score", "efn_score",]
     score_dataset['jets_eta'] = score_dataset['jets_eta'].abs()
-    colours = sns.color_palette('Set2', len(scores))
+    colours = sns.color_palette('colorblind', len(scores))
+    lines = ['-', '--', '-.', ':', (0, (3, 5, 1, 5, 1, 5)), (0, (3, 10, 1, 10)), (0, (3, 10, 1, 10, 1, 10))]
     print(args.weight)
     for i, score_name in enumerate(scores):
         if 'score' not in score_name:
@@ -183,7 +184,7 @@ def main(args):
             disc_bkg=score_dataset[score_name][is_gluon],
             weights_bkg=score_dataset[args.weight][is_gluon] if args.weight is not None else None,
             # bins=bins,
-            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
+            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 800, 1100, 1400, 1750, 2500],
             working_point=0.5,
             disc_cut=None,
             fixed_eff_bin=True,
@@ -202,7 +203,7 @@ def main(args):
             disc_bkg=score_dataset[score_name][is_gluon],
             weights_bkg=score_dataset[args.weight][is_gluon] if args.weight is not None else None,
             # bins=bins,
-            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
+            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 800, 1100, 1400, 1750, 2500],
             working_point=0.8,
             disc_cut=None,
             fixed_eff_bin=True,
@@ -298,12 +299,13 @@ def main(args):
                 rejs,
                 n_test=None,
 
-                # rej_class="gluon",
+                rej_class="ujets",
                 # signal_class="quark",
                 label=label,
                 colour=colours[i],
+                # linestyle=lines[i],
             ),
-            reference=True if score_name == 'transformer_score' else False
+            reference=True if score_name == 'fc_score' else False
         )
         plot_bkg_rej.add(plot, reference=True if score_name == 'transformer_score' else False)
         plot_bkg_rej_80.add(plot_80, reference=True if score_name == 'transformer_score' else False)
@@ -312,6 +314,7 @@ def main(args):
         plot_bkg_rej_mu.add(plot_mu, reference=True if score_name == 'transformer_score' else False)
         plot_bkg_rej_80_mu.add(plot_80_mu, reference=True if score_name == 'transformer_score' else False)
 
+    plot_roc.set_ratio_class(1, "ujets")
     plot_bkg_rej.draw()
     plot_bkg_rej_80.draw()
     plot_bkg_rej_eta.draw()
@@ -336,7 +339,7 @@ if __name__ == '__main__':
     #     args.cut = f'JZ_slice == {i}'
     #     args.save_path = f'{original_path}/JZ{i}'
     #     args.title = f'JZ{i}'
-    #     args.pt_bins = [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500]
+    #     args.pt_bins = [200, 300, 400, 600, 800, 1100, 1400, 1750, 2500]
     #     for i in range(len(args.pt_bins)):
     #         try:
     #             main(args)

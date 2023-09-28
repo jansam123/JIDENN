@@ -47,21 +47,26 @@ def compare_ml_models(overall_metrics_path: str,
         os.path.join(save_path, 'sorted_accuracies.csv'), index=False)
     print(sorted_labels)
     metric_names = ["gluon_efficiency", "quark_efficiency",
+                    "gluon_rejection", "quark_rejection",
                     "binary_accuracy", "auc",
                     # "effective_tagging_efficiency",
-                    'gluon_rejection_at_quark_80wp', 'gluon_rejection_at_quark_50wp',
-                    'gluon_efficiency_at_quark_80wp', 'gluon_efficiency_at_quark_50wp']
+                    'gluon_rejection_at_quark_80wp', 'gluon_efficiency_at_quark_80wp',
+                    'gluon_rejection_at_quark_50wp','gluon_efficiency_at_quark_50wp']
 
     # ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
     #          [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
     ylims = None
     reference = 'highway'
-    colours = sns.color_palette('Set2', len(sorted_labels))
+    colours = sns.color_palette('colorblind', len(sorted_labels))
     if x_var == 'jets_pt':
         for df in sorted_dfs:
             df['bin_mid'] = df['bin_mid'] * 1e-6
             df['bin_width'] = df['bin_width'] * 1e-6
-
+            
+    title_50 = 'Pythia8, 50% WP\n'
+    title_80 = 'Pythia8, 80% WP\n'
+    title_none = 'Pythia8\n'
+    title_all = r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets'
     plot_var_dependence(dfs=sorted_dfs,
                         labels=[MODEL_NAMING_SCHEMA[model] for model in list(sorted_labels)],
                         bin_midpoint_name='bin_mid',
@@ -74,6 +79,7 @@ def compare_ml_models(overall_metrics_path: str,
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
+                        title=[title_none + title_all]*6 +  [title_80 + title_all]*2 + [title_50 + title_all]*2,
                         figsize=(7, 5),
                         leg_loc='upper right',
                         colours=colours)
@@ -102,5 +108,5 @@ if __name__ == "__main__":
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
     # args.model_names = ["idepart", "ipart", "depart", "particle_net",
     #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
-    args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
+    args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway", "fc_noW", "pfn_noW"]
     main(args)
