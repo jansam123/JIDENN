@@ -73,6 +73,8 @@ def _calculate_metrics_in_bin(x):
                             weights=x[weights_variable] if weights_variable is not None else None)
     ret['num_events'] = len(x)
     ret['eff_num_events'] = np.sum(x[weights_variable])**2/np.sum(x[weights_variable]**2) if weights_variable is not None else len(x)
+    ret['eff_num_events_q'] = np.sum(x.query('label==1')[weights_variable])**2/np.sum(x.query('label==1')[weights_variable]**2) if weights_variable is not None else len(x.query('label==1'))
+    ret['eff_num_events_g'] = np.sum(x.query('label==0')[weights_variable])**2/np.sum(x.query('label==0')[weights_variable]**2) if weights_variable is not None else len(x.query('label==0'))
     ret['bin'] = inter
     return ret
 

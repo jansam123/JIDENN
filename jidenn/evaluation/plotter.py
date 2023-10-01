@@ -463,7 +463,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         metric_names: List[str],
                         save_path: str,
                         title: Union[str, List[str]] = None,
-                        n_counts: str = None,
+                        n_counts: Optional[Union[str, List[str]]] = None,
                         ratio_reference_label: Optional[str] = None,
                         xlabel: Optional[str] = None,
                         ylabel_mapper: Optional[Dict[str, str]] = None,
@@ -534,7 +534,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
 
             if n_counts is not None:
                 plot_y_std = True
-                counts = df[n_counts].to_numpy() if n_counts is not None else np.ones_like(y_var_mean)
+                counts = df[n_counts[i]].to_numpy() if isinstance(n_counts, list) else df[n_counts].to_numpy()
                 if 'eff' in metric_name:
                     y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts) 
                 elif 'rej' in metric_name:

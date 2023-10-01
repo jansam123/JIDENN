@@ -257,7 +257,7 @@ class QRInteraction(TrainInput):
         return (None, len(self.variables)), (None, None, 4)
 
 
-class HighLevelPFOVariables(TrainInput):
+class CraftedHighLevelJetVariables(TrainInput):
     """Constructs the input variables characterizing the **whole jet** from the PFO objects.
     These are special variables constructed for the BDT model, `jidenn.models.BDT.bdt_model`, from PFO object (originaly only from tracks trk)
 
@@ -344,16 +344,16 @@ class ConstituentVariables(TrainInput):
         logE = tf.math.log(PFO_E)
         logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
         logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
-        m = m_const
+        # m = m_const
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
         return {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
-                'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+                 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
 
     @property
     def input_shape(self) -> Tuple[None, int]:
         """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
         and `8` is the number of variables per constituent."""
-        return (None, 8)
+        return (None, 7)
 
 
 class GNNVariables(TrainInput):
@@ -409,7 +409,7 @@ class GNNVariables(TrainInput):
         m = m_const
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
         fts = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
-               'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+                'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
         
         mask = tf.ones_like(fts['deltaEta'])
         mask = tf.pad(mask, [[0, self.max_constituents - tf.shape(mask)[-1]]])
@@ -425,7 +425,7 @@ class GNNVariables(TrainInput):
     def input_shape(self) -> Tuple[None, int]:
         """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
         and `8` is the number of variables per constituent."""
-        return (self.max_constituents, 2), (self.max_constituents, 8), (self.max_constituents, 1)
+        return (self.max_constituents, 2), (self.max_constituents, 7), (self.max_constituents, 1)
 
 
 class IRCSVariables(TrainInput):
@@ -614,15 +614,15 @@ class InteractingRelativeConstituentVariables(TrainInput):
         logPT_PTjet = tf.math.log(pt)
         logE_Ejet = tf.math.log(E)
         # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
-        vars = {'log_PT|PTjet': logPT_PTjet, 'log_E|Ejet': logE_Ejet,
-                'm': m, 'deltaEta': eta, 'deltaPhi': phi, 'deltaR': deltaR}
-        return vars, interaction_vars
+        const_vars = {'log_PT|PTjet': logPT_PTjet, 'log_E|Ejet': logE_Ejet,
+                'deltaEta': eta, 'deltaPhi': phi, 'deltaR': deltaR}
+        return const_vars, interaction_vars
 
     @property
     def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
         """The input shape is `(None, 6)`, where `None` indicates that the number of constituents is not fixed, 
         and `6` is the number of variables per constituent."""
-        return (None, 6), (None, None, 4)
+        return (None, 5), (None, None, 4)
 
 
 class InteractionConstituentVariables(TrainInput):
@@ -707,7 +707,7 @@ class InteractionConstituentVariables(TrainInput):
         logE_Ejet = tf.math.log(PFO_E / tf.math.reduce_mean(jet_E))
 
         const_vars = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
-                      'm': m, 'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
+                      'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR}
 
         return const_vars, interaction_vars
 
@@ -716,7 +716,7 @@ class InteractionConstituentVariables(TrainInput):
         """The input shape is a tuple of two tuples `(None, 8)` and `(None, None, 4)`, where the first tuple corresponds to the shape 
         of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
         i.e. a matrix for each jet."""
-        return (None, 8), (None, None, 4)
+        return (None, 7), (None, None, 4)
 
 
 def input_classes_lookup(class_name: Literal['highlevel',
@@ -738,7 +738,7 @@ def input_classes_lookup(class_name: Literal['highlevel',
     """
 
     lookup_dict = {'highlevel': HighLevelJetVariables,
-                   'highlevel_constituents': HighLevelPFOVariables,
+                   'crafted_highlevel': CraftedHighLevelJetVariables,
                    'constituents': ConstituentVariables,
                    'irelative_constituents': InteractingRelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,

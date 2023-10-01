@@ -52,6 +52,12 @@ def compare_ml_models(overall_metrics_path: str,
                     # "effective_tagging_efficiency",
                     'gluon_rejection_at_quark_80wp', 'gluon_efficiency_at_quark_80wp',
                     'gluon_rejection_at_quark_50wp','gluon_efficiency_at_quark_50wp']
+    n_counts = ['eff_num_events_g', 'eff_num_events_q',
+                'eff_num_events_g', 'eff_num_events_q',
+                'eff_num_events', 'eff_num_events',
+                # 'eff_num_events_g',
+                'eff_num_events_g', 'eff_num_events_g',
+                'eff_num_events_g', 'eff_num_events_g']
 
     # ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
     #          [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
@@ -71,7 +77,7 @@ def compare_ml_models(overall_metrics_path: str,
                         labels=[MODEL_NAMING_SCHEMA[model] for model in list(sorted_labels)],
                         bin_midpoint_name='bin_mid',
                         bin_width_name='bin_width',
-                        n_counts = 'eff_num_events',
+                        n_counts = n_counts,
                         metric_names=metric_names,
                         save_path=save_path,
                         ratio_reference_label=None,
@@ -108,5 +114,6 @@ if __name__ == "__main__":
     # args.save_dir = 'plots/stepwise_flat/eval/post_compare_models'
     # args.model_names = ["idepart", "ipart", "depart", "particle_net",
     #                     "part", "transformer", "efn", "pfn", "fc", "highway"]
-    args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway", "fc_noW", "pfn_noW"]
+    # args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
+    args.model_names = ["fc", "highway","fc_crafted", "highway_crafted"]
     main(args)

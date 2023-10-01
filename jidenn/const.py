@@ -84,6 +84,8 @@ MODEL_NAMING_SCHEMA = {
     'pfn_bad': 'PFN (Bad)',
     'pfn_noW': 'PFN (No W)',
     'fc_noW': 'Fully Connected (No W)',
+    'fc_crafted': r'Fully Connected ($C_1$, $w_{\mathrm{PFO}}$, $N_{\mathrm{PFO}}$), $p_{\mathrm{T}}$, $\eta$',
+    'highway_crafted': r'Highway ($C_1$, $w_{\mathrm{PFO}}$, $N_{\mathrm{PFO}}$), $p_{\mathrm{T}}$, $\eta$',
 }
 
 
