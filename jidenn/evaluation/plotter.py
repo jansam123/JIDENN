@@ -385,11 +385,11 @@ def plot_data_distributions(df: pd.DataFrame,
         elif var_name == 'k_t':
             plt.xlim(0, 14)
 
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets", font_size=13)
+        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
         plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf', f'{var_name}.pdf'), bbox_inches='tight')
         plt.yscale('log')
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets", font_size=13)
+        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
         plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
 
@@ -473,6 +473,13 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         leg_loc='lower right',
                         h_line_position: Optional[float] = None,
                         colours: Optional[List[str]] = None,
+                        leg_ncol: int = 2,
+                        label_fontsize=30,
+                        fontsize=24,
+                        leg_fontsize=24,
+                        atlas_fontsize=24,
+                        markersize=12,
+                        linewidth=1.6,
                         ):
     """Plot the dependence of multiple metrics on a variable in a DataFrame for multiple models.
     The Dataframe must contain columns corresponding to individual metrics, and columns containing
@@ -521,13 +528,14 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             atlas_second_tag=second_tag,
             atlas_first_tag='Simulation Internal',
             leg_loc=leg_loc,
-            label_fontsize=14,
-            fontsize=12,
-            leg_fontsize=11,
-            leg_ncol=2,
+            label_fontsize=label_fontsize,
+            fontsize=fontsize,
+            leg_fontsize=leg_fontsize,
+            atlas_fontsize=atlas_fontsize,
+            leg_ncol=leg_ncol,
         )
-
-        for df, label in zip(dfs, labels):
+        markers = ['o', 's', 'v', 'D', 'P', 'X', 'd', 'p', 'h', '8', '>', '<', '^', '*', '+', '8']
+        for j, (df, label) in enumerate(zip(dfs, labels)):
             x_var = df[bin_midpoint_name].to_numpy()
             x_width = df[bin_width_name].to_numpy()
             y_var_mean = df[metric_name].to_numpy()
@@ -540,6 +548,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                 elif 'rej' in metric_name:
                     y_var_std = np.sqrt(1/y_var_mean * (1 - 1/y_var_mean) / counts) * y_var_mean**2
                 else:
+                    plot_y_std = False
                     y_var_std = np.zeros_like(y_var_mean)
             else:
                 plot_y_std = False
@@ -552,9 +561,10 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                     y_var_mean=y_var_mean,
                     y_var_std=y_var_std,
                     plot_y_std=plot_y_std,
-                    marker='o',
-                    markersize=20,
-                    markeredgewidth=20,
+                    marker=markers[j],
+                    markersize=markersize,
+                    markeredgewidth=40,
+                    linewidth=linewidth,
                     is_marker=True,
                     label=label,
                     colour=colours[labels.index(label)] if colours is not None else None,

@@ -315,6 +315,33 @@ class FixedWorkingPointBase(tf.keras.metrics.Metric):
         self.total_positives.assign(tf.zeros_like(self.total_positives))
         self.false_negatives.assign(tf.zeros_like(self.false_negatives))
         self.total_negatives.assign(tf.zeros_like(self.total_negatives))
+    
+class BkgRejVsSigEff(FixedWorkingPointBase):
+    def __init__(self, thresholds: Union[int, List] = 200, name: Optional[str] = 'bkg_rej_vs_sig_eff', dtype: Optional[tf.dtypes.DType] = None, fixed_label_id: Literal[0, 1] = 1):
+        if isinstance(thresholds, int):
+            th = thresholds
+        else:
+            th = len(thresholds)
+        super().__init__(working_point=0., num_thresholds=th, name=name, dtype=dtype)
+        if isinstance(thresholds, list):
+            self.thresholds = thresholds
+        self.fixed_label_id = fixed_label_id
+        
+    def result(self) -> Tuple[tf.Tensor, tf.Tensor]:
+        efficiency_positivess = self.true_positives / self.total_positives
+        efficiency_negatives = self.false_negatives / self.total_negatives
+        
+        if self.fixed_label_id == 1:
+            sig_efficiency = efficiency_positivess
+            bkg_rejection = 1.0 / (1 - efficiency_negatives)
+        elif self.fixed_label_id == 0:
+            sig_efficiency = efficiency_negatives
+            bkg_rejection = 1.0 / (1 - efficiency_positivess)
+        else:
+            raise ValueError(f'fixed_label_id must be 0 or 1, but is {self.fixed_label_id}')
+
+        return sig_efficiency, bkg_rejection
+        
 
 
 class EfficiencyAtFixedWorkingPoint(FixedWorkingPointBase):

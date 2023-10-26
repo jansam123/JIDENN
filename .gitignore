@@ -29,3 +29,4 @@ tests
 *.root
 **/*.root
 raw
+plots.md
