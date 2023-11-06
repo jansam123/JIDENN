@@ -385,11 +385,11 @@ def plot_data_distributions(df: pd.DataFrame,
         elif var_name == 'k_t':
             plt.xlim(0, 14)
 
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
+        atlasify.atlasify(atlas="Simulation Preliminary", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
         plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf', f'{var_name}.pdf'), bbox_inches='tight')
         plt.yscale('log')
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
+        atlasify.atlasify(atlas="Simulation Preliminary", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
         plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
 
@@ -446,7 +446,7 @@ def plot_single_dist(df: pd.DataFrame,
     plt.xscale('log') if xlog else plt.xscale('linear')
     plt.xlabel(xlabel if xlabel is not None else variable)
 
-    subtext = f"Simulation Internal \n {badge_text}" if badge_text is not None else "Simulation Internal"
+    subtext = f"Simulation Preliminary \n {badge_text}" if badge_text is not None else "Simulation Preliminary"
 
     atlasify.atlasify(
         atlas=badge,
@@ -526,7 +526,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
             figsize=figsize[i] if isinstance(figsize, list) else figsize,
             atlas_second_tag=second_tag,
-            atlas_first_tag='Simulation Internal',
+            atlas_first_tag='Simulation Preliminary',
             leg_loc=leg_loc,
             label_fontsize=label_fontsize,
             fontsize=fontsize,

@@ -115,7 +115,7 @@ def plot_inter_vars(base_dataset, label, max_const, var_names=['k_t', 'm2', 'z',
         plt.xlabel('Constituent Index', horizontalalignment='right', x=1.0, fontsize=FONTSIZE)
         plt.ylabel('Constituent Index', horizontalalignment='right', y=1.0, fontsize=FONTSIZE)
 
-        atlasify.atlasify(atlas="Simulation Internal", 
+        atlasify.atlasify(atlas="Simulation Preliminary", 
                         outside=True, 
                         subtext=f"13 TeV, Pythia8, {label}\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets",
                         font_size=FONTSIZE,
@@ -153,7 +153,7 @@ def plot_inter_vars(base_dataset, label, max_const, var_names=['k_t', 'm2', 'z',
                     plt.xlabel('Constituent Index', horizontalalignment='right', x=1.0, fontsize=FONTSIZE)
                     plt.ylabel('Constituent Index', horizontalalignment='right', y=1.0, fontsize=FONTSIZE)
 
-                    atlasify.atlasify(atlas="Simulation Internal", 
+                    atlasify.atlasify(atlas="Simulation Preliminary", 
                                     outside=True, 
                                     subtext=f"13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets",
                                     font_size=FONTSIZE,

@@ -49,7 +49,7 @@ def main(args: argparse.Namespace):
                             xlabel=r'$p_T$ [TeV]',
                             ylabel_mapper=METRIC_NAMING_SCHEMA,
                             ylims=args.ylims1,
-                            figsize=(8.1, 7),
+                            figsize=(8.6, 7),
                             xlog=args.xlog,
                             h_line_position=[None, args.wp_val, None],
                             leg_loc='upper right',
@@ -188,7 +188,7 @@ def main(args: argparse.Namespace):
         plt.ylabel(METRIC_NAMING_SCHEMA[metric])
         atlasify.atlasify(
             atlas=True,
-            subtext="Simulation Internal \n 13 TeV",
+            subtext="Simulation Preliminary \n 13 TeV",
         )
         plt.savefig(os.path.join(args.save_dir, f'summary_hist.png'), dpi=400, bbox_inches='tight')
 

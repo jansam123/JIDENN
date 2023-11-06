@@ -151,6 +151,7 @@ def main(args):
         ylabel=r"$\varepsilon_g^{-1}$",
         xlabel=r"$\varepsilon_q$",
         atlas_second_tag="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets" if args.title is None else f"13 TeV, {args.title}",
+        atlas_first_tag="Simulation Preliminary",
         figsize=(6, 6),
         ymin=1,
         ymax=1e3,

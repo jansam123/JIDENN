@@ -39,7 +39,7 @@ def sns_label_plotting(df, save_path, bins=None):
     atlasify.atlasify(
         axes=ax,
         subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets',
-        atlas='Simulation Internal',
+        atlas='Simulation Preliminary',
         font_size=15,
         sub_font_size=15,
         label_font_size=15,
@@ -76,7 +76,7 @@ def sns_label_plotting_noW(df, save_path, bins=None):
     atlasify.atlasify(
         axes=ax,
         subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets',
-        atlas='Simulation Internal',
+        atlas='Simulation Preliminary',
         font_size=14,
         sub_font_size=14,
         label_font_size=14,
