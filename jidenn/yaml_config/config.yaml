@@ -37,7 +37,7 @@ data:
     - [1, 2, 3, 4, 5, 6]
   variable_unknown_labels: [-1, -999]
   label_weights:
-  cut: 
+  cut:
   weight: weight_spectrum
 
 optimizer:
@@ -173,3 +173,22 @@ models:
     train_input: gnn
     activation: gelu #  Activation function to use (relu/elu/gelu/silu).
 
+augmentations:
+  order: []
+  drop_soft:
+    prob: 0.5
+    skew: 100
+    center_location: 0.7
+    min_number_consti: 4
+  rotation:
+    prob: 0.5
+    max_angle: 360
+  boost:
+    prob: 0.5
+    max_beta: 1.
+  collinear_split:
+    prob: 0.5
+    splitting_amount: 0.3
+  soft_smear:
+    prob: 0.5
+    energy_scale: 50
