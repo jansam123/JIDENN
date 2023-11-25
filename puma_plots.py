@@ -40,6 +40,8 @@ HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark', 4: 'quark', 5: 'quark', 6: 'qu
 def main(args):
     os.makedirs(args.save_path, exist_ok=True)
     score_dataset = pd.read_csv(args.load_path, index_col=0)
+    if args.scores is None:
+        args.scores = [col for col in score_dataset.columns if 'score' in col]
     # if args.cut is not None else score_dataset
     score_dataset = score_dataset.query('jets_pt < 2500000 and jets_pt > 200000 and jets_eta < 2.1 and jets_eta > -2.1')
     score_dataset['jets_pt'] = score_dataset['jets_pt'] * \
@@ -151,8 +153,8 @@ def main(args):
         ylabel=r"$\varepsilon_g^{-1}$",
         xlabel=r"$\varepsilon_q$",
         atlas_second_tag="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets" if args.title is None else f"13 TeV, {args.title}",
-        atlas_first_tag="Simulation Preliminary",
-        figsize=(6, 6),
+        atlas_first_tag="Simulation Internal",
+        figsize=(8, 8),
         ymin=1,
         ymax=1e3,
         xmin=0.1,
@@ -183,7 +185,7 @@ def main(args):
     for i, score_name in enumerate(scores):
         if 'score' not in score_name:
             continue
-        label = MODEL_NAMING_SCHEMA[score_name.replace('_score', '')]
+        label = MODEL_NAMING_SCHEMA[score_name.replace('_score', '')] if score_name.replace('_score', '') in MODEL_NAMING_SCHEMA.keys() else score_name.replace('_score', '')
         plot = VarVsEff(
             x_var_sig=score_dataset['jets_pt'][is_quark],
             disc_sig=score_dataset[score_name][is_quark],
@@ -200,7 +202,7 @@ def main(args):
             markersize=4,
             is_marker=True,
             label=label,
-            colour=colours[i],
+            colour=colours[i%len(colours)],
 
         )
         plot_80 = VarVsEff(
@@ -219,7 +221,7 @@ def main(args):
             markersize=4,
             is_marker=True,
             label=label,
-            colour=colours[i],
+            colour=colours[i%len(colours)],
 
         )
         plot_eta = VarVsEff(
@@ -238,7 +240,7 @@ def main(args):
             markersize=4,
             is_marker=True,
             label=label,
-            colour=colours[i],
+            colour=colours[i%len(colours)],
 
         )
         plot_80_eta = VarVsEff(
@@ -257,7 +259,7 @@ def main(args):
             markersize=4,
             is_marker=True,
             label=label,
-            colour=colours[i],
+            colour=colours[i%len(colours)],
 
         )
         plot_mu = VarVsEff(
@@ -276,7 +278,7 @@ def main(args):
             markersize=4,
             is_marker=True,
             label=label,
-            colour=colours[i],
+            colour=colours[i%len(colours)],
 
         )
         plot_80_mu = VarVsEff(
@@ -295,7 +297,7 @@ def main(args):
             markersize=4,
             is_marker=True,
             label=label,
-            colour=colours[i],
+            colour=colours[i%len(colours)],
 
         )
 
@@ -331,8 +333,8 @@ def main(args):
                 rej_class="ujets",
                 # signal_class="quark",
                 label=label,
-                colour=colours[i],
-                linestyle=lines[i],
+                colour=colours[i%len(colours)],
+                linestyle=lines[i%len(lines)],
             ),
             reference=True if  score_name == args.ref_score else False
         )
@@ -375,8 +377,9 @@ if __name__ == '__main__':
     #             break
     #         except:
     #             args.pt_bins = args.pt_bins[:-1]
-    args.scores = ["idepart-m_score", "ipart-m_score", "particle_net-m_score",
-              "pfn-m_score", "fc-reduced_score", "fc_crafted_score", "efn_score",]
-    args.ref_score = "fc_crafted_score"
+    # args.scores = ["idepart-m_score", "ipart-m_score", "particle_net-m_score",
+    #           "pfn-m_score", "fc-reduced_score", "fc_crafted_score", "efn_score",]
+    args.scores = None
+    args.ref_score = "depart_score"
     main(args)
     print('Done')

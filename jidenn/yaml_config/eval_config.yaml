@@ -32,7 +32,7 @@ logdir: logs/stepwise_flat/eval
 models_path: logs/stepwise_flat
 cache_scores: score_dataset.csv
 seed: 42
-draw_distribution: 200_000
+draw_distribution: 20_000
 test_subfolder: test
 batch_size: 512
 take: 1_000_000
@@ -49,50 +49,99 @@ metrics_to_plot:
     "binary_accuracy",
     "auc",
   ]
-reference_model: transformer
+reference_model: depart
 validation_plots_in_bins: False
 ylims: # [[0, 1.1], [0, 1.1], [0.5, 1.1], [0.5, 1.1], [0.10, 0.5]]
 model_names: [
-    "particle_net",
-    "idepart",
-    "ipart",
-    #
+    # "particle_net",
+    # "idepart",
+    # "ipart",
+    # #
+    # "depart",
+    # "part",
+    # "transformer",
+    # "pfn",
+    # # 
+    # "pfn_bad",
+    # #
+    # "efn",
+    # #
+    # "fc-full",
+    # "highway-full",
+    # "fc_crafted",
+    # "highway_crafted",
+    # "fc",
+    # "highway",
     "depart",
-    "part",
-    "transformer",
+    "depart-coll_split",
+    "depart-coll_split-001",
+    "depart-coll_split-010",
+    "depart-coll_split-030",
+    "depart-rot_drop_smear",
+    "depart-rotation",
+    "depart-soft_drop",
+    "depart-soft_drop-01-02",
+    "depart-soft_drop-01-05",
+    "depart-soft_drop-01-07",
+    "depart-soft_drop-100-02",
+    "depart-soft_drop-100-05",
+    "depart-soft_drop-100-07",
+    "depart-soft_drop-10-02",
+    "depart-soft_drop-10-05",
+    "depart-soft_drop-10-07",
+    "depart-soft_smear",
+    "depart-soft_smear-10",
+    "depart-soft_smear-1000",
+    "depart-ircs",
+    "depart-no-int",
     "pfn",
-    # 
-    "pfn_bad",
-    #
-    "efn",
-    #
-    "fc-full",
-    "highway-full",
     "fc_crafted",
-    "highway_crafted",
-    "fc",
-    "highway",
+
   ]
 model_input_types: [
-    "gnn",
+    # "gnn",
+    # "interaction_constituents",
+    # "interaction_constituents",
+    # #
+    # "constituents",
+    # "constituents",
+    # "constituents",
+    # "constituents",
+    # #
+    # "irc",
+    # #
+    # "irc_safe",
+    # #
+    # "full_highlevel",
+    # "full_highlevel",
+    # "crafted_highlevel",
+    # "crafted_highlevel",
+    # "highlevel",
+    # "highlevel",
     "interaction_constituents",
     "interaction_constituents",
-    #
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "interaction_constituents",
+    "ircs_constituents",
     "constituents",
     "constituents",
-    "constituents",
-    "constituents",
-    #
-    "irc",
-    #
-    "irc_safe",
-    #
-    "full_highlevel",
-    "full_highlevel",
     "crafted_highlevel",
-    "crafted_highlevel",
-    "highlevel",
-    "highlevel",
   ]
 working_point_path: # good_logs/cpre
 working_point_file_name:

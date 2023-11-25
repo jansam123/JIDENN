@@ -850,18 +850,26 @@ class JIDENNDataset:
             @tf.function
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
-                    data = {**data[0], **data[1]}
+                    new_data = {}
+                    for dat in data:
+                        new_data.update({**dat})
+                else:
+                    new_data = data
                 weight = weight if weight is not None else tf.ones_like(label)
-                data = {**data, 'label': label, 'weight': weight}
+                data = {**new_data, 'label': label, 'weight': weight}
                 return data
 
         elif isinstance(self._element_spec, tuple) and variables is not None:
             @tf.function
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
-                    data = {**data[0], **data[1]}
+                    new_data = {}
+                    for dat in data:
+                        new_data.update({**dat})
+                else:
+                    new_data = data
                 weight = weight if weight is not None else tf.ones_like(label)
-                data = {**data, 'label': label, 'weight': weight}
+                data = {**new_data, 'label': label, 'weight': weight}
                 return {k: data[k] for k in variables + ['label', 'weight']}
 
         elif isinstance(self._element_spec, dict) and variables is not None:
@@ -933,8 +941,9 @@ class JIDENNDataset:
         if not isinstance(self.element_spec, tuple):
             variables = list(self.element_spec.keys())
         elif isinstance(self.element_spec[0], tuple):
-            variables = list(self.element_spec[0][0].keys(
-            )) + list(self.element_spec[0][1].keys())
+            variables = []
+            for i in range(len(self.element_spec[0])):
+                variables += list(self.element_spec[0][i].keys())
         else:
             variables = list(self.element_spec[0].keys())
 

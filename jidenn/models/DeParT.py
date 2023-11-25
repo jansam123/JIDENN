@@ -200,10 +200,10 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
                 interaction, [0, 3, 1, 2])  # (B, H, N, N)
             attention_weights += interaction
 
-        attention = tf.keras.layers.Softmax()(
+        pure_attention = tf.keras.layers.Softmax()(
             attention_weights, mask=mask)  # (B, H, N, N)
         attention = self.linear_talking_2(tf.transpose(
-            attention, [0, 2, 3, 1]))  # (B, N, N, H)
+            pure_attention, [0, 2, 3, 1]))  # (B, N, N, H)
         attention = tf.transpose(attention, [0, 3, 1, 2])  # (B, H, N, N)
         attention = self.attn_drop(attention, training)  # (B, H, N, N)
 
@@ -212,7 +212,7 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         output = tf.reshape(output, [B, N, C])  # (B, N, C)
         output = self.linear_out(output)  # (B, N, C)
         output = self.dropout(output, training)
-        return output
+        return output, pure_attention
 
 
 class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
@@ -246,7 +246,7 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
         config.update({"dim": self.dim, "heads": self.heads})
         return config
 
-    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor, training: bool = False) -> tf.Tensor:
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor, training: bool = False, interaction: Optional[tf.Tensor]=None) -> tf.Tensor:
         """Forward pass of the multi-head class-attention layer
 
         Args:
@@ -262,9 +262,9 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
 
         B, N, C = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2]
 
-        kv = self.linear_kv(inputs)  # (B, N, C * 3)
-        kv = tf.reshape(kv, [B, N, 2, self.heads, C // self.heads])  # (B, N, 3, H, C // H)
-        kv = tf.transpose(kv, [2, 0, 3, 1, 4])  # (3, B, H, N, C // H)
+        kv = self.linear_kv(inputs)  # (B, N, C * 2)
+        kv = tf.reshape(kv, [B, N, 2, self.heads, C // self.heads])  # (B, N, 2, H, C // H)
+        kv = tf.transpose(kv, [2, 0, 3, 1, 4])  # (2, B, H, N, C // H)
         k, v = kv[0], kv[1]  # 2 x (B, H, N, C // H)
 
         q = self.linear_q(class_token)  # (B, 1, C)
@@ -272,11 +272,18 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
 
         attention_weights = tf.linalg.matmul(
             q, k, transpose_b=True) / (q.shape[-1] ** 0.5)  # (B, H, 1, N)
-
+        
         attention_weights = self.linear_talking_1(tf.transpose(
             attention_weights, [0, 2, 3, 1]))  # (B, 1, N, H)
         attention_weights = tf.transpose(
             attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
+        
+        if interaction is not None:
+            # interaction shape is (B, N, H)
+            interaction = tf.transpose(interaction, [0, 2, 1])  # (B, 1, N)
+            interaction = tf.expand_dims(interaction, axis=2)  # (B, 1, 1, N)
+            attention_weights += interaction    
+            
         mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
         attention = tf.keras.layers.Softmax()(
             attention_weights, mask=mask)  # (B, H, 1, N)
@@ -388,7 +395,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         """
         attended = self.pre_mhsa_ln(inputs)
-        attended = self.mhsa(attended, mask, interaction)
+        attended, attention = self.mhsa(attended, mask, interaction)
         attended = self.post_mhsa_scale(attended)
         attended = self.post_mhsa_stoch_depth(attended)
         attended = attended + inputs
@@ -399,7 +406,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         ffned = self.post_ffn_stoch_depth(ffned)
         output = ffned + attended
 
-        return output
+        return output, attention
 
 
 class ClassAttentionBlock(tf.keras.layers.Layer):
@@ -426,7 +433,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
 
         self.pre_mhca_ln = tf.keras.layers.LayerNormalization()
-        self.mhca = MultiheadClassAttention(dim, heads, dropout)
+        self.mhca = TalkingMultiheadClassAttention(dim, heads, dropout)
         self.post_mhca_scale = LayerScale(layer_scale_init_value, dim)
         self.post_mhca_stoch_depth = StochasticDepth(drop_prob=stoch_drop_prob)
 
@@ -441,7 +448,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
                       "layer_scale_init_value": self.layer_scale_init_value, "activation": self.activation, "expansion": self.expansion})
         return config
 
-    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor) -> tf.Tensor:
+    def call(self, inputs: tf.Tensor, class_token: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor]=None) -> tf.Tensor:
         """Forward pass of the class attention block
 
         Args:
@@ -457,8 +464,9 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
             tf.Tensor: output tensor of shape `(batch_size, 1, dim)`, an updated class token
         """
         attended = tf.concat([class_token, inputs], axis=1)
+        interaction = tf.concat([tf.zeros([tf.shape(interaction)[0], 1, tf.shape(interaction)[2]]), interaction], axis=1) if interaction is not None else None
         attended = self.pre_mhca_ln(attended)
-        attended = self.mhca(class_token=class_token, inputs=attended, mask=mask)
+        attended = self.mhca(class_token=class_token, inputs=attended, mask=mask, interaction=interaction)
         attended = self.post_mhca_scale(attended)
         attended = self.post_mhca_stoch_depth(attended)
         attended = attended + class_token
@@ -542,7 +550,7 @@ class DeParT(tf.keras.layers.Layer):
                                    "layer_scale_init_value", "stochastic_depth_drop_rate", "class_stochastic_depth_drop_rate", "class_dropout"]})
         return config
 
-    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None) -> tf.Tensor:
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor, interaction: Optional[tf.Tensor] = None, class_interaction: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Forward pass of the DeParT layers
 
         Args:
@@ -559,8 +567,10 @@ class DeParT(tf.keras.layers.Layer):
         sa_mask = mask[:, tf.newaxis, tf.newaxis,
                        :] & mask[:, tf.newaxis, :, tf.newaxis]
         hidden = inputs
+        attentions = []
         for layer in self.sa_layers:
-            hidden = layer(hidden, sa_mask, interaction)
+            hidden, attention = layer(hidden, sa_mask, interaction)
+            attentions.append(attention)
 
         class_token = tf.tile(self.class_token, (tf.shape(inputs)[0], 1, 1))
         class_mask = mask[:, tf.newaxis, :]
@@ -568,8 +578,8 @@ class DeParT(tf.keras.layers.Layer):
             [tf.ones((tf.shape(inputs)[0], 1, 1), dtype=tf.bool), class_mask], axis=2)
         for layer in self.ca_layers:
             class_token = layer(
-                hidden, class_token=class_token, mask=class_mask)
-        return class_token
+                hidden, class_token=class_token, mask=class_mask, interaction=class_interaction)
+        return class_token, attentions
 
 
 class FCEmbedding(tf.keras.layers.Layer):
@@ -738,17 +748,32 @@ class DeParTModel(tf.keras.Model):
                  preprocess: Union[tf.keras.layers.Layer,
                                    Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer], None] = None,
                  interaction_embed_layers: Optional[int] = None,
-                 interaction_embed_layer_size: Optional[int] = None):
+                 interaction_embed_layer_size: Optional[int] = None,
+                 return_attentions: bool = False,
+                 ):
 
         if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
-            input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
-                     tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+            if len(input_shape) == 2:                
+                input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
+                        tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+                class_interaction = None
+            elif len(input_shape) == 3:
+                input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
+                        tf.keras.layers.Input(shape=input_shape[1], ragged=True),
+                        tf.keras.layers.Input(shape=input_shape[2], ragged=True),)
+                
+                class_interaction = input[2].to_tensor() # (B, N, 1)
+                
+            else:
+                raise ValueError(
+                    "input_shape must be a tuple of two or three tuples.") 
+                
             row_lengths = input[0].row_lengths()
             hidden = input[0].to_tensor()
             interaction_hidden = input[1].to_tensor()
 
             if preprocess is not None:
-                if not isinstance(preprocess, tuple):
+                if not isinstance(preprocess, tuple): 
                     raise ValueError(
                         "preprocess must be a tuple of two layers when the input is a tuple of two tensors.")
 
@@ -758,20 +783,24 @@ class DeParTModel(tf.keras.Model):
                         interaction_hidden)
 
             if interaction_embed_layers is None or interaction_embed_layer_size is None:
-                raise ValueError(
-                    """interaction_embed_layers and interaction_embed_layer_size must be specified 
-                    when the input is a tuple of two tensors, i.e. the interaction variables are used.""")
-
-            embed_interaction = CNNEmbedding(
-                interaction_embed_layers,
-                interaction_embed_layer_size,
-                heads,
-                activation)(interaction_hidden)
+                # if tf.shape(interaction_hidden)[-1] != heads:
+                #     raise ValueError(
+                #         """The last dimension of the interaction tensor must be equal to the number of heads.
+                #         If the interaction tensor is not used, interaction_embed_layers and interaction_embed_layer_size must be specified.""")
+                embed_interaction=interaction_hidden
+            else:
+                embed_interaction = CNNEmbedding(
+                    interaction_embed_layers,
+                    interaction_embed_layer_size,
+                    heads,
+                    activation)(interaction_hidden)
         else:
             input = tf.keras.layers.Input(shape=input_shape, ragged=True)
             embed_interaction = None
+            class_interaction = None
             row_lengths = input.row_lengths()
             hidden = input.to_tensor()
+            
 
         if preprocess is not None:
             if isinstance(preprocess, tuple):
@@ -780,8 +809,8 @@ class DeParTModel(tf.keras.Model):
             hidden = preprocess(hidden)
 
         hidden = FCEmbedding(embed_dim, embed_layers, activation)(hidden)
-
-        transformed = DeParT(self_attn_layers=self_attn_layers,
+        
+        depart_model = DeParT(self_attn_layers=self_attn_layers,
                              class_attn_layers=class_attn_layers,
                              dim=embed_dim,
                              expansion=expansion,
@@ -791,10 +820,15 @@ class DeParTModel(tf.keras.Model):
                              activation=activation,
                              layer_scale_init_value=layer_scale_init_value,
                              stochastic_depth_drop_rate=stochastic_depth_drop_rate,
-                             class_stochastic_depth_drop_rate=class_stochastic_depth_drop_rate)(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction)
+                             class_stochastic_depth_drop_rate=class_stochastic_depth_drop_rate)
+
+        transformed, attentions = depart_model(hidden, mask=tf.sequence_mask(row_lengths), interaction=embed_interaction, class_interaction=class_interaction)
 
         transformed = tf.keras.layers.LayerNormalization()(
             transformed[:, 0, :])
         output = output_layer(transformed)
-
-        super().__init__(inputs=input, outputs=output)
+        
+        if return_attentions:
+            super().__init__(inputs=input, outputs=[output, attentions])
+        else:
+            super().__init__(inputs=input, outputs=output)

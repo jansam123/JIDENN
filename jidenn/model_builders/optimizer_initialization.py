@@ -3,7 +3,7 @@ Module for initializing the optimizer from the config file.
 The corresponding config dataclass is defined in `jidenn.config.config.Optimizer`.
 """
 import tensorflow as tf
-import tensorflow_addons as tfa
+# import tensorflow_addons as tfa
 
 from jidenn.config import config
 from .LearningRateSchedulers import LinearWarmup
@@ -149,8 +149,8 @@ class Lion(tf.keras.optimizers.Optimizer):
 
 def get_optimizer(args_optimizer: config.Optimizer) -> tf.keras.optimizers.Optimizer:
     """Initializes the optimizer from the config file.
-    Possible optimizers are `tf.optimizers.Adam` and `tfa.optimizers.LAMB`.
-    If the `weight_decay` parameter is set, the `tfa.optimizers.AdamW` optimizer is used.
+    Possible optimizers are `tf.optimizers.Adam` and `tf.optimizers.LAMB`.
+    If the `weight_decay` parameter is set, the `tf.optimizers.AdamW` optimizer is used.
 
     Args:
         args_optimizer (jidenn.config.config.Optimizer): config dataclass for the optimizer
@@ -180,12 +180,13 @@ def get_optimizer(args_optimizer: config.Optimizer) -> tf.keras.optimizers.Optim
         l_r = LinearWarmup(warmup_steps, l_r)
 
     if optimizer == 'LAMB':
-        return tfa.optimizers.LAMB(learning_rate=l_r,
-                                   weight_decay=weight_decay,
-                                   beta_1=beta_1,
-                                   beta_2=beta_2,
-                                   epsilon=epsilon,
-                                   clipnorm=clipnorm)
+        raise NotImplementedError('LAMB optimizer not supported.')
+        # return tfa.optimizers.LAMB(learning_rate=l_r,
+        #                            weight_decay=weight_decay,
+        #                            beta_1=beta_1,
+        #                            beta_2=beta_2,
+        #                            epsilon=epsilon,
+        #                            clipnorm=clipnorm)
     elif optimizer == 'Lion':
         return Lion(learning_rate=l_r,
                     weight_decay=weight_decay,
@@ -194,18 +195,11 @@ def get_optimizer(args_optimizer: config.Optimizer) -> tf.keras.optimizers.Optim
                     clipnorm=clipnorm)
 
     elif optimizer == 'Adam':
-        if weight_decay > 0.0:
-            return tfa.optimizers.AdamW(learning_rate=l_r,
-                                        weight_decay=weight_decay,
-                                        beta_1=beta_1,
-                                        beta_2=beta_2,
-                                        epsilon=epsilon,
-                                        clipnorm=clipnorm)
-        else:
-            return tf.optimizers.Adam(learning_rate=l_r,
-                                      beta_1=beta_1,
-                                      beta_2=beta_2,
-                                      epsilon=epsilon,
-                                      clipnorm=clipnorm)
+        return tf.optimizers.Adam(learning_rate=l_r,
+                                    beta_1=beta_1,
+                                    beta_2=beta_2,
+                                    weight_decay=weight_decay,
+                                    epsilon=epsilon,
+                                    clipnorm=clipnorm)
     else:
         raise NotImplementedError(f'Optimizer {optimizer} not supported.')

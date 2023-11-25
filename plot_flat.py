@@ -34,8 +34,11 @@ def sns_label_plotting(df, save_path, bins=None):
     plt.xlim(0.2, 2.5)
     atlasify.atlasify(
         axes=ax,
-        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets',
+        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets',
         atlas='Simulation Internal',
+        font_size=15,
+        sub_font_size=15,
+        label_font_size=15,
     )
     plt.savefig(f"{save_path}/flat_pt.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}/flat_pt.png", dpi=400, bbox_inches='tight')
@@ -64,8 +67,11 @@ def sns_label_plotting_noW(df, save_path, bins=None):
     plt.xlim(0.2, 2.5)
     atlasify.atlasify(
         axes=ax,
-        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets',
+        subtext='13 TeV, Pythia8\n' + r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets',
         atlas='Simulation Internal',
+        font_size=14,
+        sub_font_size=14,
+        label_font_size=14,
     )
     plt.savefig(f"{save_path}/flat_pt_noW.pdf", bbox_inches='tight')
     plt.savefig(f"{save_path}/flat_pt_noW.png", dpi=400, bbox_inches='tight')

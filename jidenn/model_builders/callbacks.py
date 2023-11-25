@@ -76,6 +76,25 @@ class LogCallback(tf.keras.callbacks.Callback):
         log_str += " - ".join([f"{k}: {v:.4}" for k, v in logs.items()])
         self.specified_logger.info(log_str)
 
+class AdditionalValidation(tf.keras.callbacks.Callback):
+
+    def __init__(self, dataset: tf.data.Dataset, name: str = 'val2', file_writer = None) -> None:
+        super(AdditionalValidation).__init__()
+        self.dataset = dataset
+        self.val_name = name
+        self.file_writer = file_writer
+
+    def on_epoch_end(self, epoch: int, logs: dict) -> None:
+
+        results = self.model.evaluate(self.dataset) 
+        
+        for k, v in zip(self.model.metrics_names, results):
+            logs[f'{self.val_name}_{k}'] = v
+            if self.file_writer is not None:
+                with self.file_writer.as_default():
+                    tf.summary.scalar(f'epoch_{k}', v, step=epoch)
+            
+
 
 class BestNModelCheckpoint(tf.keras.callbacks.ModelCheckpoint):
     """Custom ModelCheckpoint Callback that saves the best N checkpoints based on a specified monitor metric.
@@ -178,9 +197,11 @@ class BestNModelCheckpoint(tf.keras.callbacks.ModelCheckpoint):
 def get_callbacks(base_logdir: str,
                   epochs: int,
                   log: Logger,
-                  checkpoint: Optional[str] = 'checkpoints',
+                  checkpoint: Optional[str] = None,
                   backup: Optional[str] = 'backup',
-                  backup_freq: Optional[int] = None) -> List[tf.keras.callbacks.Callback]:
+                  backup_freq: Optional[int] = None,
+                  additional_val_dataset: Optional[tf.data.Dataset] = None,
+                  additional_val_name: Optional[str] = 'val2',) -> List[tf.keras.callbacks.Callback]:
     """
     Returns a list of Keras callbacks for a training session.
 
@@ -195,21 +216,33 @@ def get_callbacks(base_logdir: str,
     Returns:
         A list of Keras callbacks to use during training. The list contains a `tf.keras.callbacks.TensorBoard` callback for logging training information, a `jidenn.callbacks.LogCallback.LogCallback` callback for logging training information, a `jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint` callback for saving model checkpoints, and a `tf.keras.callbacks.BackupAndRestore` callback for saving backups of the training session.
     """
+    callbacks = []
+    if additional_val_dataset is not None and additional_val_name is not None:
+        file_writer = tf.summary.create_file_writer(os.path.join(base_logdir, 'test'))
+        callbacks.append(AdditionalValidation(additional_val_dataset, name=additional_val_name, file_writer=file_writer))
 
     tb_callback = tf.keras.callbacks.TensorBoard(log_dir=base_logdir)
+    callbacks.append(tb_callback)
     log_callback = LogCallback(epochs, log)
-    callbacks = [tb_callback, log_callback]
+    callbacks.append(log_callback)
 
     if checkpoint is not None:
         os.makedirs(os.path.join(base_logdir, checkpoint), exist_ok=True)
-        base_checkpoints = BestNModelCheckpoint(filepath=os.path.join(base_logdir, checkpoint, 'model-{epoch:02d}-{val_binary_accuracy:.2f}.h5'),
-                                                max_to_keep=2,
-                                                monitor='val_binary_accuracy',
-                                                mode='max',
-                                                save_weights_only=True,
-                                                save_best_only=True,
-                                                save_freq='epoch',
-                                                verbose=1,)
+        # base_checkpoints = BestNModelCheckpoint(filepath=os.path.join(base_logdir, checkpoint, 'model-{epoch:02d}-{val_binary_accuracy:.2f}.h5'),
+        #                                         max_to_keep=2,
+        #                                         monitor='val_binary_accuracy',
+        #                                         mode='max',
+        #                                         save_weights_only=True,
+        #                                         save_best_only=True,
+        #                                         save_freq='epoch',
+        #                                         verbose=1,)
+        base_checkpoints = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint,
+                                                              monitor='val_binary_accuracy',
+                                                              mode='max',
+                                                              save_weights_only=False,
+                                                              save_best_only=True,
+                                                              save_freq='epoch',
+                                                              verbose=1,)
         callbacks.append(base_checkpoints)
 
     if backup is not None:

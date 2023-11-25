@@ -65,8 +65,8 @@ LATEX_NAMING_CONVENTION = {
 MODEL_NAMING_SCHEMA = {
     'depart_flat_pT': r'DeParT (Flat $p_{\mathrm{T}}$)',
     'basic_fc': 'FC',
-    'depart': 'nDeParT',
-    'depart-m': 'nDeParT',
+    'depart': 'DeParT',
+    'depart-m': 'DeParT',
     'part': 'nParT',
     'part-m': 'nParT',
     'idepart_rel': 'DeParT (Relative)',
@@ -118,6 +118,27 @@ METRIC_NAMING_SCHEMA = {
     'gluon_rejection_at_quark_50wp': r'$\varepsilon_g^{-1} @ \varepsilon_q = 0.5 $',
     'gluon_efficiency_at_quark_80wp': r'$\varepsilon_g @ \varepsilon_q = 0.8 $',
     'gluon_efficiency_at_quark_50wp': r'$\varepsilon_q @ \varepsilon_g = 0.5 $',
+    'loss': 'Loss',
+    'roc': 'ROC',
+}
+
+METRIC_NAMING_SCHEMA_NAMED = {
+    'eff_tag_efficiency':'Effective Tagging Efficiency',
+    'effective_tagging_efficiency': r'Effective Tagging Efficiency',
+    'binary_accuracy': 'Accuracy',
+    'accuracy': 'Accuracy',
+    'relative_accuracy': 'Accuracy',
+    'relative_error': 'Relative Error',
+    'heatmap': 'Relative Error',
+    'auc': 'AUC',
+    'gluon_efficiency': 'Gluon Efficiency',
+    'quark_efficiency': 'Quark Efficiency',
+    'gluon_rejection': 'Gluon Rejection',
+    'quark_rejection': 'Quark Rejection',
+    'gluon_rejection_at_quark_80wp': 'Gluon Rejection at Quark 80% WP',
+    'gluon_rejection_at_quark_50wp': 'Gluon Rejection at Quark 50% WP',
+    'gluon_efficiency_at_quark_80wp': 'Gluon Efficiency at Quark 80% WP',
+    'gluon_efficiency_at_quark_50wp': 'Gluon Efficiency at Quark 50% WP',
     'loss': 'Loss',
     'roc': 'ROC',
 }

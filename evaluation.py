@@ -246,10 +246,25 @@ def main(args: eval_config.EvalConfig) -> None:
     colours = sns.color_palette("coolwarm", len(args.model_names))
     sorted_colours = [colours[acc_sorted_models.get_loc(model)] for model in args.model_names]
     log.info(f'Plotting variable dependence for models: {acc_sorted_models}')
+    
+    labels = []
+    for model in args.model_names:
+        if model in acc_sorted_models and model in MODEL_NAMING_SCHEMA:
+            labels.append(MODEL_NAMING_SCHEMA[model])
+        elif model in acc_sorted_models:
+            labels.append(model)
+        else:    
+            continue
+    if args.reference_model is not None and args.reference_model  in acc_sorted_models and args.reference_model in MODEL_NAMING_SCHEMA:
+        args.reference_model = MODEL_NAMING_SCHEMA[args.reference_model]
+    elif args.reference_model is not None and args.reference_model  in acc_sorted_models:
+        args.reference_model = args.reference_model
+    else:
+        args.reference_model = None
+        
     plot_var_dependence(dfs=dfs,
-                        labels=[MODEL_NAMING_SCHEMA[model] for model in args.model_names if model in acc_sorted_models],
-                        ratio_reference_label=MODEL_NAMING_SCHEMA[
-                            args.reference_model] if args.reference_model and args.reference_model in acc_sorted_models is not None else None,
+                        labels=labels,
+                        ratio_reference_label=args.reference_model,
                         bin_midpoint_name='bin_mid',
                         bin_width_name='bin_width',
                         n_counts='eff_num_events',

@@ -1,5 +1,4 @@
 import tensorflow as tf
-import tensorflow_addons as tfa
 from dataclasses import dataclass
 import numpy as np
 import os

@@ -102,7 +102,7 @@ def main(args: argparse.Namespace):
                                 ylims=args.ylims2[metric],
                                 # ylims = None,
                                 xlog=args.xlog,
-                                figsize=[(10, 4), (10, 4), (7, 5)],
+                                figsize=[(10, 4), (10, 4), (11.5, 8.)],
                                 h_line_position=[0.0, 1.0, None], 
                                 leg_loc='upper right',
                                 title=[f'{args.wp}, {MC_NAMING_SCHEMA[label]}\n{base_title}', f'{args.wp}, {MC_NAMING_SCHEMA[label]}\n{base_title}', f'Pythia, {args.wp}\n{base_title}'],
@@ -188,7 +188,7 @@ def main(args: argparse.Namespace):
         plt.ylabel(METRIC_NAMING_SCHEMA[metric])
         atlasify.atlasify(
             atlas=True,
-            subtext="Simulation Preliminary \n 13 TeV",
+            subtext="Simulation Internal \n 13 TeV",
         )
         plt.savefig(os.path.join(args.save_dir, f'summary_hist.png'), dpi=400, bbox_inches='tight')
 
