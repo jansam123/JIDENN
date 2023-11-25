@@ -20,6 +20,8 @@ parser.add_argument("--norm", type=int, default=0,
                     help="Normalization factor. Use 0 to normalize to the number of jets.")
 parser.add_argument("--num_shards", type=int, default=256, required=False,
                     help="Number of shards to save the dataset in")
+parser.add_argument("--weight_sum", type=float, default=None, required=False,
+                    help="Number of shards to save the dataset in")
 
 
 def renorm_weight(weight_var, norm):
@@ -36,7 +38,8 @@ def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
     dataset = JIDENNDataset.load(args.load_path)
     size = dataset.length
-    old_norm = dataset.dataset.reduce(np.float32(0), lambda x, y: x + tf.cast(y[args.weight_var], tf.float32))
+    old_norm = args.weight_sum if args.weight_sum is not None else dataset.dataset.reduce(
+        np.float32(0), lambda x, y: x + tf.cast(y[args.weight_var], tf.float32))
     # print(f'Old norm: {old_norm.numpy():,}')
     # new_norm = old_norm / tf.cast(args.norm, tf.float32) if args.norm != 0 else old_norm / tf.cast(size, tf.float32)
     new_norm = old_norm / tf.cast(size, tf.float32)
@@ -49,7 +52,7 @@ def main(args: argparse.Namespace) -> None:
     print(f"Number of jets: {size}")
     dataset.plot_single_variable('jets_pt',
                                  weight_variable='weight_spectrum',
-                                 save_path=os.path.join(args.save_path, 'pt.png'),
+                                 save_path=os.path.join(args.save_path, 'pt_new_W.png'),
                                  badge_text='$N_{\mathrm{jets}}$ = ' +
                                  f'{size:,} \n' + f'$\sum w$ = {new_norm.numpy():,}',
                                  bins=100,

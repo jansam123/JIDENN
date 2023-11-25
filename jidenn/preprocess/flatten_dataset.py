@@ -102,7 +102,7 @@ def get_filter_ragged_cut(variable: str = 'jets_eta',
     # if upper_cut is not None and lower_cut is not None:
     #     @tf.function
     #     def cut_fn(x):
-    #         return 
+    #         return
     # elif upper_cut is not None:
     #     @tf.function
     #     def cut_fn(x):
@@ -118,7 +118,8 @@ def get_filter_ragged_cut(variable: str = 'jets_eta',
     def _filter_unwanted_ragged_cut_fn(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
         reference_tensor = sample[variable]
-        mask = tf.math.logical_and(tf.math.greater(reference_tensor, lower_cut), tf.math.less(reference_tensor, upper_cut))
+        mask = tf.math.logical_and(tf.math.greater(reference_tensor, lower_cut),
+                                   tf.math.less(reference_tensor, upper_cut))
         for key, item in sample.items():
             if item.shape.num_elements() == 0 or item.shape.num_elements() == 1:
                 continue
@@ -132,9 +133,9 @@ def flatten_dataset(dataset: tf.data.Dataset,
                     reference_variable: str = 'jets_PartonTruthLabelID',
                     wanted_values: Optional[List[int]] = None,
                     key_phrase: str = 'jets',
-                    variable: Optional[str] = None,
-                    upper_cut: Optional[float] = None,
-                    lower_cut: Optional[float] = None,) -> tf.data.Dataset:
+                    variables: Optional[Union[str, List[str]]] = None,
+                    upper_cuts: Optional[Union[float, List[float]]] = None,
+                    lower_cuts: Optional[Union[float, List[float]]] = None) -> tf.data.Dataset:
     """Apply a series of transformations to a tf.data.Dataset to flatten it. The flattening is done by the reference
     variable, which is assumed to be a tf.RaggedTensor. The shape of the reference variable is used to infer the shape
     of the other variables. The other variables are tiled to match the shape of the reference variable. The dataset is
@@ -157,7 +158,7 @@ def flatten_dataset(dataset: tf.data.Dataset,
             .filter(get_filter_empty_fn(reference_variable))
             .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
         )
-    elif variable is None and upper_cut is None and lower_cut is None:
+    elif variables is None and upper_cuts is None and lower_cuts is None:
         return (
             dataset
             .map(get_filter_ragged_values_fn(reference_variable, wanted_values, key_phrase))
@@ -165,9 +166,18 @@ def flatten_dataset(dataset: tf.data.Dataset,
             .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
         )
     else:
+        if isinstance(variables, str):
+            variables = [variables]
+        if isinstance(upper_cuts, float) or isinstance(upper_cuts, int):
+            upper_cuts = [upper_cuts]
+        if isinstance(lower_cuts, float) or isinstance(lower_cuts, int):
+            lower_cuts = [lower_cuts]
+
+        for variable, upper_cut, lower_cut in zip(variables, upper_cuts, lower_cuts):
+            dataset = dataset.map(get_filter_ragged_cut(variable, upper_cut, lower_cut, key_phrase))
+
         return (
             dataset
-            .map(get_filter_ragged_cut(variable, upper_cut, lower_cut, key_phrase))
             .map(get_filter_ragged_values_fn(reference_variable, wanted_values, key_phrase))
             .filter(get_filter_empty_fn(reference_variable))
             .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))

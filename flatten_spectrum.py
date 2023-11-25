@@ -14,6 +14,7 @@ from functools import partial
 from jidenn.preprocess.resampling import resample_var_with_labels, write_new_variable, get_cut_fn, get_filter_fn, resample_labels
 # from jidenn.evaluation.plotter import plot_single_dist
 from jidenn.data.JIDENNDataset import JIDENNDataset
+from jidenn.preprocess.flatten_dataset import flatten_dataset
 
 
 parser = argparse.ArgumentParser()
@@ -37,6 +38,10 @@ parser.add_argument("--equalize_labels", action='store_true', help="Equalize lab
 parser.add_argument("--precompute", action='store_true', help="Precompute the initial distribution")
 parser.add_argument('-w', "--weight_var", type=str, default=None, help="Use reweighting, specify the weight variable")
 parser.add_argument("--min_count", action='store_true', help="Use min count for each bin")
+parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
+                    help="Variable to use as reference for flattening")
+parser.add_argument("--wanted_values", type=int, nargs='+',
+                    default=[1, 2, 3, 4, 5, 6, 21], help="Values to keep in the reference variable")
 
 JZ_LOW_PT = [20, 60, 160, 400, 800, 1300, 1800, 2500, 3200, 3900, 4600, 5300]
 JZ_LOW_PT = [val * 1e3 for val in JZ_LOW_PT]
@@ -64,7 +69,8 @@ def main(args: argparse.Namespace) -> None:
 
     @tf.function
     def jz_mapper(dataset: tf.data.Dataset, jz) -> tf.data.Dataset:
-        dataset = dataset.map(write_new_variable(jz))
+        dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
+                                wanted_values=args.wanted_values, variables=['jets_eta', 'jets_pt'], lower_cuts=[-args.eta_cut, args.xlim[0]], upper_cuts=[args.eta_cut, args.xlim[1]]))
         if args.jz_low_cut:
             dataset = dataset.filter(get_cut_fn('jets_pt', lower_limit=tf.constant(JZ_LOW_PT)[jz - 1]))
         if args.flatten_jz:
@@ -92,9 +98,9 @@ def main(args: argparse.Namespace) -> None:
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_mapper,
                                           file_labels=file_labels, stop_on_empty_dataset=True)
 
-    dataset = dataset.filter(get_cut_fn('jets_pt', args.xlim[0], args.xlim[1])) if args.cut else dataset
-    dataset = dataset.filter(get_cut_fn('jets_eta', -args.eta_cut, args.eta_cut)
-                             ) if args.eta_cut is not None else dataset
+    # dataset = dataset.filter(get_cut_fn('jets_pt', args.xlim[0], args.xlim[1])) if args.cut else dataset
+    # dataset = dataset.filter(get_cut_fn('jets_eta', -args.eta_cut, args.eta_cut)
+    #                          ) if args.eta_cut is not None else dataset
     dataset = dataset.take(args.take) if args.take is not None else dataset
 
     if args.flatten:
