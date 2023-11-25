@@ -73,16 +73,17 @@ def main(args: eval_config.EvalConfig) -> None:
         if args.draw_distribution is not None:
             os.makedirs(f'{args.logdir}/data_dist', exist_ok=True)
 
-        def distribution_drawer(x: JIDENNDataset):
+        def distribution_drawer(x: JIDENNDataset, name: str = None):
             print('Convert to pandas')
             df = x.apply(lambda ds: ds.take(args.draw_distribution)).to_pandas()
+            df.to_csv(f'{args.logdir}/data_dist/{name}.csv')
             return plot_data_distributions(df,
                                            folder=f'{args.logdir}/data_dist',
                                            named_labels={i: label for i, label in enumerate(labels)},
                                            weight_variable='weight' if args.data.weight is not None else None,
                                            bins=100,
                                            xlabel_mapper=LATEX_NAMING_CONVENTION)
-        full_dataset = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],
+        full_dataset, tech_info = evaluate_multiple_models(model_paths=[os.path.join(args.models_path, model_name, 'model') for model_name in args.model_names],
                                                 model_names=args.model_names,
                                                 model_input_name=args.model_input_types,
                                                 dataset=dataset,
@@ -103,7 +104,15 @@ def main(args: eval_config.EvalConfig) -> None:
         log.info('Converting to pandas')
         df = full_dataset.to_pandas(variables=variables)
         df = df.rename(columns={args.data.weight: 'weight'}) if args.data.weight is not None else df
+        if 'jets_eta' in df.columns:    
+            df['jets_eta'] = df['jets_eta'].abs()
         df.to_csv(os.path.join(args.logdir, args.cache_scores)) if args.cache_scores is not None else None
+        tech_info.to_csv(os.path.join(args.logdir, 'tech_info.csv'))
+        tech_info.index.name = 'Model'
+        tech_info = tech_info.reset_index()
+        tech_info.to_latex(buf=f'{args.logdir}/tech_info.tex', float_format="{:.2f}".format,
+                           column_format='l' + 'cc', label='tab:tech_info', index=False,
+                           escape=False)
     ##########################################################################################################################################
 
     
@@ -228,7 +237,7 @@ def main(args: eval_config.EvalConfig) -> None:
     latex_metrics = latex_metrics.reset_index()
     latex_metrics.to_latex(buf=f'{args.logdir}/overall_metrics.tex', float_format="{:.4f}".format,
                            column_format='l' + 'c' * (len(latex_metrics.columns) - 1), label='tab:results', index=False,
-                           escape=False, caption="Results of the different models. The best results are highlighted in bold.")
+                           escape=False)
     log.info('Overall metrics for all models:')
     log.info(overall_metrics)
 

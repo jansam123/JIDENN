@@ -449,6 +449,8 @@ def plot_single_dist(df: pd.DataFrame,
     plt.xscale('log') if xlog else plt.xscale('linear')
     plt.xlabel(xlabel if xlabel is not None else variable)
 
+    subtext = f"Simulation Preliminary \n {badge_text}" if badge_text is not None else "Simulation Preliminary"
+
     atlasify.atlasify(
         atlas="Simulation Internal" if badge else False,
         subtext=badge_text if badge else None,
@@ -464,7 +466,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         metric_names: List[str],
                         save_path: str,
                         title: Union[str, List[str]] = None,
-                        n_counts: str = None,
+                        n_counts: Optional[Union[str, List[str]]] = None,
                         ratio_reference_label: Optional[str] = None,
                         xlabel: Optional[str] = None,
                         ylabel_mapper: Optional[Dict[str, str]] = None,
@@ -474,6 +476,13 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         leg_loc='lower right',
                         h_line_position: Optional[float] = None,
                         colours: Optional[List[str]] = None,
+                        leg_ncol: int = 2,
+                        label_fontsize=30,
+                        fontsize=24,
+                        leg_fontsize=24,
+                        atlas_fontsize=24,
+                        markersize=12,
+                        linewidth=1.6,
                         ):
     """Plot the dependence of multiple metrics on a variable in a DataFrame for multiple models.
     The Dataframe must contain columns corresponding to individual metrics, and columns containing
@@ -520,27 +529,29 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
             figsize=figsize[i] if isinstance(figsize, list) else figsize,
             atlas_second_tag=second_tag,
-            atlas_first_tag='Simulation Internal',
+            atlas_first_tag='Simulation Preliminary',
             leg_loc=leg_loc,
-            label_fontsize=14,
-            fontsize=12,
-            leg_fontsize=11,
-            leg_ncol=2,
+            label_fontsize=label_fontsize,
+            fontsize=fontsize,
+            leg_fontsize=leg_fontsize,
+            atlas_fontsize=atlas_fontsize,
+            leg_ncol=leg_ncol,
         )
-
-        for df, label in zip(dfs, labels):
+        markers = ['o', 's', 'v', 'D', 'P', 'X', 'd', 'p', 'h', '8', '>', '<', '^', '*', '+', '8']
+        for j, (df, label) in enumerate(zip(dfs, labels)):
             x_var = df[bin_midpoint_name].to_numpy()
             x_width = df[bin_width_name].to_numpy()
             y_var_mean = df[metric_name].to_numpy()
 
             if n_counts is not None:
                 plot_y_std = True
-                counts = df[n_counts].to_numpy() if n_counts is not None else np.ones_like(y_var_mean)
+                counts = df[n_counts[i]].to_numpy() if isinstance(n_counts, list) else df[n_counts].to_numpy()
                 if 'eff' in metric_name:
                     y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts)
                 elif 'rej' in metric_name:
                     y_var_std = np.sqrt(1 / y_var_mean * (1 - 1 / y_var_mean) / counts) * y_var_mean**2
                 else:
+                    plot_y_std = False
                     y_var_std = np.zeros_like(y_var_mean)
             else:
                 plot_y_std = False
@@ -553,9 +564,10 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                     y_var_mean=y_var_mean,
                     y_var_std=y_var_std,
                     plot_y_std=plot_y_std,
-                    marker='o',
-                    markersize=20,
-                    markeredgewidth=20,
+                    marker=markers[j],
+                    markersize=markersize,
+                    markeredgewidth=40,
+                    linewidth=linewidth,
                     is_marker=True,
                     label=label,
                     colour=colours[labels.index(label)] if colours is not None else None,

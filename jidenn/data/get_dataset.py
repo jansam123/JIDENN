@@ -13,6 +13,7 @@ from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 def get_preprocessed_dataset(file: str,
                              args_data: config.Data,
                              input_creator: Callable[[ROOTVariables], ROOTVariables],
+                             augmentation: Callable[[ROOTVariables], ROOTVariables],
                              shuffle_reading: bool = True):
 
     @tf.function
@@ -51,6 +52,7 @@ def get_preprocessed_dataset(file: str,
     dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset
     dataset = dataset.set_variables_target_weight(target=args_data.target, weight=args_data.weight)
     dataset = dataset.remap_labels(label_mapping)
+    dataset = dataset.remap_data(augmentation) if augmentation is not None else dataset
     dataset = dataset.remap_data(input_creator) if input_creator is not None else dataset
     return dataset
 

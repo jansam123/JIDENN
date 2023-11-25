@@ -39,7 +39,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Literal
 
 from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN, ParticleNet
-
+from jidenn.config.augmentation_config import DropSoft, Rotation, Boost, CollinearSplit, SoftSmear
 
 @dataclass
 class Data:
@@ -219,13 +219,25 @@ class Models:
     pfn: PFN
     particle_net: ParticleNet
 
+@dataclass
+class Augmentations:
+    """Configuration for the augmentations. See the documentation for each augmentation for more information."""
+    order: List[str]
+    drop_soft: DropSoft
+    rotation: Rotation
+    boost: Boost
+    collinear_split: CollinearSplit
+    soft_smear: SoftSmear
 
 @dataclass
 class JIDENNConfig:
     """A dataclass containing all of the configuration information for a JIDENN training session."""
     general: General
     data: Data
+    augmentations: Augmentations
     dataset: Dataset
     preprocess: Preprocess
     optimizer: Optimizer
     models: Models
+
+

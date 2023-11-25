@@ -25,7 +25,7 @@ data:
     - [1, 2, 3, 4, 5, 6]
   variable_unknown_labels: [-1, -999]
   label_weights:
-  cut: (jets_eta<2.1) && (jets_eta>-2.1) # && (jets_pt>1000000)
+  cut: 
   weight: weight
 
 logdir: logs/stepwise_flat/eval
@@ -35,7 +35,7 @@ seed: 42
 draw_distribution: 200_000
 test_subfolder: test
 batch_size: 512
-take: 1_124_739
+take: 1_000_000
 binning:
   variable: ['jets_pt', 'jets_eta', 'JZ_slice', 'corrected_averageInteractionsPerCrossing']
   bins: [200000, 300000, 400000, 600000, 850000, 1100000, 1400000, 1750000, 2500000] 
@@ -57,19 +57,20 @@ model_names: [
     "idepart",
     "ipart",
     #
-    # "idepart_rel",
-    #
     "depart",
     "part",
     "transformer",
     "pfn",
-    # "pfn_noW",
-    # "pfn_bad",
+    # 
+    "pfn_bad",
     #
     "efn",
-    
+    #
+    "fc-full",
+    "highway-full",
+    "fc_crafted",
+    "highway_crafted",
     "fc",
-    # "fc_noW",
     "highway",
   ]
 model_input_types: [
@@ -77,18 +78,19 @@ model_input_types: [
     "interaction_constituents",
     "interaction_constituents",
     #
-    # "irelative_constituents",
+    "constituents",
+    "constituents",
+    "constituents",
+    "constituents",
     #
-    "constituents",
-    "constituents",
-    "constituents",
-    "constituents",
-    # "constituents",
-    # "irc",
+    "irc",
     #
     "irc_safe",
-    
-    # "highlevel",
+    #
+    "full_highlevel",
+    "full_highlevel",
+    "crafted_highlevel",
+    "crafted_highlevel",
     "highlevel",
     "highlevel",
   ]

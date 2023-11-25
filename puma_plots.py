@@ -9,6 +9,7 @@ from sklearn.metrics import roc_curve, precision_recall_curve, precision_score
 
 from jidenn.config.eval_config import Binning
 from jidenn.const import MODEL_NAMING_SCHEMA
+from jidenn.evaluation.evaluation_metrics import RejectionAtFixedWorkingPoint, BkgRejVsSigEff
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--load_path", type=str, help="Path to the saved tf.data.Dataset file")
@@ -149,28 +150,35 @@ def main(args):
         n_ratio_panels=1,
         ylabel=r"$\varepsilon_g^{-1}$",
         xlabel=r"$\varepsilon_q$",
-        atlas_second_tag="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PF jets" if args.title is None else f"13 TeV, {args.title}",
+        atlas_second_tag="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets" if args.title is None else f"13 TeV, {args.title}",
+        atlas_first_tag="Simulation Preliminary",
         figsize=(6, 6),
         ymin=1,
-        ymax=1e4,
+        ymax=1e3,
+        xmin=0.1,
+        xmax=1,
         y_scale=1.4,
         grid=False,
-        label_fontsize=14,
-        fontsize=12,
-        atlas_fontsize=13,
-        leg_fontsize=11,
+        atlas_fontsize=15,
+        leg_fontsize=15,
+        fontsize=17,
+        label_fontsize=18,
     )
 
     plots = []
-    sig_eff = np.linspace(0.1, 1, 1000)
+    sig_eff = np.linspace(0.1, 1, 100)
     # score_dataset.columns:
     # scores = ["idepart_score", "ipart_score", "particle_net_score", "depart_score",
     #           "transformer_score", "part_score", "pfn_score", "highway_score", "fc_score", "efn_score",]
-    scores = ["idepart_score", "ipart_score", "particle_net_score",
-              "pfn_score", "highway_score", "fc_score", "efn_score",]
+    scores = args.scores
     score_dataset['jets_eta'] = score_dataset['jets_eta'].abs()
     colours = sns.color_palette('colorblind', len(scores))
-    lines = ['-', '--', '-.', ':', (0, (3, 5, 1, 5, 1, 5)), (0, (3, 10, 1, 10)), (0, (3, 10, 1, 10, 1, 10))]
+    lines = ['-', '--', '-.', ':', (5, (10, 3)), (0, (3, 5, 1, 5)), (0, (5, 1))]
+    rej_calculators = [RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_50wp', 
+                                                  fixed_label_id=1, 
+                                                  working_point=wp, 
+                                                  num_thresholds=200,
+                                                  returned_label_id=0) for wp in sig_eff]
     print(args.weight)
     for i, score_name in enumerate(scores):
         if 'score' not in score_name:
@@ -184,7 +192,7 @@ def main(args):
             disc_bkg=score_dataset[score_name][is_gluon],
             weights_bkg=score_dataset[args.weight][is_gluon] if args.weight is not None else None,
             # bins=bins,
-            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 800, 1100, 1400, 1750, 2500],
+            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
             working_point=0.5,
             disc_cut=None,
             fixed_eff_bin=True,
@@ -203,7 +211,7 @@ def main(args):
             disc_bkg=score_dataset[score_name][is_gluon],
             weights_bkg=score_dataset[args.weight][is_gluon] if args.weight is not None else None,
             # bins=bins,
-            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 800, 1100, 1400, 1750, 2500],
+            bins=args.pt_bins if args.pt_bins is not None else [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500],
             working_point=0.8,
             disc_cut=None,
             fixed_eff_bin=True,
@@ -291,8 +299,29 @@ def main(args):
 
         )
 
-        rejs = calc_rej(score_dataset[score_name][is_quark], score_dataset[score_name][is_gluon],
-                        sig_eff, bkg_weights=score_dataset[args.weight][is_gluon] if args.weight is not None else None)
+        # rejs = calc_rej(score_dataset[score_name][is_quark], score_dataset[score_name][is_gluon],
+                        # sig_eff)#, bkg_weights=score_dataset[args.weight][is_gluon] if args.weight is not None else None)
+        # rejs = [rc(y_true=score_dataset['label'], 
+        #            y_pred=score_dataset[score_name], 
+        #            sample_weight=score_dataset[args.weight]).numpy() for rc in rej_calculators]
+        # rejs = np.array(rejs)
+        sig_eff, rejs = BkgRejVsSigEff(
+                              thresholds=list(np.linspace(0., 1, 200)),
+                              fixed_label_id=1)(y_true=score_dataset['label'], 
+                                                y_pred=score_dataset[score_name], 
+                                                sample_weight=score_dataset[args.weight])
+        sig_eff = sig_eff.numpy()
+        sig_eff, uniq_idx = np.unique(sig_eff, return_index=True)
+        rejs = rejs.numpy()
+        rejs = rejs[uniq_idx]
+        rejs = rejs[np.where(sig_eff > 0.04)]
+        sig_eff = sig_eff[np.where(sig_eff > 0.04)]
+        
+        sort_idx = np.argsort(sig_eff)
+        rejs = rejs[sort_idx]
+        sig_eff = sig_eff[sort_idx]
+        print(sig_eff)
+        print(rejs)
         plot_roc.add_roc(
             Roc(
                 sig_eff,
@@ -303,9 +332,9 @@ def main(args):
                 # signal_class="quark",
                 label=label,
                 colour=colours[i],
-                # linestyle=lines[i],
+                linestyle=lines[i],
             ),
-            reference=True if score_name == 'fc_score' else False
+            reference=True if  score_name == args.ref_score else False
         )
         plot_bkg_rej.add(plot, reference=True if score_name == 'transformer_score' else False)
         plot_bkg_rej_80.add(plot_80, reference=True if score_name == 'transformer_score' else False)
@@ -339,11 +368,15 @@ if __name__ == '__main__':
     #     args.cut = f'JZ_slice == {i}'
     #     args.save_path = f'{original_path}/JZ{i}'
     #     args.title = f'JZ{i}'
-    #     args.pt_bins = [200, 300, 400, 600, 800, 1100, 1400, 1750, 2500]
+    #     args.pt_bins = [200, 300, 400, 600, 850, 1100, 1400, 1750, 2500]
     #     for i in range(len(args.pt_bins)):
     #         try:
     #             main(args)
     #             break
     #         except:
     #             args.pt_bins = args.pt_bins[:-1]
+    args.scores = ["idepart-m_score", "ipart-m_score", "particle_net-m_score",
+              "pfn-m_score", "fc-reduced_score", "fc_crafted_score", "efn_score",]
+    args.ref_score = "fc_crafted_score"
     main(args)
+    print('Done')

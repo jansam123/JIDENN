@@ -73,6 +73,8 @@ def _calculate_metrics_in_bin(x):
                             weights=x[weights_variable] if weights_variable is not None else None)
     ret['num_events'] = len(x)
     ret['eff_num_events'] = np.sum(x[weights_variable])**2/np.sum(x[weights_variable]**2) if weights_variable is not None else len(x)
+    ret['eff_num_events_q'] = np.sum(x.query('label==1')[weights_variable])**2/np.sum(x.query('label==1')[weights_variable]**2) if weights_variable is not None else len(x.query('label==1'))
+    ret['eff_num_events_g'] = np.sum(x.query('label==0')[weights_variable])**2/np.sum(x.query('label==0')[weights_variable]**2) if weights_variable is not None else len(x.query('label==0'))
     ret['bin'] = inter
     return ret
 
@@ -181,7 +183,7 @@ def evaluate_multiple_models(model_paths: List[str],
                              log: Optional[logging.Logger] = None,
                              custom_objects: Optional[Dict[str, Callable]] = None,
                              checkpoint_path: Optional[str] = None,
-                             distribution_drawer: Optional[Callable[[JIDENNDataset], None]] = None) -> JIDENNDataset:
+                             distribution_drawer: Optional[Callable[[JIDENNDataset, str], None]] = None) -> Tuple[JIDENNDataset, pd.DataFrame]:
     """Evaluate multiple Keras models on a JIDENNDataset. The explicit training inputs are created automatically
     from the JIDENNDataset. Input type for each model is deduced from the `model_input_name` argument. The order of 
     evaluation is **NOT** determined by the `model_names` argument. The iteration order is given by the unigue values
@@ -211,12 +213,13 @@ def evaluate_multiple_models(model_paths: List[str],
 
     # iterate over all input types to reduce the number of times the dataset is prepared
     log.info(f'Batches will be of size: {batch_size}, total number of events: {take}') if log is not None else None
+    tech_info = []
     for input_type in set(model_input_name):
         train_input_class = input_classes_lookup(input_type)
         train_input_class = train_input_class()
         model_input = tf.function(func=train_input_class)
         ds = dataset.remap_data(model_input)
-        if distribution_drawer is not None:
+        if distribution_drawer is not None and 'interaction_constituents' not in input_type:
             log.info(f'----- Drawing data distribution for: {input_type}') if log is not None else None
             input_type_hash = hashlib.sha256(input_type.encode('utf-8')).hexdigest()
             if checkpoint_path is not None:
@@ -225,14 +228,14 @@ def evaluate_multiple_models(model_paths: List[str],
                         pickle.load(f)
                     log.info(f'----- Data distribution already drawn for: {input_type}') if log is not None else None
                 except FileNotFoundError:
-                    distribution_drawer(ds)
+                    distribution_drawer(ds, input_type)
                     with open(os.path.join(checkpoint_path, f'{input_type_hash}'), 'wb') as f:
                         pickle.dump(True, f)
             else:
-                distribution_drawer(ds)
+                distribution_drawer(ds, input_type)
             
         ds = ds.get_prepared_dataset(batch_size=batch_size,
-                                     ragged=False if input_type == 'gnn' else True,
+                                     ragged=False if 'gnn' in input_type else True,
                                      take=take)
 
         # iterate over all models with the same input type
@@ -243,8 +246,11 @@ def evaluate_multiple_models(model_paths: List[str],
                 try:
                     with open(os.path.join(checkpoint_path, f'{model_name_hash}.pkl'), 'rb') as f:
                         score = pickle.load(f)
+                    with open(os.path.join(checkpoint_path, f'{model_name_hash}_tech.pkl'), 'rb') as f:
+                        tech_info_current = pickle.load(f)
                     log.info(f'----- Score already calculated for: {model_name}') if log is not None else None
                     dataset = add_score_to_dataset(dataset, score, f'{model_name}_{score_name}')
+                    tech_info.append(tech_info_current)
                     continue
                 except FileNotFoundError:
                     pass
@@ -260,9 +266,13 @@ def evaluate_multiple_models(model_paths: List[str],
             stop = time.time()
             log.info(f'----- Predicting took: {total_time:.2f} s') if log is not None else None
             log.info(f'----- Max memory used: {max_memory*1e-6:.2f} MB') if log is not None else None
+            tech_info_current = pd.DataFrame({'time': total_time, 'memory': max_memory*1e-6}, index=[model_name])
             if checkpoint_path is not None:
                 with open(os.path.join(checkpoint_path, f'{model_name_hash}.pkl'), 'wb') as f:
                     pickle.dump(score, f)
+                with open(os.path.join(checkpoint_path, f'{model_name_hash}_tech.pkl'), 'wb') as f:
+                    pickle.dump(tech_info_current, f)
             dataset = add_score_to_dataset(dataset, score, f'{model_name}_{score_name}')
+            tech_info.append(tech_info_current) 
 
-    return dataset
+    return dataset, pd.concat(tech_info)

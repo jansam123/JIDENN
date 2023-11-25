@@ -16,6 +16,7 @@ from jidenn.evaluation.plotter import plot_train_history
 from jidenn.model_builders.normalization_initialization import get_normalization
 from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.model_builders.multi_gpu_strategies import choose_strategy
+from jidenn.data.augmentations import construct_augmentation
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
@@ -69,8 +70,6 @@ def main(args: config.JIDENNConfig) -> None:
     else:
         log.info(f"Decay steps set to {args.optimizer.decay_steps}")
 
-    files = [f'{args.data.path}/{name}' for name in ["train", "dev"]]
-
     # pick input variables according to model
     # if you want to choose your own input, implement a subclass of `TrainInput` in  `jidenn.data.TrainInput` and put it into the dict in the function `input_classes_lookup`
     train_input_class = input_classes_lookup(
@@ -79,8 +78,9 @@ def main(args: config.JIDENNConfig) -> None:
     model_input_creator = tf.function(func=train_input_class)
     input_shape = train_input_class.input_shape
 
-    train, dev = [get_preprocessed_dataset(
-        file, args.data, input_creator=model_input_creator) for file in files]
+    augmentation_function = construct_augmentation(args.augmentations) if args.augmentations is not None else None
+    train = get_preprocessed_dataset(os.path.join(args.data.path, 'train'), args.data, input_creator=model_input_creator, augmentation=augmentation_function)
+    dev = get_preprocessed_dataset(os.path.join(args.data.path, 'dev'), args.data, input_creator=model_input_creator)
 
     try:
         restoring_from_backup = len(os.listdir(os.path.join(
