@@ -554,6 +554,61 @@ class JIDENNDataset:
         return JIDENNDataset(dataset=dataset, element_spec=element_spec,
                              metadata=metadata, variables=variables, target=target,
                              weight=weight, length=dataset.cardinality().numpy())
+        
+    @staticmethod
+    def from_root_file_batched(filename: str,
+                                tree_name: str = 'NOMINAL',
+                                step_size = 10,
+                                metadata_hist: Optional[str] = 'h_metadata') -> JIDENNDataset:
+        
+        file = uproot.open(filename, object_cache=None, array_cache=None)
+        
+        if metadata_hist is not None:
+            logging.info("Getting metadata")
+            labels = file[metadata_hist].member('fXaxis').labels()
+            values = file[metadata_hist].values()
+            values = tf.constant(values)
+            metadata = dict(zip(labels, values))
+            logging.info(f"Metadata: {metadata}")
+        else:
+            metadata = None
+        
+        def get_iter(step_size):
+            def _iter():
+                for batch in file[tree_name].iterate(step_size=step_size, library='pd'):
+                    
+                    unragged = batch.loc[:, batch.dtypes != 'awkward']
+                    unragged_ds = unragged.to_dict('list')
+                    unragged_ds = {k: tf.constant(v) for k, v in unragged_ds.items()}
+                    
+                    ragged = batch.loc[:, batch.dtypes == 'awkward']
+                    
+                    ragged_ds = {var: tf.RaggedTensor.from_nested_row_lengths(
+                        flat_values=ak.ravel(ragged[var].values),
+                        nested_row_lengths=[ak.flatten(ragged[var].ak.num(axis=ax).values, axis=None).to_list()
+                                    for ax in range(1, ragged[var].values[0].ndim + 1)]) for var in ragged.keys()}
+
+                    yield {**ragged_ds, **unragged_ds}
+            return _iter
+
+
+        example_dataset = tf.data.Dataset.from_tensors(next(get_iter(1)()))
+        example_dataset_2 = tf.data.Dataset.from_tensors(next(get_iter(2)()))
+        example_dataset = example_dataset.concatenate(example_dataset_2)
+        
+        dataset = tf.data.Dataset.from_generator(
+            get_iter(step_size), output_signature=example_dataset.element_spec)
+        dataset = dataset.interleave(
+            lambda x: tf.data.Dataset.from_tensor_slices(x), num_parallel_calls=tf.data.AUTOTUNE)
+
+        variables = list(dataset.element_spec.keys())
+        element_spec = dataset.element_spec
+        target = None
+        weight = None
+        return JIDENNDataset(dataset=dataset, element_spec=element_spec,
+                             metadata=metadata, variables=variables, target=target,
+                             weight=weight, length=None)
+            
 
     def set_variables_target_weight(self,
                                     variables: Optional[List[str]] = None,
