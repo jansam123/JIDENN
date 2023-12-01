@@ -79,8 +79,18 @@ def main(args: config.JIDENNConfig) -> None:
     input_shape = train_input_class.input_shape
 
     augmentation_function = construct_augmentation(args.augmentations) if args.augmentations is not None else None
-    train = get_preprocessed_dataset(os.path.join(args.data.path, 'train'), args.data, input_creator=model_input_creator, augmentation=augmentation_function)
-    dev = get_preprocessed_dataset(os.path.join(args.data.path, 'dev'), args.data, input_creator=model_input_creator)
+    log.info(f"Using augmentations: {args.augmentations.order}") if args.augmentations is not None else log.warning(
+        "No augmentations specified")
+    train_path = [os.path.join(path, 'train')  for path in args.data.path] if isinstance(args.data.path, list) else os.path.join(args.data.path, 'train')
+    dev_path = [os.path.join(path, 'dev') for path in args.data.path] if isinstance(args.data.path, list) else os.path.join(args.data.path, 'dev')
+    
+    train = get_preprocessed_dataset(train_path, args.data, input_creator=model_input_creator, augmentation=augmentation_function)
+    dev = get_preprocessed_dataset(dev_path, args.data, input_creator=model_input_creator)
+    
+    if args.test_data is not None:
+        test = get_preprocessed_dataset(args.test_data.path, args.test_data, input_creator=model_input_creator)
+    else:
+        test = None
 
     try:
         restoring_from_backup = len(os.listdir(os.path.join(
@@ -100,7 +110,7 @@ def main(args: config.JIDENNConfig) -> None:
 
     # get proper dataset size based on the config
     if args.dataset.take is not None:
-        train_size = 1 - args.dataset.dev_size - args.dataset.test_size
+        train_size = 1 - args.dataset.dev_size 
         train_size = int(train_size * args.dataset.take)
         dev_size = int(args.dataset.dev_size * args.dataset.take)
     else:
@@ -115,12 +125,17 @@ def main(args: config.JIDENNConfig) -> None:
     dev = dev.get_prepared_dataset(batch_size=args.dataset.batch_size,
                                    ragged=False if args.general.model == 'particlenet' else True,
                                    take=dev_size)
+    
+    test = test.get_prepared_dataset(batch_size=args.dataset.batch_size,
+                                        ragged=False if args.general.model == 'particlenet' else True,
+                                        take=args.dataset.test_take) if test is not None else None
 
     # this is only to get rid of some warnings
     options = tf.data.Options()
     options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
     train = train.with_options(options)
     dev = dev.with_options(options)
+    test = test.with_options(options) if test is not None else None
 
     # build model, gpu_strategy is based on the number of gpus available
     @gpu_strategy
@@ -165,8 +180,6 @@ def main(args: config.JIDENNConfig) -> None:
         model.load_weights(args.general.load_checkpoint_path)
 
     # get callbacks based on the input
-    callbacks = get_callbacks(args.general.logdir, args.dataset.epochs, log,
-                              args.general.checkpoint, args.general.backup, args.general.backup_freq)
 
     if args.general.model == 'bdt' and args.dataset.epochs > 1:
         log.warning("BDT does not support multiple epochs. Setting epochs to 1")
@@ -175,18 +188,31 @@ def main(args: config.JIDENNConfig) -> None:
     if args.dataset.cache == 'mem':
         train = train.cache()
         dev = dev.cache()
+        test = test.cache() if test is not None else None
     elif args.dataset.cache == 'disk':
         os.makedirs(f'{args.general.logdir}/cache/train', exist_ok=True)
         os.makedirs(f'{args.general.logdir}/cache/dev', exist_ok=True)
         train = train.cache(f'{args.general.logdir}/cache/train')
         dev = dev.cache(f'{args.general.logdir}/cache/dev')
+        test = test.cache(f'{args.general.logdir}/cache/test') if test is not None else None
 
+    callbacks = get_callbacks(base_logdir=args.general.logdir, 
+                              epochs=args.dataset.epochs, 
+                              log=log, 
+                              backup=args.general.backup, 
+                              backup_freq=args.general.backup_freq,
+                              checkpoint=os.path.join(args.general.logdir, 'checkpoint'),
+                              additional_val_dataset=test,
+                              additional_val_name='test')
     # running training
     history = model.fit(train,
                         epochs=args.dataset.epochs,
                         callbacks=callbacks,
                         validation_data=dev,
                         verbose=2 if args.general.model == 'bdt' else 1)
+    
+    model.load_weights(os.path.join(args.general.logdir, 'checkpoint'))
+
 
     # saving the model
     model_dir = os.path.join(args.general.logdir, 'model')
@@ -198,17 +224,21 @@ def main(args: config.JIDENNConfig) -> None:
         log.info(f"Saving history")
         history_dir = os.path.join(args.general.logdir, 'history')
         os.makedirs(history_dir, exist_ok=True)
-        for metric in [m for m in history.history.keys() if 'val' not in m]:
-            plot_train_history(
-                {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.dataset.epochs)
-
-    # if test is None:
-    #     log.error("No test dataset, skipping evaluation.")
-    #     log.info("Done!")
-    #     return
+        for metric in model.metrics_names:
+            metric_dict = {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}
+            if f'test_{metric}' in history.history.keys():
+                metric_dict[f'test {metric}'] = history.history[f'test_{metric}']
+            plot_train_history(metric_dict, history_dir, metric, args.dataset.epochs)
+                
+        # for metric in [m for m in history.history.keys() if 'val' not in m]:
+        #     plot_train_history(
+        #         {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.dataset.epochs)
 
     # run simple evaluation
+    log.info("Evaluating on dev set:")
     log.info(model.evaluate(dev, return_dict=True))
+    log.info("Evaluating on test set:")
+    log.info(model.evaluate(test, return_dict=True))
 
     # if model is bdt, plot feature importances
     if args.general.model == 'bdt':

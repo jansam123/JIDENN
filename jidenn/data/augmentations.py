@@ -5,6 +5,7 @@ import numpy as np
 
 import jidenn.config.augmentation_config as aug_cfg
 import jidenn.config.config as cfg
+from jidenn.data.four_vector_transform import to_e_px_py_pz, to_m_pt_eta_phi
 
 
 def get_drop_constituents(config: aug_cfg.DropSoft):
@@ -22,7 +23,7 @@ def get_drop_constituents(config: aug_cfg.DropSoft):
         PFO_pt = jets['jets_PFO_pt']
         n_consts = tf.shape(PFO_pt)[0]
         if n_consts < min_const:
-            return tf.range(0, n_consts, 1, dtype=tf.int32)
+            return jets
 
         center = tf.cast((tf.cast(n_consts, tf.float32) * center_frac), tf.float32)
 
@@ -32,7 +33,7 @@ def get_drop_constituents(config: aug_cfg.DropSoft):
 
         take_index = tf.where(coin_flips > drop_probabilty, True, False)
         if tf.reduce_all(take_index == False):
-            return tf.range(0, n_consts, 1, dtype=tf.int32)
+            return jets
 
         jets['jets_PFO_m'] = jets['jets_PFO_m'][take_index]
         jets['jets_PFO_pt'] = jets['jets_PFO_pt'][take_index]
@@ -59,13 +60,14 @@ def get_rotation_augm(config: aug_cfg.Rotation):
     @tf.function
     def rotation_augm(jets):
         jets = jets.copy()
-        jets = add_cartesian_coordinates(jets)
-        axis = tf.stack([jets['jets_px'], jets['jets_py'], jets['jets_pz']])
-        vector = tf.stack([jets['jets_PFO_px'], jets['jets_PFO_py'], jets['jets_PFO_pz']], axis=1)
+        jets_PFO_E, jets_PFO_px, jets_PFO_py, jets_PFO_pz = to_e_px_py_pz(jets['jets_PFO_m'], jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi'])
+        _, jets_px, jets_py, jets_pz = to_e_px_py_pz(jets['jets_m'], jets['jets_pt'], jets['jets_eta'], jets['jets_phi'])
+        axis = tf.stack([jets_px, jets_py, jets_pz])
+        vector = tf.stack([jets_PFO_px, jets_PFO_py, jets_PFO_pz], axis=1)
         rotated_vector = random_rotate_around_fixed_axis(vector, axis)
-        jets['jets_PFO_px'], jets['jets_PFO_py'], jets['jets_PFO_pz'] = tf.unstack(rotated_vector, axis=1)
-        jets['jets_PFO_m'], jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi'] = to_m_pt_eta_phi(
-            jets['jets_PFO_E'], jets['jets_PFO_px'], jets['jets_PFO_py'], jets['jets_PFO_pz'])
+        jets_PFO_px, jets_PFO_py, jets_PFO_pz = tf.unstack(rotated_vector, axis=1)
+        _, jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi'] = to_m_pt_eta_phi(
+            jets_PFO_E, jets_PFO_px, jets_PFO_py, jets_PFO_pz)
         return jets
     return rotation_augm
 
@@ -88,12 +90,12 @@ def get_boost_augm(config: aug_cfg.Boost):
     @tf.function
     def boost_augm(jets):
         jets = jets.copy()
-        jets = add_cartesian_coordinates(jets)
-        momentum = tf.stack([jets['jets_PFO_px'], jets['jets_PFO_py'], jets['jets_PFO_pz']], axis=1)
-        jets['jets_PFO_E'], new_momentum = random_boost(jets['jets_PFO_E'], momentum)
-        jets['jets_PFO_px'], jets['jets_PFO_py'], jets['jets_PFO_pz'] = tf.unstack(new_momentum, axis=1)
-        jets['jets_PFO_m'], jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi'] = to_m_pt_eta_phi(
-            jets['jets_PFO_E'], jets['jets_PFO_px'], jets['jets_PFO_py'], jets['jets_PFO_pz'])
+        jets_PFO_E, jets_PFO_px, jets_PFO_py, jets_PFO_pz = to_e_px_py_pz(jets['jets_PFO_m'], jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi'])
+        momentum = tf.stack([jets_PFO_px, jets_PFO_py, jets_PFO_pz], axis=1)
+        jets_PFO_E, new_momentum = random_boost(jets_PFO_E, momentum)
+        jets_PFO_px, jets_PFO_py, jets_PFO_pz = tf.unstack(new_momentum, axis=1)
+        _, jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi'] = to_m_pt_eta_phi(
+            jets_PFO_E, jets_PFO_px, jets_PFO_py, jets_PFO_pz)
         return jets
     return boost_augm
 
@@ -107,7 +109,7 @@ def get_random_split_fn(config: aug_cfg.CollinearSplit):
         m, pt, eta, phi = jets['jets_PFO_m'], jets['jets_PFO_pt'], jets['jets_PFO_eta'], jets['jets_PFO_phi']
         split_index = tf.where(tf.random.uniform(shape=tf.shape(pt), minval=0, maxval=1) < prob, True, False)
 
-        frac = tf.random.uniform(shape=tf.shape(pt), minval=0., maxval=1.)
+        frac = tf.random.uniform(shape=tf.shape(pt), minval=0.1, maxval=0.9, dtype=tf.float32)
         new_all_pt = pt * tf.cast(tf.logical_not(split_index), tf.float32) + \
             pt * tf.cast(split_index, tf.float32) * frac
         new_pt = tf.boolean_mask(pt, split_index) * (1 - tf.boolean_mask(frac, split_index))
@@ -118,6 +120,11 @@ def get_random_split_fn(config: aug_cfg.CollinearSplit):
         jets['jets_PFO_pt'] = tf.concat([new_all_pt, new_pt], axis=0)
         jets['jets_PFO_eta'] = tf.concat([eta, new_eta], axis=0)
         jets['jets_PFO_phi'] = tf.concat([phi, new_phi], axis=0)
+        sort_idxs =  tf.argsort(jets['jets_PFO_pt'], axis=0, direction='DESCENDING')
+        jets['jets_PFO_m'] = tf.gather(jets['jets_PFO_m'], sort_idxs)
+        jets['jets_PFO_pt'] = tf.gather(jets['jets_PFO_pt'], sort_idxs)
+        jets['jets_PFO_eta'] = tf.gather(jets['jets_PFO_eta'], sort_idxs)
+        jets['jets_PFO_phi'] = tf.gather(jets['jets_PFO_phi'], sort_idxs)
         return jets
     return random_split
 

@@ -35,8 +35,7 @@ def main(args: argparse.Namespace) -> None:
     dss = dataset.split_train_dev_test(args.train_frac, args.dev_frac, args.test_frac)
 
     for name, ds in zip(['train', 'dev', 'test'], dss):
-        if name == 'test':
-            ds.save(os.path.join(args.save_path, name), num_shards=args.num_shards)
+        ds.save(os.path.join(args.save_path, name), num_shards=args.num_shards)
 
 
 if __name__ == "__main__":

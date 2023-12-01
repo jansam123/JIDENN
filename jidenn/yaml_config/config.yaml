@@ -27,7 +27,7 @@ general:
   load_checkpoint_path:
 
 data:
-  path: ./data/pythia_W_flat_70_JZ10_noL # Path to data folder containing folder of *.root files.
+  path: ./data/pythia_W_flat_70_JZ10_noL 
   target: jets_PartonTruthLabelID
   labels: # list of labels to use.
     - gluon
@@ -40,13 +40,27 @@ data:
   cut:
   weight: weight_spectrum
 
+test_data:
+  path: ./data/altMC_phys_JZ3_cut/Sh_2211_jj_DIRE
+  target: jets_PartonTruthLabelID
+  labels: # list of labels to use.
+    - gluon
+    - quark
+  target_labels:
+    - [21]
+    - [1, 2, 3, 4, 5, 6]
+  variable_unknown_labels: [-1, -999]
+  label_weights:
+  cut:
+  weight: weight
+
 optimizer:
-  name: LAMB # Optimizer to use, options: Adam, LAMB, Lion.
-  warmup_steps: 100 # Number of steps, when learning rate is increased linearly.
+  name: Adam # Optimizer to use, options: Adam, LAMB, Lion.
+  warmup_steps: 1000 # Number of steps, when learning rate is increased linearly.
   learning_rate: 0.001 # Learning rate.
   min_learning_rate: 0.01 # Minimal learning rate as a fraction of the initial learning rate.
   decay_steps: # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
-  clipnorm: # Gradient clipping (maximal norm of the gradient).
+  clipnorm: 1.0 # Gradient clipping (maximal norm of the gradient).
   weight_decay: # Weight decay (L2 regularization).
   beta_1: # Adam beta_1 (optimizer parameter).
   label_smoothing: 0. # Label smoothing.
@@ -54,17 +68,17 @@ optimizer:
   epsilon: #part : 0.0001
 
 dataset:
-  epochs: 10 # Number of epochs.
+  epochs: 25 # Number of epochs.
   take: # Length of data to use.
-  batch_size: 512 # Batch size.
+  batch_size: 1024 # Batch size.
   dev_size: 0.1 # Size of dev dataset.
-  test_size: 0.1 # Size of test dataset.
-  shuffle_buffer: 100_000 # Size of shuffler buffer.
+  test_take: 100_000 # Size of test dataset.
+  shuffle_buffer: 1_000 # Size of shuffler buffer.
   cache: disk # Cache dataset in memory (`mem`) or on disk (`disk`).
 
 preprocess:
-  normalization_size: 500 # Size of normalization dataset (if normalize is True).
-  draw_distribution: 20_000 # Size of the distribution to draw.
+  normalization_size: 150 # Size of normalization dataset (if normalize is True).
+  draw_distribution:  # Size of the distribution to draw.
 
 models:
   fc:
@@ -175,20 +189,20 @@ models:
 
 augmentations:
   order: []
-  drop_soft:
-    prob: 0.5
-    skew: 100
-    center_location: 0.7
-    min_number_consti: 4
   rotation:
     prob: 0.5
     max_angle: 360
   boost:
     prob: 0.5
-    max_beta: 1.
+    max_beta: 0.1
   collinear_split:
     prob: 0.5
-    splitting_amount: 0.3
+    splitting_amount: 0.05
   soft_smear:
     prob: 0.5
-    energy_scale: 50
+    energy_scale: 100
+  drop_soft:
+    prob: 0.5
+    skew: 1
+    center_location: 0.5
+    min_number_consti: 3

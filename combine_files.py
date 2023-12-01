@@ -66,6 +66,7 @@ def main(args: argparse.Namespace) -> None:
 
     files = [os.path.join(args.load_path, file, args.dataset_type) for file in os.listdir(
         os.path.join(args.load_path)) if file.startswith('_') and len(os.listdir(os.path.join(args.load_path, file))) > 0]
+    
     dataset = JIDENNDataset.load_parallel(files)
 
     # norm = dataset.metadata['sum_AOD_w']

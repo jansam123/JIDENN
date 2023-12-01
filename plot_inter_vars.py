@@ -28,29 +28,6 @@ def pad(max_const):
         return data, weight
     return _pad
 
-# def pad(max_const):
-#     @tf.function
-#     def _pad(data, weight):
-#         weight = tf.cast(weight, tf.float32)
-#         weight = tf.fill(tf.shape(data[1]['z']), weight)
-#         weight = tf.pad(weight, [[0,max_const-tf.shape(weight)[1]],[0,max_const-tf.shape(weight)[1]]])
-#         data = {var: tf.pad(val, [[0,max_const-tf.shape(val)[1]],[0,max_const-tf.shape(val)[1]]]) for var, val in data[1].items()}
-#         for var in data.keys():
-#             if var == 'z':
-#                 continue
-#             data[var] = tf.exp(data[var])
-#         return data, weight
-#     return _pad
-
-# def pad(max_const):
-#     @tf.function
-#     def _pad(data, weight):
-#         weight = tf.cast(weight, tf.float32)
-#         data = {var: tf.pad(val, [[0,max_const-tf.shape(val)[1]],[0,max_const-tf.shape(val)[1]]]) for var, val in data[1].items()}
-#         weight = tf.fill(tf.shape(data['z']), weight)
-#         return data, weight
-#     return _pad
-
 @tf.function
 def reduce_sum(previous, data_w):
     data, weight = data_w

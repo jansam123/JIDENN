@@ -340,7 +340,7 @@ def plot_data_distributions(df: pd.DataFrame,
     df[color_column] = df[hue_variable].apply(
         lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
     df[weight_column] = df[weight_variable] if weight_variable is not None else 1
-    hue_order = ['quark', 'gluon'] #set(named_labels.values()) if named_labels is not None else None
+    hue_order = ['quark', 'gluon']  # set(named_labels.values()) if named_labels is not None else None
     var_names = list(df.columns) if variables is None else variables
     var_names.remove(color_column) if color_column in var_names else None
     var_names.remove(weight_column) if weight_column in var_names else None
@@ -373,9 +373,10 @@ def plot_data_distributions(df: pd.DataFrame,
             line.set_linestyle(ls)
             handle.set_ls(ls)
         ax.legend_.set_title(None)
-        plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name, horizontalalignment='right', x=1.0)
+        plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name,
+                   horizontalalignment='right', x=1.0)
         plt.ylabel(r"a.u.", horizontalalignment='right', y=1.0)
-        
+
         if var_name == 'z':
             plt.xlim(0, 0.5)
         elif var_name == 'delta':
@@ -449,8 +450,8 @@ def plot_single_dist(df: pd.DataFrame,
     subtext = f"Simulation Internal \n {badge_text}" if badge_text is not None else "Simulation Internal"
 
     atlasify.atlasify(
-        atlas=badge,
-        subtext=subtext if badge else None,
+        atlas="Simulation Internal" if badge else False,
+        subtext=badge_text if badge else None,
     )
     plt.savefig(save_path, dpi=400, bbox_inches='tight')
     plt.close()
@@ -544,16 +545,16 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                 plot_y_std = True
                 counts = df[n_counts[i]].to_numpy() if isinstance(n_counts, list) else df[n_counts].to_numpy()
                 if 'eff' in metric_name:
-                    y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts) 
+                    y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts)
                 elif 'rej' in metric_name:
-                    y_var_std = np.sqrt(1/y_var_mean * (1 - 1/y_var_mean) / counts) * y_var_mean**2
+                    y_var_std = np.sqrt(1 / y_var_mean * (1 - 1 / y_var_mean) / counts) * y_var_mean**2
                 else:
                     plot_y_std = False
                     y_var_std = np.zeros_like(y_var_mean)
             else:
                 plot_y_std = False
                 y_var_std = np.zeros_like(y_var_mean)
-            
+
             plot.add(
                 puma.VarVsVar(
                     x_var=x_var,

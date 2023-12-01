@@ -28,12 +28,8 @@ def sns_label_plotting(df, save_path, bins=None):
         handle.set_ls(ls)
 
     ax.legend_.set_title(None)
-    ax.tick_params(axis='both', which='major', labelsize=15)
-    ax.tick_params(axis='both', which='minor', labelsize=15)
-    
-    plt.setp(ax.get_legend().get_texts(), fontsize='15')
-    plt.xlabel(pt_name, horizontalalignment='right', x=1.0, fontsize=15)
-    plt.ylabel(r"Counts", horizontalalignment='right', y=1.0, fontsize=15)
+    plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
+    plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(1e3, 1e6)
     plt.xlim(0.2, 2.5)
     atlasify.atlasify(
@@ -65,12 +61,8 @@ def sns_label_plotting_noW(df, save_path, bins=None):
         line.set_linestyle(ls)
         handle.set_ls(ls)
     ax.legend_.set_title(None)
-    ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.tick_params(axis='both', which='minor', labelsize=14)
-    
-    plt.setp(ax.get_legend().get_texts(), fontsize='14')
-    plt.xlabel(pt_name, horizontalalignment='right', x=1.0, fontsize=14)
-    plt.ylabel(r"Counts", horizontalalignment='right', y=1.0, fontsize=14)
+    plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
+    plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(1e3, 1e6)
     plt.xlim(0.2, 2.5)
     atlasify.atlasify(

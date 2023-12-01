@@ -3,18 +3,19 @@ Module containing a single function to load and preprocess a dataset from a list
 into `JIDENNDataset` objects, perform the preprocessing steps specified in `args_data`.
 """
 import tensorflow as tf
-from typing import List, Optional, Tuple, Callable
+from typing import List, Optional, Tuple, Callable, Union
 
 from jidenn.config import config
 from jidenn.data.string_conversions import Cut
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 
 
-def get_preprocessed_dataset(file: str,
+def get_preprocessed_dataset(file: Union[str, List[str]],
                              args_data: config.Data,
                              input_creator: Callable[[ROOTVariables], ROOTVariables],
-                             augmentation: Callable[[ROOTVariables], ROOTVariables],
-                             shuffle_reading: bool = True):
+                             augmentation: Optional[Callable[[ROOTVariables], ROOTVariables]] = None,
+                             shuffle_reading: bool = False,
+                             cache: Optional[str] = None):
 
     @tf.function
     def count_PFO(sample: ROOTVariables) -> ROOTVariables:
@@ -46,7 +47,10 @@ def get_preprocessed_dataset(file: str,
         is_unknown = tf.reduce_any(sample[args_data.target] == unknown_labels)
         return tf.logical_not(is_unknown)
 
-    dataset = JIDENNDataset.load(file, shuffle_reading=shuffle_reading)
+    if isinstance(file, str):
+        dataset = JIDENNDataset.load(file, shuffle_reading=shuffle_reading)
+    else:
+        dataset = JIDENNDataset.load_multiple(file, shuffle_reading=shuffle_reading)
     dataset = dataset.remap_data(count_PFO)
     dataset = dataset.filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
     dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset

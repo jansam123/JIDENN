@@ -122,7 +122,7 @@ class Dataset:
     batch_size: int   # Batch size.
     take: Optional[int]   # Length of data to use.
     dev_size: float   # Size of dev dataset.
-    test_size: float  # Size of test dataset.
+    test_take: int  # Size of test dataset.
     shuffle_buffer: Optional[int]   # Size of shuffler buffer.
     cache: Optional[str]   # Path to cached data.
 
@@ -234,7 +234,8 @@ class JIDENNConfig:
     """A dataclass containing all of the configuration information for a JIDENN training session."""
     general: General
     data: Data
-    augmentations: Augmentations
+    test_data: Optional[Data]
+    augmentations: Optional[Augmentations]
     dataset: Dataset
     preprocess: Preprocess
     optimizer: Optimizer

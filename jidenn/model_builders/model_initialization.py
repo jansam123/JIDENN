@@ -6,7 +6,6 @@ The mapping from string names of the models in the config file is then mapped to
 """
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 from typing import Tuple, Optional, Callable, List, Literal, Union, Any
 
 from jidenn.config import model_config
@@ -18,7 +17,7 @@ from ..models.ParT import ParTModel
 from ..models.DeParT import DeParTModel
 from ..models.PFN import PFNModel
 from ..models.EFN import EFNModel
-from ..models.BDT import bdt_model
+# from ..models.BDT import bdt_model
 from ..models.ParticleNet import ParticleNetModel
 
 
@@ -33,7 +32,7 @@ def get_activation(activation: Literal['relu', 'gelu', 'tanh', 'swish']) -> Call
     if activation == 'relu':
         return tf.nn.relu
     elif activation == 'gelu':
-        return tfa.activations.gelu
+        return tf.keras.activations.gelu
     elif activation == 'tanh':
         return tf.nn.tanh
     elif activation == 'swish':
@@ -284,8 +283,8 @@ def get_bdt_model(input_size: int,
     Returns:
         tfdf.keras.GradientBoostedTreesModel: BDT model.
     """
-
-    return bdt_model(args_model)
+    raise NotImplementedError('BDT model not supported.')
+    # return bdt_model(args_model)
 
 
 def model_getter_lookup(model_name: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']

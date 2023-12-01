@@ -161,7 +161,8 @@ def dict_to_stacked_tensor(data: Union[ROOTVariables, Tuple[ROOTVariables, ROOTV
     if isinstance(data, tuple):
         output_data = []
         for data_input in data:
-            output_data.append(tf.stack([tf.cast(data_input[var], FLOAT_PRECISION) for var in data_input.keys()], axis=-1))
+            output_data.append(tf.stack(
+                [tf.cast(data_input[var], FLOAT_PRECISION) for var in data_input.keys()], axis=-1))
         return tuple(output_data)
     else:
         return tf.stack([tf.cast(data[var], FLOAT_PRECISION) for var in data.keys()], axis=-1)
@@ -245,7 +246,8 @@ class JIDENNDataset:
         """Initializes the JIDENNDataset object. """
 
         if dataset is not None and element_spec is None:
-            logging.warning("Element spec not set. Using the element spec of the dataset.")
+            logging.warning(
+                "Element spec not set. Using the element spec of the dataset.")
             element_spec = dataset.element_spec
         self._dataset = dataset
         self._element_spec = element_spec
@@ -328,11 +330,13 @@ class JIDENNDataset:
             raise ValueError(
                 'Multiple datasets can only be loaded if `element_spec_path` and `metadata_path` are set. Otherwise use `load_multiple`.')
 
-        element_spec_path = os.path.join(path, 'element_spec.pkl') if element_spec_path is None else element_spec_path
+        element_spec_path = os.path.join(
+            path, 'element_spec.pkl') if element_spec_path is None else element_spec_path
         with open(element_spec_path, 'rb') as f:
             element_spec = pickle.load(f)
 
-        metadata_path = os.path.join(path, 'metadata.pkl') if metadata_path is None else metadata_path
+        metadata_path = os.path.join(
+            path, 'metadata.pkl') if metadata_path is None else metadata_path
         try:
             with open(metadata_path, 'rb') as f:
                 metadata = pickle.load(f)
@@ -362,29 +366,39 @@ class JIDENNDataset:
     @staticmethod
     def load_multiple(files: List[str],
                       file_labels: Optional[List[Any]] = None,
-                      dataset_mapper: Optional[Callable[[tf.data.Dataset], tf.data.Dataset]] = None,
+                      dataset_mapper: Optional[Callable[[
+                          tf.data.Dataset], tf.data.Dataset]] = None,
                       element_spec_paths: Optional[List[str]] = None,
                       stop_on_empty_dataset: bool = False,
                       weights: Optional[List[float]] = None,
+                      mode: Literal['concatenate',
+                                    'interleave'] = 'interleave',
                       metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
 
-        element_spec_paths = [None] * len(files) if element_spec_paths is None else element_spec_paths
-        metadata_paths = [None] * len(files) if metadata_paths is None else metadata_paths
+        element_spec_paths = [
+            None] * len(files) if element_spec_paths is None else element_spec_paths
+        metadata_paths = [None] * \
+            len(files) if metadata_paths is None else metadata_paths
+        file_labels = [None] * \
+            len(files) if file_labels is None else file_labels
 
         dss = []
         for file, file_label, element_spec_path, metadata_path in zip(files, file_labels, element_spec_paths, metadata_paths):
             ds = JIDENNDataset.load(file, element_spec_path, metadata_path)
-            ds = ds.apply(lambda x: dataset_mapper(x, file_label)) if dataset_mapper is not None else ds
+            ds = ds.apply(lambda x: dataset_mapper(x, file_label)
+                          ) if dataset_mapper is not None else ds
             dss.append(ds)
 
-        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode='interleave', weights=weights)
+        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode=mode, weights=weights)
 
     @staticmethod
     def load_parallel(files: List[str],
                       file_labels: Optional[List[Any]] = None,
                       element_spec_paths: Optional[List[str]] = None,
                       take: Optional[int] = None,
-                      dataset_mapper: Optional[Callable[[tf.data.Dataset], tf.data.Dataset]] = None,
+                      dataset_mapper: Optional[Callable[[
+                          tf.data.Dataset], tf.data.Dataset]] = None,
+                      num_parallel_calls: int = tf.data.AUTOTUNE,
                       metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
 
         if file_labels is not None and len(file_labels) != len(files):
@@ -393,7 +407,8 @@ class JIDENNDataset:
 
         es_paths = [os.path.join(file, 'element_spec.pkl')
                     for file in files] if element_spec_paths is None else element_spec_paths
-        m_paths = [os.path.join(file, 'metadata.pkl') for file in files] if metadata_paths is None else metadata_paths
+        m_paths = [os.path.join(file, 'metadata.pkl')
+                   for file in files] if metadata_paths is None else metadata_paths
         metadatas = []
         element_specs = []
         for element_spec_path, metadata_path in zip(es_paths, m_paths):
@@ -419,7 +434,8 @@ class JIDENNDataset:
         if file_labels is None:
             @tf.function
             def _interleaver(file):
-                dataset = tf.data.Dataset.load(file, compression='GZIP', element_spec=element_specs[0])
+                dataset = tf.data.Dataset.load(
+                    file, compression='GZIP', element_spec=element_specs[0])
                 if take is not None:
                     dataset = dataset.take(take)
                 if dataset_mapper is not None:
@@ -428,7 +444,8 @@ class JIDENNDataset:
         else:
             @tf.function
             def _interleaver(file, label):
-                dataset = tf.data.Dataset.load(file, compression='GZIP', element_spec=element_specs[0])
+                dataset = tf.data.Dataset.load(
+                    file, compression='GZIP', element_spec=element_specs[0])
                 if take is not None:
                     dataset = dataset.take(take)
                 if dataset_mapper is not None:
@@ -437,9 +454,11 @@ class JIDENNDataset:
 
         dataset = tf.data.Dataset.from_tensor_slices(files)
         if file_labels is not None:
-            label_dataset = tf.data.Dataset.from_tensor_slices(tf.constant(file_labels))
+            label_dataset = tf.data.Dataset.from_tensor_slices(
+                tf.constant(file_labels))
             dataset = tf.data.Dataset.zip((dataset, label_dataset))
-        dataset = dataset.interleave(_interleaver, num_parallel_calls=tf.data.AUTOTUNE)
+        dataset = dataset.interleave(
+            _interleaver, num_parallel_calls=num_parallel_calls)
         element_spec = dataset.element_spec
 
         return JIDENNDataset(dataset=dataset, element_spec=element_spec, metadata=metadata, length=None)
@@ -617,7 +636,8 @@ class JIDENNDataset:
         """Sets the `variables`, `target` and `weight` of the dataset."""
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
-        dataset = self.dataset.map(get_var_picker(target=target, weight=weight, variables=variables))
+        dataset = self.dataset.map(get_var_picker(
+            target=target, weight=weight, variables=variables))
         new_vars = list(dataset.element_spec[0].keys())
         return JIDENNDataset(dataset=dataset,
                              metadata=self.metadata,
@@ -885,18 +905,26 @@ class JIDENNDataset:
             @tf.function
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
-                    data = {**data[0], **data[1]}
+                    new_data = {}
+                    for dat in data:
+                        new_data.update({**dat})
+                else:
+                    new_data = data
                 weight = weight if weight is not None else tf.ones_like(label)
-                data = {**data, 'label': label, 'weight': weight}
+                data = {**new_data, 'label': label, 'weight': weight}
                 return data
 
         elif isinstance(self._element_spec, tuple) and variables is not None:
             @tf.function
             def tuple_to_dict(data, label, weight=None):
                 if isinstance(data, tuple):
-                    data = {**data[0], **data[1]}
+                    new_data = {}
+                    for dat in data:
+                        new_data.update({**dat})
+                else:
+                    new_data = data
                 weight = weight if weight is not None else tf.ones_like(label)
-                data = {**data, 'label': label, 'weight': weight}
+                data = {**new_data, 'label': label, 'weight': weight}
                 return {k: data[k] for k in variables + ['label', 'weight']}
 
         elif isinstance(self._element_spec, dict) and variables is not None:
@@ -932,10 +960,13 @@ class JIDENNDataset:
         np_dataset = {}
         for var in variables:
             try:
-                np_dataset[var] = np.asarray(list(self.dataset.map(lambda x: x[var]).as_numpy_iterator()))
+                np_dataset[var] = np.asarray(
+                    list(self.dataset.map(lambda x: x[var]).as_numpy_iterator()))
             except ValueError:
-                logging.warning(f'Variable {var} is a ragged tensor. Converting to a ragged tensor.')
-                np_dataset[var] = tf.ragged.constant(list(self.dataset.map(lambda x: x[var]).as_numpy_iterator()))
+                logging.warning(
+                    f'Variable {var} is a ragged tensor. Converting to a ragged tensor.')
+                np_dataset[var] = tf.ragged.constant(
+                    list(self.dataset.map(lambda x: x[var]).as_numpy_iterator()))
         return np_dataset
 
     def plot_data_distributions(self,
@@ -965,7 +996,9 @@ class JIDENNDataset:
         if not isinstance(self.element_spec, tuple):
             variables = list(self.element_spec.keys())
         elif isinstance(self.element_spec[0], tuple):
-            variables = list(self.element_spec[0][0].keys()) + list(self.element_spec[0][1].keys())
+            variables = []
+            for i in range(len(self.element_spec[0])):
+                variables += list(self.element_spec[0][i].keys())
         else:
             variables = list(self.element_spec[0].keys())
 
@@ -980,7 +1013,8 @@ class JIDENNDataset:
                              weight_variable: Optional[str] = None,
                              **kwargs):
 
-        convert_variables = [variable, hue_variable] if hue_variable is not None else [variable]
+        convert_variables = [
+            variable, hue_variable] if hue_variable is not None else [variable]
         if weight_variable is None:
             convert_variables += [self.weight] if self.weight is not None else []
         else:
@@ -1008,7 +1042,8 @@ class JIDENNDataset:
             Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]: The train, dev and test datasets.
         """
 
-        assert train_fraction + dev_fraction + test_fraction == 1., "Fractions must sum to 1.0 and can only have 2 decimal places."
+        assert train_fraction + dev_fraction + \
+            test_fraction == 1., "Fractions must sum to 1.0 and can only have 2 decimal places."
 
         dataset_size = self.length
         if dataset_size is not None and backend == 'cut':
@@ -1019,8 +1054,12 @@ class JIDENNDataset:
             # Split the shuffled dataset into train, dev, and test datasets
             train = self.apply(lambda x: x.take(train_size))
             dev = self.apply(lambda x: x.skip(train_size).take(dev_size))
-            test = self.apply(lambda x: x.skip(train_size + dev_size).take(test_size))
+            test = self.apply(lambda x: x.skip(
+                train_size + dev_size).take(test_size))
             return train, dev, test
+        elif backend == 'cut':
+            raise ValueError(
+                'Cardinality of the dataset is not known. Use `backend=coin`.')
 
         @tf.function
         def random_number(sample: ROOTVariables) -> tf.Tensor:
@@ -1045,10 +1084,11 @@ class JIDENNDataset:
             return sample
 
         randomized_dataset = self.remap_data(random_number)
-        randomized_dataset = randomized_dataset.apply(lambda x: x.cache())
 
         train = randomized_dataset.filter(train_filter)
         train = train.remap_data(delete_random_number)
-        dev = randomized_dataset.filter(dev_filter).remap_data(delete_random_number)
-        test = randomized_dataset.filter(test_filter).remap_data(delete_random_number)
+        dev = randomized_dataset.filter(
+            dev_filter).remap_data(delete_random_number)
+        test = randomized_dataset.filter(
+            test_filter).remap_data(delete_random_number)
         return train, dev, test

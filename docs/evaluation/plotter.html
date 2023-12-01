@@ -389,11 +389,11 @@ def plot_data_distributions(df: pd.DataFrame,
 
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
-        atlasify.atlasify(subtext=&#34;Simulation Internal&#34;)
+        atlasify.atlasify(subtext=&#34;Simulation Preliminary&#34;)
         plt.savefig(os.path.join(folder, &#39;jpg&#39;, f&#39;{var_name}.jpg&#39;), dpi=300, bbox_inches=&#39;tight&#39;)
         plt.savefig(os.path.join(folder, &#39;pdf&#39;, f&#39;{var_name}.pdf&#39;), bbox_inches=&#39;tight&#39;)
         plt.yscale(&#39;log&#39;)
-        atlasify.atlasify(subtext=&#34;Simulation Internal&#34;)
+        atlasify.atlasify(subtext=&#34;Simulation Preliminary&#34;)
         plt.savefig(os.path.join(folder, &#39;jpg_log&#39;, f&#39;{var_name}.jpg&#39;), dpi=300, bbox_inches=&#39;tight&#39;)
         plt.savefig(os.path.join(folder, &#39;pdf_log&#39;, f&#39;{var_name}.pdf&#39;), bbox_inches=&#39;tight&#39;)
 
@@ -420,7 +420,7 @@ def plot_single_dist(df: pd.DataFrame,
     plt.yscale(&#39;log&#39;) if ylog else plt.yscale(&#39;linear&#39;)
     plt.xscale(&#39;log&#39;) if xlog else plt.xscale(&#39;linear&#39;)
     plt.xlabel(xlabel if xlabel is not None else variable)
-    atlasify.atlasify(subtext=f&#34;Simulation Internal \n {badge_text}&#34; if badge_text is not None else &#34;Simulation Internal&#34;)
+    atlasify.atlasify(subtext=f&#34;Simulation Preliminary \n {badge_text}&#34; if badge_text is not None else &#34;Simulation Preliminary&#34;)
     plt.savefig(save_path, dpi=400, bbox_inches=&#39;tight&#39;)
     plt.close()
 
@@ -653,11 +653,11 @@ variable names such as 'jets_pt' to a latex formatted label such as '$p_{\mathrm
 
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name)
 
-        atlasify.atlasify(subtext=&#34;Simulation Internal&#34;)
+        atlasify.atlasify(subtext=&#34;Simulation Preliminary&#34;)
         plt.savefig(os.path.join(folder, &#39;jpg&#39;, f&#39;{var_name}.jpg&#39;), dpi=300, bbox_inches=&#39;tight&#39;)
         plt.savefig(os.path.join(folder, &#39;pdf&#39;, f&#39;{var_name}.pdf&#39;), bbox_inches=&#39;tight&#39;)
         plt.yscale(&#39;log&#39;)
-        atlasify.atlasify(subtext=&#34;Simulation Internal&#34;)
+        atlasify.atlasify(subtext=&#34;Simulation Preliminary&#34;)
         plt.savefig(os.path.join(folder, &#39;jpg_log&#39;, f&#39;{var_name}.jpg&#39;), dpi=300, bbox_inches=&#39;tight&#39;)
         plt.savefig(os.path.join(folder, &#39;pdf_log&#39;, f&#39;{var_name}.pdf&#39;), bbox_inches=&#39;tight&#39;)
 
@@ -741,7 +741,7 @@ variable names such as 'jets_pt' to a latex formatted label such as '$p_{\mathrm
     plt.yscale(&#39;log&#39;) if ylog else plt.yscale(&#39;linear&#39;)
     plt.xscale(&#39;log&#39;) if xlog else plt.xscale(&#39;linear&#39;)
     plt.xlabel(xlabel if xlabel is not None else variable)
-    atlasify.atlasify(subtext=f&#34;Simulation Internal \n {badge_text}&#34; if badge_text is not None else &#34;Simulation Internal&#34;)
+    atlasify.atlasify(subtext=f&#34;Simulation Preliminary \n {badge_text}&#34; if badge_text is not None else &#34;Simulation Preliminary&#34;)
     plt.savefig(save_path, dpi=400, bbox_inches=&#39;tight&#39;)
     plt.close()</code></pre>
 </details>

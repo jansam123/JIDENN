@@ -19,17 +19,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, help="Path to save the dataset")
 parser.add_argument("--load_path", type=str, help="Path to the root file")
 parser.add_argument("--shuffle", type=int, default=100_000, required=False, help="Shuffle buffer size")
-parser.add_argument("--take", type=int, default=200_000, help="Number of jets to take")
+parser.add_argument("--take", type=int, default=1_000_000, help="Number of jets to take")
 parser.add_argument("--num_shards", type=int, default=256, required=False,
                     help="Number of shards to save the dataset in")
+parser.add_argument("--skip", type=int, default=None, help="Number of events to skip")
+parser.add_argument("--JZs_to_skip", type=int, nargs='+', default=None, help="JZs to skip")
 parser.add_argument("--min_jz", type=int, default=2, help="Maximum JZ to use")
 parser.add_argument("--max_jz", type=int, default=7, help="Maximum JZ to use")
 parser.add_argument("--eta_cut", type=float, default=2.1, help="Eta cut")
+parser.add_argument("--pt_lower_cut", type=float, default=0.2e6, help="Pt lower cut")
+parser.add_argument("--pt_upper_cut", type=float, default=2.5e6, help="Pt upper cut")
 parser.add_argument("--dataset_type", type=str, default='test', help="train/dev/test")
 parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
                     help="Variable to use as reference for flattening")
 parser.add_argument("--wanted_values", type=int, nargs='+',
-                    default=[1, 2, 3, 4, 5, 6, 21], help="Values to keep in the reference variable")
+                    default=[1, 2, 3, 21], help="Values to keep in the reference variable")
 parser.add_argument("--jz_description_file", type=str,
                     default='data/JZ_description.csv', help="JZ description csv file.")
 
@@ -47,13 +51,15 @@ TAKE_FRAC = 0.01
 def write_weights(cross_section: float = 1., filt_eff: float = 1., lumi: float = 1., norm: float = 1.):
     @tf.function
     def _calculate_weights(data):
+        data = data.copy()
         w = tf.cast(data['weight_mc'], tf.float64)
         cast_lumi = tf.cast(lumi, tf.float64)
         cast_cross_section = tf.cast(cross_section, tf.float64)
         cast_filt_eff = tf.cast(filt_eff, tf.float64)
         cast_norm = tf.cast(norm, tf.float64)
         weight = w[0] * cast_lumi * cast_cross_section * cast_filt_eff / cast_norm
-        return {**data, 'weight': weight}
+        data['weight'] = weight
+        return data
     return _calculate_weights
 
 
@@ -74,6 +80,7 @@ def main(args: argparse.Namespace) -> None:
         norm_name = jz_description[jz_description['JZ'] == jz]['Norm'].values[0]
 
         dataset = JIDENNDataset.load(file)
+        print(dataset.element_spec)
         size = dataset.length
         norm = dataset.metadata[norm_name]
 
@@ -96,15 +103,16 @@ def main(args: argparse.Namespace) -> None:
         dataset = dataset.map(write_weights(cross_section, filt_eff, lumi, norm))
         dataset = dataset.map(write_new_variable(variable_name='JZ_slice',
                               variable_value=tf.constant(jz, dtype=tf.int32)))
-        if jz == 4:
-            dataset = dataset.skip(10_000_000)
+        if args.skip is not None and jz == 4:
+            print(f'Skipping {args.skip} events of JZ4')
+            dataset = dataset.skip(args.skip)
         return dataset
 
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_cutter,
                                           file_labels=weight_info, weights=sampling_weights)
-    dataset = dataset.take(args.take)
     dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
-                                    wanted_values=args.wanted_values, variable='jets_eta', lower_cut=-args.eta_cut, upper_cut=args.eta_cut))
+                                    wanted_values=args.wanted_values, variables=['jets_eta', 'jets_pt'], lower_cuts=[-args.eta_cut, args.pt_lower_cut], upper_cuts=[args.eta_cut, args.pt_upper_cut]))
+    dataset = dataset.take(args.take)
     # dataset = dataset.filter(lambda x: tf.random.uniform([]) < TAKE_FRAC)
 
     dataset = dataset.apply(lambda x: x.shuffle(args.shuffle).prefetch(tf.data.AUTOTUNE))
@@ -121,6 +129,24 @@ def main(args: argparse.Namespace) -> None:
                                  bins=100,
                                  multiple='stack',
                                  hue_variable='JZ_slice')
+    dataset.apply(lambda x: x.filter(lambda y: y['jets_PartonTruthLabelID'] != 21)).plot_single_variable('jets_pt',
+                                                                                                         weight_variable='weight',
+                                                                                                         save_path=os.path.join(
+                                                                                                             args.save_path, 'pt_quark.png'),
+                                                                                                         ylog=True,
+                                                                                                         badge_text='quark\n',
+                                                                                                         bins=100,
+                                                                                                         multiple='stack',
+                                                                                                         hue_variable='JZ_slice')
+    dataset.apply(lambda x: x.filter(lambda z: z['jets_PartonTruthLabelID'] == 21)).plot_single_variable('jets_pt',
+                                                                                                         weight_variable='weight',
+                                                                                                         save_path=os.path.join(
+                                                                                                             args.save_path, 'pt_gluon.png'),
+                                                                                                         ylog=True,
+                                                                                                         badge_text='gluon\n',
+                                                                                                         bins=100,
+                                                                                                         multiple='stack',
+                                                                                                         hue_variable='JZ_slice')
     dataset.plot_single_variable('jets_pt',
                                  weight_variable=None,
                                  save_path=os.path.join(args.save_path, 'pt_noW.png'),
@@ -141,7 +167,7 @@ def main(args: argparse.Namespace) -> None:
                                  ylog=True,
                                  badge_text='$N_{\mathrm{jets}}$ = ' + f'{size:,} \n',
                                  bins=100,
-                                 multiple='stack',
+                                 multiple='layer',
                                  hue_variable='jets_PartonTruthLabelID')
 
     dataset.plot_single_variable('weight',
@@ -154,4 +180,6 @@ def main(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
+    if isinstance(args.JZs_to_skip, int):
+        args.JZs_to_skip = [args.JZs_to_skip]
     main(args)
