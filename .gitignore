@@ -30,3 +30,4 @@ tests
 **/*.root
 raw
 plots.md
+test_venv

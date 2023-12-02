@@ -30,7 +30,6 @@ parser.add_argument("--num_shards", type=int, default=4, required=False,
 def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
     dataset = JIDENNDataset.from_root_file(args.load_path, backend=args.backend)
-    print(dataset.element_spec)
 
     dss = dataset.split_train_dev_test(args.train_frac, args.dev_frac, args.test_frac)
 

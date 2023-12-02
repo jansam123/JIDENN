@@ -6,13 +6,14 @@ from __future__ import annotations
 import tensorflow as tf
 import pandas as pd
 from dataclasses import dataclass
-from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Any
+from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Any, Iterator
 import os
 import pickle
 import awkward as ak
 import uproot
 import logging
 import numpy as np
+import ray
 #
 from jidenn.data.string_conversions import Cut, Expression
 from jidenn.evaluation.plotter import plot_data_distributions, plot_single_dist
@@ -185,6 +186,126 @@ def get_var_picker(target: Optional[str] = None,
         else:
             return new_sample, Expression(target)(sample), Expression(weight)(sample)
     return pick_variables
+
+
+def root_file_iterator(filename: str,
+                       treename: str,
+                       step_size: Optional[int] = None,
+                       entry_start: Optional[int] = None,
+                       entry_stop: Optional[int] = None,
+                       num_workers: int = 1) -> Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]:
+    """A generator that yields batches of data from a ROOT file as dictionaries of tensors. 
+    Tensors are created from the awkward arrays into normal tensors or ragged tensors, 
+    optionaly with multiple raggged dimensions based on the structure of the awkward array.
+
+    Args:
+        filename (str): ROOT file name
+        tree (str): name of the tree in the ROOT file
+        step_size (Optional[int], optional): Size of the batch. If None, the whole tree is loaded. Defaults to None.
+        entry_start (Optional[int], optional): Index of the first entry to load. If None, the whole tree is loaded. Defaults to None.
+        entry_stop (Optional[int], optional): Index of the last entry to load. Defaults to None.
+        num_workers (int, optional): Number of workers to use for parallel loading in `uproot`. Defaults to 1.
+
+    Yields:
+        Dict[str, Union[tf.Tensor, tf.RaggedTensor]]: Dictionary of tensors with the same keys as the branches in the ROOT tree.
+    """
+
+    with uproot.open(filename, num_workers=num_workers) as file:
+        tree = file[treename]
+        variables = tree.keys()
+        num_entries = tree.num_entries if entry_stop is None else entry_stop - entry_start
+        processed_events = 0
+        for i, batch in enumerate(tree.iterate(step_size=step_size, entry_start=entry_start, entry_stop=entry_stop)):
+
+            processed_events += ak.num(batch[variables[0]], axis=0)
+
+            print(
+                f"Processing chunk {i}: loaded {processed_events} out of {num_entries} events ({100*processed_events/num_entries if num_entries > 0 else 0:.1f}%).")
+            yield {var: awkward_to_tensor(batch[var]) for var in variables}
+
+
+@ray.remote
+class BatchSaver:
+    """A class that saves a batch of data to a folder as a tf.data.Dataset.
+    This is a workaround for the memory leak in tf.data.Dataset.save().
+
+    Args:
+        folder (str): Folder to save the batch to.
+        data (Dict[str, Union[tf.Tensor, tf.RaggedTensor]]): Dictionary of tensors to save.
+    """
+
+    def __init__(self, folder: str, data: Dict[str, Union[tf.Tensor, tf.RaggedTensor]]):
+        self.folder = folder
+        self.data = data
+
+    def save(self):
+        """Saves the batch to the folder.
+
+        Returns:
+            Tuple[Any, Any]: The element spec and cardinality of the saved dataset.
+        """
+        dataset = tf.data.Dataset.from_tensor_slices(self.data)
+        dataset.save(self.folder, compression='GZIP')
+        return (dataset.element_spec, dataset.cardinality())
+
+
+def save_batch(folder: str, data: Dict[str, Union[tf.Tensor, tf.RaggedTensor]], n_parallel: Optional[int] = None) -> Tuple[Any, Any]:
+    """Saves a batch of data to a folder as a tf.data.Dataset using ray actors.
+
+    Args:
+        folder (str): Folder to save the batch to.
+        data (Dict[str, Union[tf.Tensor, tf.RaggedTensor]]): Dictionary of tensors to save.
+
+    Returns:
+        Tuple[Any, Any]: The element spec and cardinality of the saved dataset.
+    """
+    with ray.init(num_cpus=n_parallel):
+        actors = [BatchSaver.remote(folder, data)]
+        output = ray.get([actor.save.remote() for actor in actors])
+        element_spec, cardinality = output[0]
+    return element_spec, cardinality
+
+
+def data_iterator_to_dataset(iterator: Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]],
+                             tmp_folder: str,
+                             single_batch: bool = False,
+                             n_parallel: Optional[int] = None) -> tf.data.Dataset:
+    """Converts a data iterator to a tf.data.Dataset. The iterator consists of batches of data in a form of dictionaries of tensors.
+    Each of the tensor has an extra dimension that corresponds to the batch size. The function saves each batch to a separate folder
+    and then loads the batches as tf.data.Datasets. The datasets are then merged into one dataset using tf.data.Dataset.sample_from_datasets().
+    This is a workaround for the memory leak in tf.data.Dataset.save() and to parallelize the loading of the batches.
+
+    Args:
+        iterator (Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]): Iterator of batches of data. Each batch is a dictionary of tensors, where each tensor has an extra dimension that corresponds to the batch size.
+        tmp_folder (str): Folder to save the batches to.
+
+    Returns:
+        tf.data.Dataset: Dataset containing all the batches.
+    """
+
+    if single_batch:
+        return tf.data.Dataset.from_tensor_slices(next(iterator))
+
+    batch_folders = []
+    element_specs = []
+    cardinalities = []
+    for i, batch in enumerate(iterator):
+        # check if iterator is empty at the beginning of the loop
+        batch_folder = os.path.join(tmp_folder, f"batch_{i}")
+        os.makedirs(batch_folder, exist_ok=True)
+        element_spec, cardinality = save_batch(batch_folder, batch, n_parallel)
+        batch_folders.append(str(batch_folder))
+        element_specs.append(element_spec)
+        cardinalities.append(cardinality)
+
+    dataset = tf.data.Dataset.sample_from_datasets(
+        [tf.data.Dataset.load(batch_folder, compression='GZIP', element_spec=element_spec)
+         for batch_folder, element_spec in zip(batch_folders, element_specs)],
+        stop_on_empty_dataset=False,
+    )
+    dataset = dataset.apply(
+        tf.data.experimental.assert_cardinality(sum(cardinalities)))
+    return dataset
 
 
 class JIDENNDataset:
@@ -573,52 +694,36 @@ class JIDENNDataset:
         return JIDENNDataset(dataset=dataset, element_spec=element_spec,
                              metadata=metadata, variables=variables, target=target,
                              weight=weight, length=dataset.cardinality().numpy())
-        
+
     @staticmethod
     def from_root_file_batched(filename: str,
-                                tree_name: str = 'NOMINAL',
-                                step_size = 10,
-                                metadata_hist: Optional[str] = 'h_metadata') -> JIDENNDataset:
-        
-        file = uproot.open(filename, object_cache=None, array_cache=None)
-        
+                               step_size: int = 10,
+                               entry_start: Optional[int] = None,
+                               entry_stop: Optional[int] = None,
+                               tmp_folder: str = 'tmp',
+                               n_parallel: int = 1,
+                               tree_name: str = 'NOMINAL',
+                               metadata_hist: Optional[str] = 'h_metadata') -> JIDENNDataset:
+
         if metadata_hist is not None:
-            logging.info("Getting metadata")
-            labels = file[metadata_hist].member('fXaxis').labels()
-            values = file[metadata_hist].values()
-            values = tf.constant(values)
-            metadata = dict(zip(labels, values))
-            logging.info(f"Metadata: {metadata}")
+            with uproot.open(filename) as file:
+                logging.info("Getting metadata")
+                labels = file[metadata_hist].member('fXaxis').labels()
+                values = file[metadata_hist].values()
+                values = tf.constant(values)
+                metadata = dict(zip(labels, values))
+                logging.info(f"Metadata: {metadata}")
         else:
             metadata = None
-        
-        def get_iter(step_size):
-            def _iter():
-                for batch in file[tree_name].iterate(step_size=step_size, library='pd'):
-                    
-                    unragged = batch.loc[:, batch.dtypes != 'awkward']
-                    unragged_ds = unragged.to_dict('list')
-                    unragged_ds = {k: tf.constant(v) for k, v in unragged_ds.items()}
-                    
-                    ragged = batch.loc[:, batch.dtypes == 'awkward']
-                    
-                    ragged_ds = {var: tf.RaggedTensor.from_nested_row_lengths(
-                        flat_values=ak.ravel(ragged[var].values),
-                        nested_row_lengths=[ak.flatten(ragged[var].ak.num(axis=ax).values, axis=None).to_list()
-                                    for ax in range(1, ragged[var].values[0].ndim + 1)]) for var in ragged.keys()}
 
-                    yield {**ragged_ds, **unragged_ds}
-            return _iter
+        iterator = root_file_iterator(filename, tree_name, step_size=step_size,
+                                      entry_start=entry_start, entry_stop=entry_stop, num_workers=n_parallel)
 
+        single_batch = entry_stop - \
+            entry_start <= step_size if entry_start is not None and entry_stop is not None else False
 
-        example_dataset = tf.data.Dataset.from_tensors(next(get_iter(1)()))
-        example_dataset_2 = tf.data.Dataset.from_tensors(next(get_iter(2)()))
-        example_dataset = example_dataset.concatenate(example_dataset_2)
-        
-        dataset = tf.data.Dataset.from_generator(
-            get_iter(step_size), output_signature=example_dataset.element_spec)
-        dataset = dataset.interleave(
-            lambda x: tf.data.Dataset.from_tensor_slices(x), num_parallel_calls=tf.data.AUTOTUNE)
+        dataset = data_iterator_to_dataset(
+            iterator, tmp_folder, single_batch=single_batch, n_parallel=n_parallel)
 
         variables = list(dataset.element_spec.keys())
         element_spec = dataset.element_spec
@@ -626,8 +731,7 @@ class JIDENNDataset:
         weight = None
         return JIDENNDataset(dataset=dataset, element_spec=element_spec,
                              metadata=metadata, variables=variables, target=target,
-                             weight=weight, length=None)
-            
+                             weight=weight, length=dataset.cardinality().numpy())
 
     def set_variables_target_weight(self,
                                     variables: Optional[List[str]] = None,
