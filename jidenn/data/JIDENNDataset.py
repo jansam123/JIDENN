@@ -219,7 +219,7 @@ def root_file_iterator(filename: str,
 
             processed_events += ak.num(batch[variables[0]], axis=0)
 
-            print(
+            logging.info(
                 f"Processing chunk {i}: loaded {processed_events} out of {num_entries} events ({100*processed_events/num_entries if num_entries > 0 else 0:.1f}%).")
             yield {var: awkward_to_tensor(batch[var]) for var in variables}
 
@@ -493,7 +493,9 @@ class JIDENNDataset:
                       stop_on_empty_dataset: bool = False,
                       weights: Optional[List[float]] = None,
                       mode: Literal['concatenate',
-                                    'interleave'] = 'interleave',
+                                    'interleave',
+                                    'sample'] = 'interleave',
+                      metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]},
                       metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
 
         element_spec_paths = [
@@ -510,7 +512,7 @@ class JIDENNDataset:
                           ) if dataset_mapper is not None else ds
             dss.append(ds)
 
-        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode=mode, weights=weights)
+        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode=mode, weights=weights, metadata_combiner=metadata_combiner)
 
     @staticmethod
     def load_parallel(files: List[str],
@@ -520,37 +522,50 @@ class JIDENNDataset:
                       dataset_mapper: Optional[Callable[[
                           tf.data.Dataset], tf.data.Dataset]] = None,
                       num_parallel_calls: int = tf.data.AUTOTUNE,
-                      metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
+                      metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]},
+                      metadata_paths: Optional[Union[List[str], str]] = None) -> JIDENNDataset:
 
         if file_labels is not None and len(file_labels) != len(files):
             raise ValueError(
                 f'Number of file labels ({len(file_labels)}) must be equal to the number of files ({len(files)}).')
 
-        es_paths = [os.path.join(file, 'element_spec.pkl')
-                    for file in files] if element_spec_paths is None else element_spec_paths
+        # Load metadata
+        metadata_paths = [metadata_paths] if isinstance(
+            metadata_paths, str) else metadata_paths
         m_paths = [os.path.join(file, 'metadata.pkl')
                    for file in files] if metadata_paths is None else metadata_paths
         metadatas = []
-        element_specs = []
-        for element_spec_path, metadata_path in zip(es_paths, m_paths):
+        for metadata_path in m_paths:
             try:
                 with open(metadata_path, 'rb') as f:
                     metadatas.append(pickle.load(f))
             except FileNotFoundError:
                 logging.warning(f'Metadata file `{metadata_path}` not found.')
                 metadatas.append(None)
+
+        if not all_equal([metadata.keys() for metadata in metadatas]):
+            raise ValueError(
+                f'All datasets must have the same metadata keys: {[metadata.keys() for metadata in metadatas]}')
+        elif metadata_paths is not None and len(metadata_paths) == 1:
+            logging.info('Only one metadata file found.')
+            metadata = metadatas[0]
+        elif metadata_combiner is not None:
+            logging.info('Combining metadata.')
+            metadata = metadata_combiner(metadatas)
+        else:
+            logging.info('Not using metadata.')
+            metadata = None
+
+        # Load element spec
+        es_paths = [os.path.join(file, 'element_spec.pkl')
+                    for file in files] if element_spec_paths is None else element_spec_paths
+        element_specs = []
+        for element_spec_path in es_paths:
             with open(element_spec_path, 'rb') as f:
                 element_specs.append(pickle.load(f))
 
         if not all_equal(element_specs):
             raise ValueError('All datasets must have the same element spec.')
-
-        if not all_equal([metadata.keys() for metadata in metadatas]):
-            raise ValueError(
-                f'All datasets must have the same metadata keys: {[metadata.keys() for metadata in metadatas]}')
-        else:
-            metadata = {key: tf.reduce_sum(tf.stack([metadata[key]
-                                                     for metadata in metadatas], axis=0), axis=0) for key in metadatas[0].keys()}
 
         if file_labels is None:
             @tf.function
@@ -593,17 +608,19 @@ class JIDENNDataset:
 
     @staticmethod
     def combine(datasets: List[JIDENNDataset],
-                mode: Literal['concatenate', 'interleave'] = 'concatenate',
+                mode: Literal['concatenate', 'interleave', 'sample'] = 'concatenate',
                 stop_on_empty_dataset: bool = False,
                 weights: Optional[List[float]] = None,
-                sum_metadata: bool = True) -> JIDENNDataset:
+                metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]}) -> JIDENNDataset:
         """Combines multiple datasets into one dataset. The samples are interleaved and the weights are used to sample from the datasets.
 
         Args:
             datasets (List[JIDENNDataset]): List of datasets to combined. All `JIDENNDataset.dataset`s must be set and have the same `element_spec`.
             mode (str, optional): 'concatenate' or 'interleave'. The mode to combine the datasets. Defaults to 'concatenate'.
             dataset_weights (List[float]): List of weights for each dataset. The weights are used to sample from the datasets.
-            sum_metadata (bool, optional): If `True`, the metadata of the datasets is summed. Defaults to `True`.
+            metadata_combiner (Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]], optional): Function that combines the metadata of the datasets. 
+                The function takes a list of metadata dictionaries and returns a single metadata dictionary.
+                Defaults to lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]}.
 
         Returns:
             JIDENNDataset: Combined `JIDENNDataset` object.
@@ -621,23 +638,25 @@ class JIDENNDataset:
             raise ValueError('All datasets must have the same target.')
         if not all_equal(weight):
             raise ValueError('All datasets must have the same weight.')
-        if sum_metadata and not all_equal([dataset.metadata.keys() for dataset in datasets]):
+        if metadata_combiner is not None and not all_equal([dataset.metadata.keys() for dataset in datasets]):
             raise ValueError('All datasets must have the same metadata.')
 
-        if mode == 'interleave':
+        if mode == 'sample':
             dataset = tf.data.Dataset.sample_from_datasets(
                 [dataset.dataset for dataset in datasets], stop_on_empty_dataset=stop_on_empty_dataset, weights=weights)
         elif mode == 'concatenate':
             dataset = datasets[0].dataset
             for ji_ds in datasets[1:]:
                 dataset = dataset.concatenate(ji_ds.dataset)
+        elif mode == 'interleave':
+            dataset = tf.data.Dataset.from_tensor_slices([dataset.dataset for dataset in datasets]).interleave(
+                lambda x: x, num_parallel_calls=tf.data.AUTOTUNE)
         else:
             raise ValueError(
                 f'Mode {mode} not supported. Choose from concatenate or interleave.')
 
-        if datasets[0].metadata is not None and sum_metadata:
-            metadata = {key: tf.reduce_sum(tf.stack([ds.metadata[key]
-                                           for ds in datasets], axis=0), axis=0) for key in datasets[0].metadata}
+        if datasets[0].metadata is not None and metadata_combiner is not None:
+            metadata = metadata_combiner([ds.metadata for ds in datasets])
         else:
             metadata = None
 
@@ -750,7 +769,7 @@ class JIDENNDataset:
                              target=target,
                              weight=weight, length=self.length)
 
-    def save(self, file: str, num_shards: Optional[int] = None) -> None:
+    def save(self, file: str, num_shards: Optional[int] = None, **kwargs) -> None:
         """Saves the dataset to a file. The dataset is stored in the `tf.data.Dataset` format.
         The `element_spec` is stored in the `element_spec` file inside the dataset directory.
         Tensorflow saves the `element_spec.pb` automatically, but manual save is required 
@@ -775,7 +794,7 @@ class JIDENNDataset:
             return tf.random.uniform(shape=[], minval=0, maxval=num_shards, dtype=tf.int64)
 
         self.dataset.save(file, compression='GZIP',
-                          shard_func=random_shards if num_shards is not None else None)
+                          shard_func=random_shards if num_shards is not None else None, **kwargs)
 
         with open(os.path.join(file, 'element_spec.pkl'), 'wb') as f:
             pickle.dump(self.dataset.element_spec, f)

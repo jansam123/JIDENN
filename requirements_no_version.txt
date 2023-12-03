@@ -1,6 +1,4 @@
 tensorflow 
-tensorflow_decision_forests 
-tensorflow-addons 
 Jinja2 
 tensorboard-plugin-profile 
 tensorflow-datasets 
@@ -18,3 +16,4 @@ atlas-ftag-tools
 puma-hep 
 atlasify 
 pytest
+ray
