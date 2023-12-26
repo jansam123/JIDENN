@@ -17,6 +17,7 @@ parser.add_argument("--num_shards", type=int, default=256,
 parser.add_argument("--num_datasets", type=int, default=256,
                     help="Expected number of datasets to be combined.")
 
+
 def main(args: argparse.Namespace) -> None:
     logging.info(
         f'Combining datasets from {args.load_path} into {args.save_path}')
@@ -28,14 +29,15 @@ def main(args: argparse.Namespace) -> None:
             f'Expected {args.num_datasets + 1} datasets, but found {len(files)}.')
 
     dataset = JIDENNDataset.load_multiple(
-        files, metadata_combiner=lambda x: x[0], mode='interleave')
+        files, metadata_combiner=lambda x: x[0], mode='sample')
     logging.info(f'Loaded dataset with metadata: {dataset.metadata}')
     logging.info(f'Loaded dataset of length {dataset.length}')
 
     logging.info(f'Saving dataset to {args.save_path}')
     dataset = dataset.apply(lambda x: x.prefetch(tf.data.AUTOTUNE))
 
-    os.system(f'rm -rf {args.save_path}') if os.path.exists(args.save_path) else None
+    os.system(
+        f'rm -rf {args.save_path}') if os.path.exists(args.save_path) else None
     os.makedirs(args.save_path, exist_ok=True)
     dataset.save(args.save_path, num_shards=args.num_shards)
     logging.info(f'Saved dataset to {args.save_path}')

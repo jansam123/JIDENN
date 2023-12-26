@@ -23,13 +23,19 @@ parser.add_argument("--env_file", type=str,
 parser.add_argument("--sample_desc_csv", type=str, default='/home/jankovys/JIDENN/data/sample_description.csv',
                     help="Path to the sample description csv file.")
 
+# * EDIT THIS FUNCTION TO SELECT THE FILES YOU WANT TO CONVERT
+
 
 def include_file_from_new_filename(new_filename: str) -> bool:
-    return 'H7EG_jetjet_Cluster_dipole' in new_filename
+    return True  # 'H7EG_jetjet_Cluster_dipole' in new_filename
+
+# * EDIT THIS FUNCTION TO SELECT THE FILES YOU WANT TO CONVERT
 
 
 def include_file_from_old_filename(old_filename: str) -> bool:
-    return 'r10724' in old_filename
+    return True  # 'r10724' in old_filename
+
+# * EDIT THIS FUNCTION TO CREATE THE NEW FILENAME
 
 
 def create_new_filename(old_filepath: str) -> Tuple[str, str]:
@@ -44,7 +50,6 @@ def main(args: argparse.Namespace) -> None:
     run_desc['Description'] = run_desc['Description'].apply(
         lambda x: x[:x.rfind('_')])
     run_desc['JZ'] = 'JZ' + run_desc['JZ'].astype(str)
-    
 
     num_subjobs_per_file = []
     num_entries_per_file = []
@@ -52,39 +57,43 @@ def main(args: argparse.Namespace) -> None:
     old_file_names = []
     job_names = []
     sample_names = []
-    jz_numbers = [] 
+    jz_numbers = []
     fi_ids = []
     unique_sample_name_jz = []
     for root, _, files in os.walk(args.load_path):
         for file in files:
             if file.endswith('.root'):
                 old_file = os.path.join(root, file)
+                logging.info(f'Processing file {old_file}')
                 if not include_file_from_old_filename(old_file):
                     continue
-                
+
                 run_number, fi_id = create_new_filename(old_file)
                 if run_number in run_desc.index:
                     sample_name = run_desc.loc[run_number, 'Description']
                     jz_number = run_desc.loc[run_number, 'JZ']
-                    
+
                 else:
                     logging.warning(
                         f'Run number {run_number} not found in the csv file, using the original run number {run_number}.')
                     sample_name = None
                     jz_number = None
-                        
+
                 job_name = f'{sample_name}_{jz_number}{fi_id}'
                 if sample_name is not None and jz_number is not None:
-                    new_file = os.path.join(args.save_path, sample_name, jz_number, fi_id)
+                    new_file = os.path.join(
+                        args.save_path, sample_name, jz_number, fi_id)
                 else:
                     new_file = os.path.join(args.save_path, run_number, fi_id)
-                
-                
+
                 if not include_file_from_new_filename(new_file):
                     continue
-
-                with uproot.open(old_file) as f:
-                    num_entries = f['NOMINAL'].num_entries
+                try:
+                    with uproot.open(old_file) as f:
+                        num_entries = f['NOMINAL'].num_entries
+                except:
+                    logging.warning(f'Could not open file {old_file}')
+                    continue
 
                 num_jobs = num_entries // args.events_per_job
                 if num_entries % args.events_per_job != 0:
@@ -94,17 +103,20 @@ def main(args: argparse.Namespace) -> None:
                 num_entries_per_file.append(num_entries)
                 new_file_names.append(new_file)
                 job_names.append(job_name)
-                sample_names.append(sample_name) if sample_name is not None else sample_names.append(run_number)
-                jz_numbers.append(jz_number) if jz_number is not None else jz_numbers.append('None')
+                sample_names.append(
+                    sample_name) if sample_name is not None else sample_names.append(run_number)
+                jz_numbers.append(
+                    jz_number) if jz_number is not None else jz_numbers.append('None')
                 fi_ids.append(fi_id)
                 old_file_names.append(old_file)
                 unique_sample_name_jz.append((sample_name, jz_number))
-                
+
     unique_sample_name_jz = list(set(unique_sample_name_jz))
     unique_sample_names = [x[0] for x in unique_sample_name_jz]
     unique_jz_numbers = [x[1] for x in unique_sample_name_jz]
     num_unique_samples = len(unique_sample_name_jz)
-
+    
+    logging.info(f'Creating .env file at {args.env_file}')
     # create a .env file
     if os.path.exists(args.env_file):
         os.system(f'rm {args.env_file}')

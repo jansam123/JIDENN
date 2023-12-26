@@ -20,7 +20,6 @@ parser.add_argument("--test_frac", type=float, default=0.1,
                     help="Fraction of the dataset to use for testing")
 
 
-
 def main(args: argparse.Namespace) -> None:
     logging.info(
         f'Running with args: {{{", ".join([f"{k}: {v}" for k, v in vars(args).items()])}}}')
@@ -31,11 +30,12 @@ def main(args: argparse.Namespace) -> None:
 
     dataset = JIDENNDataset.load_multiple(files, mode='interleave')
 
-    dataset = dataset.apply(lambda x: x.prefetch(tf.data.AUTOTUNE))
+    dataset = dataset.apply(lambda x: x.prefetch(
+        tf.data.AUTOTUNE), preserves_length=True)
     dss = dataset.split_train_dev_test(
-        args.train_frac, args.dev_frac, args.test_frac, backend='coin')
+        args.train_frac, args.dev_frac, args.test_frac)
 
-    for name, ds in zip(['train', 'dev', 'test'], dss):
+    for name, ds in zip(['test', 'dev', 'train'], dss):
         save_path = os.path.join(args.save_path, name)
         if os.path.exists(save_path):
             os.system(f'rm -rf {save_path}')

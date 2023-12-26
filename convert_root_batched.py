@@ -41,7 +41,8 @@ def main(args: argparse.Namespace) -> None:
                                                    step_size=args.step_size,
                                                    entry_start=entry_start,
                                                    entry_stop=entry_stop,
-                                                   n_parallel=args.n_parallel)
+                                                   n_parallel=args.n_parallel,
+                                                   manual_cast_int=['photons', 'muons'])
 
     path = os.path.join(args.save_path, f'batch_{args.job_id}')
     if os.path.exists(path):

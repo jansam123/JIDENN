@@ -193,18 +193,24 @@ def root_file_iterator(filename: str,
                        step_size: Optional[int] = None,
                        entry_start: Optional[int] = None,
                        entry_stop: Optional[int] = None,
-                       num_workers: int = 1) -> Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]:
+                       num_workers: int = 1,
+                       downcast: bool = True,
+                       manual_cast_int: List[str] = [],
+                       manual_cast_float: List[str] = []) -> Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]:
     """A generator that yields batches of data from a ROOT file as dictionaries of tensors. 
     Tensors are created from the awkward arrays into normal tensors or ragged tensors, 
     optionaly with multiple raggged dimensions based on the structure of the awkward array.
 
     Args:
         filename (str): ROOT file name
-        tree (str): name of the tree in the ROOT file
+        treename (str): name of the tree in the ROOT file
         step_size (Optional[int], optional): Size of the batch. If None, the whole tree is loaded. Defaults to None.
         entry_start (Optional[int], optional): Index of the first entry to load. If None, the whole tree is loaded. Defaults to None.
         entry_stop (Optional[int], optional): Index of the last entry to load. Defaults to None.
         num_workers (int, optional): Number of workers to use for parallel loading in `uproot`. Defaults to 1.
+        downcast (bool, optional): Downcast the output to `tf.float32`, `tf.int32` or `tf.uint32`. Defaults to True.
+        manual_cast_int (List[str], optional): List of variables to cast to `tf.int32`. Defaults to [].
+        manual_cast_float (List[str], optional): List of variables to cast to `tf.float32`. Defaults to [].
 
     Yields:
         Dict[str, Union[tf.Tensor, tf.RaggedTensor]]: Dictionary of tensors with the same keys as the branches in the ROOT tree.
@@ -221,7 +227,26 @@ def root_file_iterator(filename: str,
 
             logging.info(
                 f"Processing chunk {i}: loaded {processed_events} out of {num_entries} events ({100*processed_events/num_entries if num_entries > 0 else 0:.1f}%).")
-            yield {var: awkward_to_tensor(batch[var]) for var in variables}
+
+            output = {}
+            for var in variables:
+                tensor = awkward_to_tensor(batch[var])
+                if downcast:
+                    if tensor.dtype == tf.float64:
+                        tensor = tf.cast(tensor, FLOAT_PRECISION)
+                    elif tensor.dtype == tf.int64:
+                        tensor = tf.cast(tensor, INT_PRECISION)
+                    elif tensor.dtype == tf.uint64:
+                        tensor = tf.cast(tensor, INT_PRECISION)
+
+                if var in manual_cast_int:
+                    tensor = tf.cast(tensor, INT_PRECISION)
+                elif var in manual_cast_float:
+                    tensor = tf.cast(tensor, FLOAT_PRECISION)
+
+                output[var] = tensor
+            yield output
+            # yield {var: awkward_to_tensor(batch[var]) for var in variables}
 
 
 @ray.remote
@@ -495,7 +520,8 @@ class JIDENNDataset:
                       mode: Literal['concatenate',
                                     'interleave',
                                     'sample'] = 'interleave',
-                      metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]},
+                      metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {
+                          key: tf.reduce_sum(tf.stack([m[key] for m in metas], axis=0), axis=0) for key in metas[0]},
                       metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
 
         element_spec_paths = [
@@ -522,7 +548,8 @@ class JIDENNDataset:
                       dataset_mapper: Optional[Callable[[
                           tf.data.Dataset], tf.data.Dataset]] = None,
                       num_parallel_calls: int = tf.data.AUTOTUNE,
-                      metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]},
+                      metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {
+                          key: tf.reduce_sum(tf.stack([m[key] for m in metas], axis=0), axis=0) for key in metas[0]},
                       metadata_paths: Optional[Union[List[str], str]] = None) -> JIDENNDataset:
 
         if file_labels is not None and len(file_labels) != len(files):
@@ -608,10 +635,11 @@ class JIDENNDataset:
 
     @staticmethod
     def combine(datasets: List[JIDENNDataset],
-                mode: Literal['concatenate', 'interleave', 'sample'] = 'concatenate',
+                mode: Literal['concatenate', 'interleave',
+                              'sample'] = 'concatenate',
                 stop_on_empty_dataset: bool = False,
                 weights: Optional[List[float]] = None,
-                metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas, axis=0), axis=0) for key in metas[0]}) -> JIDENNDataset:
+                metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas[key], axis=0), axis=0) for key in metas[0]}) -> JIDENNDataset:
         """Combines multiple datasets into one dataset. The samples are interleaved and the weights are used to sample from the datasets.
 
         Args:
@@ -630,14 +658,14 @@ class JIDENNDataset:
         targets = [dataset.target for dataset in datasets]
         weight = [dataset.weight for dataset in datasets]
 
-        if not all_equal(element_specs):
-            raise ValueError('All datasets must have the same element spec.')
-        if not all_equal(variables):
-            raise ValueError('All datasets must have the same variables.')
-        if not all_equal(targets):
-            raise ValueError('All datasets must have the same target.')
-        if not all_equal(weight):
-            raise ValueError('All datasets must have the same weight.')
+        # if not all_equal(element_specs):
+        #     raise ValueError('All datasets must have the same element spec.')
+        # if not all_equal(variables):
+        #     raise ValueError('All datasets must have the same variables.')
+        # if not all_equal(targets):
+        #     raise ValueError('All datasets must have the same target.')
+        # if not all_equal(weight):
+        #     raise ValueError('All datasets must have the same weight.')
         if metadata_combiner is not None and not all_equal([dataset.metadata.keys() for dataset in datasets]):
             raise ValueError('All datasets must have the same metadata.')
 
@@ -722,7 +750,9 @@ class JIDENNDataset:
                                tmp_folder: str = 'tmp',
                                n_parallel: int = 1,
                                tree_name: str = 'NOMINAL',
-                               metadata_hist: Optional[str] = 'h_metadata') -> JIDENNDataset:
+                               metadata_hist: Optional[str] = 'h_metadata',
+                               manual_cast_int: List[str] = [],
+                               manual_cast_float: List[str] = []) -> JIDENNDataset:
 
         if metadata_hist is not None:
             with uproot.open(filename) as file:
@@ -736,7 +766,8 @@ class JIDENNDataset:
             metadata = None
 
         iterator = root_file_iterator(filename, tree_name, step_size=step_size,
-                                      entry_start=entry_start, entry_stop=entry_stop, num_workers=n_parallel)
+                                      entry_start=entry_start, entry_stop=entry_stop, num_workers=n_parallel,
+                                      manual_cast_int=manual_cast_int, manual_cast_float=manual_cast_float)
 
         single_batch = entry_stop - \
             entry_start <= step_size if entry_start is not None and entry_stop is not None else False
@@ -901,11 +932,12 @@ class JIDENNDataset:
                              metadata=self.metadata, variables=self.variables,
                              target=self.target, weight=self.weight, length=None)
 
-    def apply(self, func: Callable[[tf.data.Dataset], tf.data.Dataset]) -> JIDENNDataset:
+    def apply(self, func: Callable[[tf.data.Dataset], tf.data.Dataset], preserves_length: bool = False) -> JIDENNDataset:
         """Applies a function to the dataset.
 
         Args:
             func (Callable[[tf.data.Dataset], tf.data.Dataset]): Function to apply to the dataset.
+            preserves_length (bool, optional): If `True`, the length of the dataset is preserved. Defaults to False.
 
         Returns:
             JIDENNDataset: The JIDENNDataset object with the dataset modified by the function.
@@ -916,7 +948,7 @@ class JIDENNDataset:
         dataset = func(self.dataset)
         return JIDENNDataset(dataset=dataset, element_spec=dataset.element_spec,
                              metadata=self.metadata, variables=self.variables,
-                             target=self.target, weight=self.weight, length=None)
+                             target=self.target, weight=self.weight, length=self.length if preserves_length else None)
 
     def filter(self, filter: Callable[[ROOTVariables], bool]) -> JIDENNDataset:
         """Filters the dataset using the `filter` function. 

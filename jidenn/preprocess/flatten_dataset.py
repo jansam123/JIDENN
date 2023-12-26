@@ -27,11 +27,13 @@ def get_ragged_to_dataset_fn(reference_variable: str = 'jets_PartonTruthLabelID'
     def _ragged_to_dataset(sample: ROOTVariables) -> tf.data.Dataset:
         sample = sample.copy()
         ragged_shape = tf.shape(sample[reference_variable])
+        sample[f'{key_phrase}_index'] = tf.range(
+            start=0, limit=ragged_shape[0], dtype=tf.int32)
         for key, item in sample.items():
             if key_phrase not in key or item.shape.num_elements() == 1:
                 tensor_with_new_axis = tf.expand_dims(item, axis=0)
-                sample[key] = tf.tile(tensor_with_new_axis, [ragged_shape[0]] + [1] * len(item.shape))
-
+                sample[key] = tf.tile(tensor_with_new_axis, [
+                                      ragged_shape[0]] + [1] * len(item.shape))
         return tf.data.Dataset.from_tensor_slices(sample)
     return _ragged_to_dataset
 
@@ -54,7 +56,8 @@ def get_filter_empty_fn(reference_variable: str = 'jets_PartonTruthLabelID') -> 
 
 
 def get_filter_ragged_values_fn(reference_variable: str = 'jets_PartonTruthLabelID',
-                                wanted_values: List[int] = [1, 2, 3, 4, 5, 6, 21],
+                                wanted_values: List[int] = [
+                                    1, 2, 3, 4, 5, 6, 21],
                                 key_phrase: str = 'jets') -> Callable[[ROOTVariables], ROOTVariables]:
     """Get a function that filters out unwanted values from a ROOTVariables dictionary containg a RaggedTensor. The
     intended use is to use this function in a tf.data.Dataset.map call to filter out unwanted values from a dataset.
@@ -129,13 +132,33 @@ def get_filter_ragged_cut(variable: str = 'jets_eta',
     return _filter_unwanted_ragged_cut_fn
 
 
+def get_keys_to_remove_fn(keys_to_remove: List[str]) -> Callable[[ROOTVariables], ROOTVariables]:
+    """Get a function that removes keys from a ROOTVariables dictionary. The intended use is to use this function in a
+    tf.data.Dataset.map call to remove unwanted keys from a dataset.
+
+    Args:
+        keys_to_remove (List[str]): The keys to remove.
+
+    Returns:
+        Callable[[ROOTVariables], ROOTVariables]: A function that removes keys from a ROOTVariables
+    """
+    @tf.function
+    def _remove_keys(sample: ROOTVariables) -> ROOTVariables:
+        sample = sample.copy()
+        for key in keys_to_remove:
+            sample.pop(key)
+        return sample
+    return _remove_keys
+
+
 def flatten_dataset(dataset: tf.data.Dataset,
                     reference_variable: str = 'jets_PartonTruthLabelID',
                     wanted_values: Optional[List[int]] = None,
                     key_phrase: str = 'jets',
                     variables: Optional[Union[str, List[str]]] = None,
                     upper_cuts: Optional[Union[float, List[float]]] = None,
-                    lower_cuts: Optional[Union[float, List[float]]] = None) -> tf.data.Dataset:
+                    lower_cuts: Optional[Union[float, List[float]]] = None,
+                    keys_to_remove: Optional[Union[List[str], str]] = ['jets_bTagged', 'jets_truth_flavor']) -> tf.data.Dataset:
     """Apply a series of transformations to a tf.data.Dataset to flatten it. The flattening is done by the reference
     variable, which is assumed to be a tf.RaggedTensor. The shape of the reference variable is used to infer the shape
     of the other variables. The other variables are tiled to match the shape of the reference variable. The dataset is
@@ -151,6 +174,10 @@ def flatten_dataset(dataset: tf.data.Dataset,
     Returns:
         tf.data.Dataset: The flattened dataset
     """
+    if keys_to_remove is not None:
+        if isinstance(keys_to_remove, str):
+            keys_to_remove = [keys_to_remove]
+        dataset = dataset.map(get_keys_to_remove_fn(keys_to_remove))
 
     if wanted_values is None:
         return (
@@ -174,7 +201,8 @@ def flatten_dataset(dataset: tf.data.Dataset,
             lower_cuts = [lower_cuts]
 
         for variable, upper_cut, lower_cut in zip(variables, upper_cuts, lower_cuts):
-            dataset = dataset.map(get_filter_ragged_cut(variable, upper_cut, lower_cut, key_phrase))
+            dataset = dataset.map(get_filter_ragged_cut(
+                variable, upper_cut, lower_cut, key_phrase))
 
         return (
             dataset

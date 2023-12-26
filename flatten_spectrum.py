@@ -18,26 +18,42 @@ from jidenn.preprocess.flatten_dataset import flatten_dataset
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--save_path", type=str, default='data/pythia_flat/train', help="Path to save the dataset")
-parser.add_argument("--file_path", type=str, default='data/pythia', help="Path to the root file")
-parser.add_argument("--num_shards", type=int, default=256, help="Number of shards to use when saving the dataset")
-parser.add_argument("--bins", type=int, default=70, help="Number of bins to use for the binning")
-parser.add_argument("--take", type=int, default=None, help="Number of samples to take")
-parser.add_argument("--dataset_type", type=str, default='test', help="train/dev/test")
-parser.add_argument("--shuffle", type=int, default=1_000, required=False, help="Shuffle buffer size")
+parser.add_argument("--save_path", type=str,
+                    default='data/pythia_flat/train', help="Path to save the dataset")
+parser.add_argument("--file_path", type=str,
+                    default='data/pythia', help="Path to the root file")
+parser.add_argument("--num_shards", type=int, default=256,
+                    help="Number of shards to use when saving the dataset")
+parser.add_argument("--bins", type=int, default=70,
+                    help="Number of bins to use for the binning")
+parser.add_argument("--take", type=int, default=None,
+                    help="Number of samples to take")
+parser.add_argument("--dataset_type", type=str,
+                    default='test', help="train/dev/test")
+parser.add_argument("--shuffle", type=int, default=1_000,
+                    required=False, help="Shuffle buffer size")
 parser.add_argument("--max_jz", type=int, default=10, help="Maximum JZ to use")
 parser.add_argument("--min_jz", type=int, default=2, help="Maximum JZ to use")
 parser.add_argument("--eta_cut", type=float, default=2.1, help="Eta cut")
-parser.add_argument("--jz_low_cut", action='store_true', help="Cut the dataset")
+parser.add_argument("--jz_low_cut", action='store_true',
+                    help="Cut the dataset")
 parser.add_argument("--cut", action='store_true', help="Cut the dataset")
-parser.add_argument("--xlim", type=float, nargs=2, default=None, help="X-axis limits")
-parser.add_argument("--log_binning", action='store_true', help="Use log-spaced bins")
-parser.add_argument("--flatten_jz", action='store_true', help="Flatten each JZ slice individually")
-parser.add_argument("--flatten", action='store_true', help="Flatten whole dataset")
-parser.add_argument("--equalize_labels", action='store_true', help="Equalize labels in each JZ")
-parser.add_argument("--precompute", action='store_true', help="Precompute the initial distribution")
-parser.add_argument('-w', "--weight_var", type=str, default=None, help="Use reweighting, specify the weight variable")
-parser.add_argument("--min_count", action='store_true', help="Use min count for each bin")
+parser.add_argument("--xlim", type=float, nargs=2,
+                    default=None, help="X-axis limits")
+parser.add_argument("--log_binning", action='store_true',
+                    help="Use log-spaced bins")
+parser.add_argument("--flatten_jz", action='store_true',
+                    help="Flatten each JZ slice individually")
+parser.add_argument("--flatten", action='store_true',
+                    help="Flatten whole dataset")
+parser.add_argument("--equalize_labels", action='store_true',
+                    help="Equalize labels in each JZ")
+parser.add_argument("--precompute", action='store_true',
+                    help="Precompute the initial distribution")
+parser.add_argument('-w', "--weight_var", type=str, default=None,
+                    help="Use reweighting, specify the weight variable")
+parser.add_argument("--min_count", action='store_true',
+                    help="Use min count for each bin")
 parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthLabelID',
                     help="Variable to use as reference for flattening")
 parser.add_argument("--wanted_values", type=int, nargs='+',
@@ -46,7 +62,8 @@ parser.add_argument("--wanted_values", type=int, nargs='+',
 JZ_LOW_PT = [20, 60, 160, 400, 800, 1300, 1800, 2500, 3200, 3900, 4600, 5300]
 JZ_LOW_PT = [val * 1e3 for val in JZ_LOW_PT]
 
-JZ_HIGH_PT = [60, 160, 400, 800, 1300, 1800, 2500, 3200, 3900, 4600, 5300, 7000]
+JZ_HIGH_PT = [60, 160, 400, 800, 1300, 1800,
+              2500, 3200, 3900, 4600, 5300, 7000]
 JZ_HIGH_PT = [val * 1e3 for val in JZ_HIGH_PT]
 
 
@@ -64,20 +81,26 @@ def get_labeled_pt(data):
 
 def main(args: argparse.Namespace) -> None:
     logging.basicConfig(level=logging.INFO)
-    logging.info(f'Running with args: {{{", ".join([f"{k}: {v}" for k, v in vars(args).items()])}}}')
+    logging.info(
+        f'Running with args: {{{", ".join([f"{k}: {v}" for k, v in vars(args).items()])}}}')
     os.makedirs(args.save_path, exist_ok=True)
 
     @tf.function
     def jz_mapper(dataset: tf.data.Dataset, jz) -> tf.data.Dataset:
+        dataset = dataset.map(write_new_variable(
+            variable_name='JZ_slice', variable_value=tf.constant(jz, dtype=tf.int32)))
         dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
                                 wanted_values=args.wanted_values, variables=['jets_eta', 'jets_pt'], lower_cuts=[-args.eta_cut, args.xlim[0]], upper_cuts=[args.eta_cut, args.xlim[1]]))
         if args.jz_low_cut:
-            dataset = dataset.filter(get_cut_fn('jets_pt', lower_limit=tf.constant(JZ_LOW_PT)[jz - 1]))
+            dataset = dataset.filter(get_cut_fn(
+                'jets_pt', lower_limit=tf.constant(JZ_LOW_PT)[jz - 1]))
         if args.flatten_jz:
             jz_resampler = partial(resample_var_with_labels,
                                    bins=args.bins,
-                                   lower_var_limit=tf.constant(JZ_LOW_PT)[jz - 1],
-                                   upper_var_limit=tf.constant(JZ_HIGH_PT)[jz - 1],
+                                   lower_var_limit=tf.constant(JZ_LOW_PT)[
+                                       jz - 1],
+                                   upper_var_limit=tf.constant(
+                                       JZ_HIGH_PT)[jz - 1],
                                    log_binning_base=np.e if args.log_binning else None,
                                    variable='jets_pt',
                                    precompute_init_dist=args.precompute,
@@ -92,7 +115,8 @@ def main(args: argparse.Namespace) -> None:
             dataset = dataset.apply(label_resampler)
         return dataset
 
-    files = [os.path.join(args.file_path, f'JZ{jz}', args.dataset_type) for jz in range(args.min_jz, args.max_jz + 1)]
+    files = [os.path.join(args.file_path, f'JZ{jz}', args.dataset_type) for jz in range(
+        args.min_jz, args.max_jz + 1)]
     file_labels = list(range(args.min_jz, args.max_jz + 1))
     # dataset = JIDENNDataset.load_parallel(files, dataset_mapper=jz_mapper, file_labels=file_labels)
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_mapper,
@@ -116,7 +140,8 @@ def main(args: argparse.Namespace) -> None:
                             from_min_count=args.min_count)
         dataset = dataset.apply(resampler)
 
-    dataset = dataset.apply(lambda x: x.shuffle(args.shuffle, seed=42).prefetch(tf.data.AUTOTUNE))
+    dataset = dataset.apply(lambda x: x.shuffle(
+        args.shuffle, seed=42).prefetch(tf.data.AUTOTUNE))
     dataset.save(args.save_path, num_shards=args.num_shards)
 
     dataset = JIDENNDataset.load(args.save_path)
