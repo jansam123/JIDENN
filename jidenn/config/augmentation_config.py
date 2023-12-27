@@ -1,3 +1,4 @@
+from typing import List, Union
 from dataclasses import dataclass
 
 
@@ -37,3 +38,14 @@ class CollinearSplit(AugmentationBase):
 @dataclass
 class SoftSmear(AugmentationBase):
     energy_scale: float
+
+@dataclass
+class PTSmear(AugmentationBase):
+    std_pt_frac: float
+    
+@dataclass
+class ShiftWeights(AugmentationBase):
+    training_weight: str
+    shift_weight: str
+    shift_weight_idxs: Union[List[int], int]
+    nominal_weight_idx: int

@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import logging
 import hydra
+import copy
 from functools import partial
 from hydra.core.config_store import ConfigStore
 #
@@ -81,14 +82,18 @@ def main(args: config.JIDENNConfig) -> None:
     augmentation_function = construct_augmentation(args.augmentations) if args.augmentations is not None else None
     log.info(f"Using augmentations: {args.augmentations.order}") if args.augmentations is not None else log.warning(
         "No augmentations specified")
-    train_path = [os.path.join(path, 'train')  for path in args.data.path] if isinstance(args.data.path, list) else os.path.join(args.data.path, 'train')
-    dev_path = [os.path.join(path, 'dev') for path in args.data.path] if isinstance(args.data.path, list) else os.path.join(args.data.path, 'dev')
     
-    train = get_preprocessed_dataset(train_path, args.data, input_creator=model_input_creator, augmentation=augmentation_function)
-    dev = get_preprocessed_dataset(dev_path, args.data, input_creator=model_input_creator)
+    train_path = [os.path.join(path, 'train')  for path in list(args.data.path)] if not isinstance(args.data.path, str) else os.path.join(args.data.path, 'train')
+    dev_path = [os.path.join(path, 'dev') for path in list(args.data.path)] if not isinstance(args.data.path, str) else os.path.join(args.data.path, 'dev')
+    args_data_train = copy.deepcopy(args.data)
+    args_data_train.path = train_path
+    args_data_dev = copy.deepcopy(args.data)
+    args_data_dev.path = dev_path
+    train = get_preprocessed_dataset(args_data_train, input_creator=model_input_creator, augmentation=augmentation_function)
+    dev = get_preprocessed_dataset(args_data_dev, input_creator=model_input_creator)
     
     if args.test_data is not None:
-        test = get_preprocessed_dataset(args.test_data.path, args.test_data, input_creator=model_input_creator)
+        test = get_preprocessed_dataset(args.test_data, input_creator=model_input_creator)
     else:
         test = None
 
@@ -205,10 +210,12 @@ def main(args: config.JIDENNConfig) -> None:
                               additional_val_dataset=test,
                               additional_val_name='test')
     # running training
+    train = train.apply(tf.data.experimental.assert_cardinality(args.dataset.steps_per_epoch)) if args.dataset.steps_per_epoch is not None else train
     history = model.fit(train,
                         epochs=args.dataset.epochs,
                         callbacks=callbacks,
                         validation_data=dev,
+                        #steps_per_epoch=args.dataset.steps_per_epoch,
                         verbose=2 if args.general.model == 'bdt' else 1)
     
     model.load_weights(os.path.join(args.general.logdir, 'checkpoint'))

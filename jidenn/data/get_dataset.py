@@ -10,12 +10,10 @@ from jidenn.data.string_conversions import Cut
 from jidenn.data.JIDENNDataset import JIDENNDataset, ROOTVariables
 
 
-def get_preprocessed_dataset(file: Union[str, List[str]],
-                             args_data: config.Data,
+def get_preprocessed_dataset(args_data: config.Data,
                              input_creator: Callable[[ROOTVariables], ROOTVariables],
                              augmentation: Optional[Callable[[ROOTVariables], ROOTVariables]] = None,
-                             shuffle_reading: bool = False,
-                             cache: Optional[str] = None):
+                             shuffle_reading: bool = False):
 
     @tf.function
     def count_PFO(sample: ROOTVariables) -> ROOTVariables:
@@ -47,16 +45,16 @@ def get_preprocessed_dataset(file: Union[str, List[str]],
         is_unknown = tf.reduce_any(sample[args_data.target] == unknown_labels)
         return tf.logical_not(is_unknown)
 
-    if isinstance(file, str):
-        dataset = JIDENNDataset.load(file, shuffle_reading=shuffle_reading)
+    if isinstance(args_data.path, str):
+        dataset = JIDENNDataset.load(args_data.path, shuffle_reading=shuffle_reading)
     else:
-        dataset = JIDENNDataset.load_multiple(file, shuffle_reading=shuffle_reading)
+        dataset = JIDENNDataset.load_multiple(args_data.path, mode='interleave', weights=args_data.dataset_weigths, stop_on_empty_dataset=True)
     dataset = dataset.remap_data(count_PFO)
     dataset = dataset.filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
     dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset
+    dataset = dataset.remap_data(augmentation) if augmentation is not None else dataset
     dataset = dataset.set_variables_target_weight(target=args_data.target, weight=args_data.weight)
     dataset = dataset.remap_labels(label_mapping)
-    dataset = dataset.remap_data(augmentation) if augmentation is not None else dataset
     dataset = dataset.remap_data(input_creator) if input_creator is not None else dataset
     return dataset
 

@@ -466,9 +466,8 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
         List[tf.keras.metrics.Metric]: The list of selected metrics.
     """
     metrics = [
-        # tf.keras.metrics.BinaryCrossentropy(name='loss'),
         tf.keras.metrics.BinaryAccuracy(
-            name='binary_accuracy', threshold=threshold),
+            name='binary_accuracy', threshold=0.5), # fix the threshold to 0.5, other thresholds are useless for this metric
         BinaryEfficiency(name='gluon_efficiency',
                          label_id=0, threshold=threshold),
         BinaryEfficiency(name='quark_efficiency',

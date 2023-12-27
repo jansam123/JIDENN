@@ -17,8 +17,6 @@ parser = argparse.ArgumentParser()
 # These arguments will be set appropriately by ReCodEx, even if you change them.
 parser.add_argument("--load_dir", default=".", type=str,
                     help="Directory to load the metrics from.")
-parser.add_argument("--summary_csv", default=".", type=str,
-                    help="Path to the summary csv.")
 parser.add_argument("-m", "--model_names", nargs='*', type=str,
                     help="names of the models.")
 parser.add_argument("--save_dir", default=".", type=str,
@@ -28,9 +26,9 @@ parser.add_argument("--var", default="jets_pt", type=str,
 parser.add_argument("--type", default="pT", type=str, help="Type of the plot.")
 parser.add_argument("--compare_mc", default=False, type=bool,
                     help="Compare MC models.")
-parser.add_argument("-f", "--figsize", default=(7, 5), type=float, nargs=2,
+parser.add_argument("-f", "--figsize", default=(13, 9), type=float, nargs=2,
                     help="Figure size.")
-parser.add_argument("--leg_ncol", default=2, type=int,
+parser.add_argument("--leg_ncol", default=1, type=int,
                     help="Number of columns in the legend.")
 
 def compare_ml_models(paths: List[str],
@@ -66,7 +64,6 @@ def compare_ml_models(paths: List[str],
     # ylims = [[0.6, 0.9], [0.55, 0.9], [0.6, 0.85], [0.7, 0.9], [0.2, 0.5],
     #          [2.5, 6], [3, 35], [0.53, 0.85], [0.85, 1.0]]
     ylims = [None]*6 + [[2., 6.8], None, [6.5, 36.], None]
-    reference = 'highway'
     colours = sns.color_palette('colorblind', len(labels))
     if x_var == 'jets_pt':
         for df in dfs:
@@ -80,15 +77,18 @@ def compare_ml_models(paths: List[str],
     title_80 = 'Pythia8, 80% WP\n'
     title_none = 'Pythia8\n'
     title_all = r'anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets'
+    new_labels = []
+    for label in labels:
+        new_labels.append(MODEL_NAMING_SCHEMA[label] if label in MODEL_NAMING_SCHEMA else label)
     plot_var_dependence(dfs=dfs,
-                        labels=[MODEL_NAMING_SCHEMA[model] for model in list(labels)],
+                        labels=new_labels,
                         bin_midpoint_name='bin_mid',
                         bin_width_name='bin_width',
                         n_counts = n_counts,
                         metric_names=metric_names,
                         save_path=save_path,
                         ratio_reference_label=None,
-                        xlabel=LATEX_NAMING_CONVENTION[x_var],
+                        xlabel=LATEX_NAMING_CONVENTION[x_var] if x_var in LATEX_NAMING_CONVENTION else x_var,
                         ylabel_mapper=METRIC_NAMING_SCHEMA,
                         ylims=ylims,
                         xlog=False,
@@ -128,6 +128,7 @@ if __name__ == "__main__":
     # args.model_names = ["idepart", "ipart", "depart", "particle_net",
                         # "part", "transformer", "efn", "pfn", "fc", "highway", "fc_crafted", "highway_crafted"]
     if args.model_names is None:
-        args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
+        # args.model_names = ["idepart", "ipart", "particle_net", "pfn", "efn", "fc", "highway"]
+        args.model_names = ["depart", "depart-multiMC"]
     # args.model_names = ["fc", "highway","fc_crafted", "highway_crafted"]
     main(args)

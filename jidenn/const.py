@@ -123,7 +123,7 @@ METRIC_NAMING_SCHEMA = {
 }
 
 METRIC_NAMING_SCHEMA_NAMED = {
-    'eff_tag_efficiency':'Effective Tagging Efficiency',
+    'eff_tag_efficiency': 'Effective Tagging Efficiency',
     'effective_tagging_efficiency': r'Effective Tagging Efficiency',
     'binary_accuracy': 'Accuracy',
     'accuracy': 'Accuracy',
@@ -145,18 +145,27 @@ METRIC_NAMING_SCHEMA_NAMED = {
 
 MC_NAMING_SCHEMA = {
     'pythia': 'Py',
-    'sherpa': 'Sherpa Cluster Old',
+    'sherpa_enh_cluster_tune': 'Sh Cl.',
     'sherpa_lund': 'Sh St.',
     'sherpa_dire': 'Sh Dire',
-    'sherpa_enh_cluster_tune': 'Sh Cl.',
     'herwig': 'Hw Ang.',
     'herwig_dipole': 'Hw Dip.',
     'herwig7': 'Hw Ang.',
     'herwig7_dipole': 'Hw Dip.',
+    'sherpa': 'Sherpa Cluster Old',
     'powheg_pythia': 'PhPy',
     'powheg+pythia': 'PhPy',
     'powheg_herwig': 'PhHw',
     'powheg+herwig': 'PhHw',
     'powheg_herwig7': 'PhHw',
     'powheg+herwig7': 'PhHw',
+    'Pythia8EvtGen_A14NNPDF23LO_jetjet': 'Py',
+    'Sh_2211_Enh_clusterTune': 'Sh Cl.',
+    'H7EG_jetjet_Cluster': 'Hw Ang.',
+    'H7EG_jetjet_Cluster_dipole': 'Hw Dip.',
+    'Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets': 'Sh St.',
+    'Sh_2211_jj_DIRE': 'Sh Dire',
+    'PhH7EG_jj': 'PhHw',
+    'PhPy8EG_jj': 'PhPy',
+    'multiMC': 'Multi',
 }
