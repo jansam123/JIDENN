@@ -19,3 +19,4 @@ class WorkingPoint(BinnedVariable):
 
     def set_working_point(self, working_point: float) -> None:
         self.working_point = working_point
+        

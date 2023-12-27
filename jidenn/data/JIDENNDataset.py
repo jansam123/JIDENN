@@ -17,6 +17,8 @@ import ray
 #
 from jidenn.data.string_conversions import Cut, Expression
 from jidenn.evaluation.plotter import plot_data_distributions, plot_single_dist
+from jidenn.histogram.tf_dataset_histogram import histogram, histogram_multiple
+from jidenn.histogram.BinnedVariable import Binning
 
 
 ROOTVariables = Dict[str, Union[tf.RaggedTensor, tf.Tensor]]
@@ -1248,3 +1250,10 @@ class JIDENNDataset:
         test = randomized_dataset.filter(
             test_filter).remap_data(delete_random_number)
         return train, dev, test
+
+    def histogram(self, binning: Union[List[Binning], Binning], weight_var:Optional[str] = None) -> Dict[str, np.ndarray]:
+        if isinstance(binning, list):
+            return histogram_multiple(self.dataset, binning, weight_var)
+        else:
+            return histogram(self.dataset, binning, weight_var)
+        

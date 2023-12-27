@@ -119,7 +119,7 @@ class SingleEvalConfig:
     test_subfolder: str
     batch_size: int
     take: int
-    binning: Binning
+    binning: BinningConfig
     additional_variables: List[str]
     working_point_path: Optional[str]
     threads: Optional[int]
