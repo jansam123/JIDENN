@@ -32,7 +32,7 @@ def get_bin_fn(bins: Union[int, List[float]] = 100,
     Returns:
         Callable[[ROOTVariables], tf.Tensor]: Function that returns the bin index of a variable.
     """
-    np.emath.logn(lower_var_limit, log_binning_base)
+    # np.emath.logn(lower_var_limit, log_binning_base)
 
     if log_binning_base is not None and isinstance(bins, int):
         bin_edges = np.logspace(np.log(lower_var_limit), np.log(upper_var_limit), bins + 1, base=log_binning_base)

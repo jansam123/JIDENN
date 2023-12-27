@@ -12,12 +12,12 @@ from .config import Data
 
 
 @dataclass
-class Binning:
+class BinningConfig:
     """Configuration for binning a continuous variable.
 
     Args:
         variable (str): Name of the variable to bin.
-        bins (int): Number of bins to use.
+        bins (int): Number of bins to use or list of bin edges.
         max_bin (Union[float, int]): Maximum value of the variable. Values above this will be put in the last bin.
         min_bin (Union[float, int]): Minimum value of the variable. Values below this will be put in the first bin.
         log_bin_base (Optional[int]): If not `None`, use logarithmic binning with the given base. 
@@ -73,7 +73,7 @@ class EvalConfig:
     test_subfolder: str
     batch_size: int
     take: int
-    binning: Binning
+    binning: BinningConfig
     working_point_path: Optional[str]
     working_point_file_name: Optional[str]
     metrics_to_plot: List[str]
@@ -81,5 +81,3 @@ class EvalConfig:
     ylims: List[List[float]]
     threads: Optional[int]
     validation_plots_in_bins: bool
-
-    
