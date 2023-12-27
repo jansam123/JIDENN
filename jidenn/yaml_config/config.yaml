@@ -23,11 +23,12 @@ general:
   logdir: ${general.base_logdir}/${now:%Y-%m-%d}__${now:%H-%M-%S} #${hydra:runtime.output_dir} # Path to log directory.
   checkpoint: # Path to checkpoint directory (inside logdir). If nothing is set (or null), no checkpoints are saved.
   backup: "backup" # Path to backup directory (inside logdir). If nothing is set (or null), no backups are saved.
-  backup_freq: # Frequency of backups (in batches). Use None (null) to backup every epoch.
+  backup_freq:  # Frequency of backups (in batches). Use None (null) to backup every epoch.
   load_checkpoint_path:
 
 data:
-  path: ./data/pythia_W_flat_70_JZ10_noL 
+  path: [data/all_MCs/Pythia8EvtGen_A14NNPDF23LO_jetjet, data/all_MCs/H7EG_jetjet_Cluster, data/all_MCs/H7EG_jetjet_Cluster_dipole, data/all_MCs/Sh_2211_jj_DIRE, data/all_MCs/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets]
+  dataset_weigths: [0.21168501, 0.21168501, 0.15325995, 0.21168501, 0.21168501]
   target: jets_PartonTruthLabelID
   labels: # list of labels to use.
     - gluon
@@ -41,7 +42,7 @@ data:
   weight: weight_spectrum
 
 test_data:
-  path: ./data/altMC_phys_JZ3_cut/Sh_2211_jj_DIRE
+  path: data/all_MCs/Pythia8EvtGen_A14NNPDF23LO_jetjet/dev
   target: jets_PartonTruthLabelID
   labels: # list of labels to use.
     - gluon
@@ -69,6 +70,7 @@ optimizer:
 
 dataset:
   epochs: 25 # Number of epochs.
+  steps_per_epoch: # Number of steps per epoch. If None, autocomputes as: int(take * (1 - dev_size) / batch_size).
   take: # Length of data to use.
   batch_size: 1024 # Batch size.
   dev_size: 0.1 # Size of dev dataset.
@@ -200,9 +202,18 @@ augmentations:
     splitting_amount: 0.05
   soft_smear:
     prob: 0.5
-    energy_scale: 100
+    energy_scale: 1000
+  pt_smear:
+    prob: 0.5
+    std_pt_frac: 0.02
   drop_soft:
     prob: 0.5
-    skew: 1
+    skew: 100
     center_location: 0.5
     min_number_consti: 3
+  shift_weights:
+    prob: 0.5
+    training_weight: weight_spectrum
+    shift_weight: weight_mc
+    shift_weight_idxs: [1,2,3,4,5,6,7,9,10]
+    nominal_weight_idx: 0

@@ -1,0 +1,49 @@
+defaults:
+  - _self_
+
+hydra:
+  run:
+    dir: ${logdir}
+  sweep:
+    dir: ${logdir}
+    subdir: ${hydra.job.num}
+  job_logging:
+    formatters:
+      simple:
+        format: "[%(asctime)s][%(levelname)s] - %(message)s"
+  output_subdir: config
+
+data:
+  path: 
+  target: jets_PartonTruthLabelID
+  labels: # list of labels to use.
+    - gluon
+    - quark
+  target_labels:
+    - [21]
+    - [1, 2, 3, 4, 5, 6]
+  variable_unknown_labels: [-1, -999]
+  label_weights:
+  cut: 
+  weight: weight
+
+logdir: 
+model_path: 
+cache_scores: score_dataset.csv
+seed: 42
+draw_distribution: 20_000
+test_subfolder: 
+batch_size: 512
+take: 1_000_000
+binning:
+  variable: 'jets_pt'
+  bins: [200000, 300000, 400000, 600000, 850000, 1100000, 1400000, 1750000, 2500000] 
+  max_bin: 
+  min_bin:
+  log_bin_base: 
+additional_variables: ['jets_eta', 'JZ_slice', 'corrected_averageInteractionsPerCrossing']
+validation_plots_in_bins:  
+model_name: 
+model_input_type: 
+working_point_path: 
+threads:

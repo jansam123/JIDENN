@@ -658,21 +658,22 @@ class JIDENNDataset:
         targets = [dataset.target for dataset in datasets]
         weight = [dataset.weight for dataset in datasets]
 
-        # if not all_equal(element_specs):
-        #     raise ValueError('All datasets must have the same element spec.')
-        # if not all_equal(variables):
-        #     raise ValueError('All datasets must have the same variables.')
-        # if not all_equal(targets):
-        #     raise ValueError('All datasets must have the same target.')
-        # if not all_equal(weight):
-        #     raise ValueError('All datasets must have the same weight.')
-        if metadata_combiner is not None and not all_equal([dataset.metadata.keys() for dataset in datasets]):
+        if not all_equal(element_specs):
+            raise ValueError('All datasets must have the same element spec.')
+        if not all_equal(variables):
+            raise ValueError('All datasets must have the same variables.')
+        if not all_equal(targets):
+            raise ValueError('All datasets must have the same target.')
+        if not all_equal(weight):
+            raise ValueError('All datasets must have the same weight.')
+        if sum_metadata and not all_equal([dataset.metadata.keys() for dataset in datasets]):
             raise ValueError('All datasets must have the same metadata.')
 
         if mode == 'sample':
             dataset = tf.data.Dataset.sample_from_datasets(
                 [dataset.dataset for dataset in datasets], stop_on_empty_dataset=stop_on_empty_dataset, weights=weights)
         elif mode == 'concatenate':
+            logging.warning('Weights are ignored in concatenate mode.') if weights is not None else None
             dataset = datasets[0].dataset
             for ji_ds in datasets[1:]:
                 dataset = dataset.concatenate(ji_ds.dataset)

@@ -142,6 +142,36 @@ def get_soft_smear_fn(config: aug_cfg.SoftSmear):
         return jets
     return get_soft_smear
 
+def get_pt_smear_fn(config: aug_cfg.PTSmear):
+    scale = config.std_pt_frac
+    @tf.function
+    def get_soft_smear(jets):
+        jets = jets.copy()
+        jets['jets_PFO_pt'] = tf.random.normal(shape=tf.shape(jets['jets_PFO_pt']), mean=jets['jets_PFO_pt'], stddev=scale * jets['jets_PFO_pt'])
+        return jets
+    return get_soft_smear
+
+def get_shift_weights_fn(config: aug_cfg.ShiftWeights):
+    if isinstance(config.shift_weight_idxs, int):
+        shift_idxs = tf.constant([config.shift_weight_idxs], dtype=tf.int32)
+    else:
+        shift_idxs = tf.constant(list(config.shift_weight_idxs), dtype=tf.int32)
+    @tf.function
+    def shift_weights(jets):
+        jets = jets.copy()
+        
+        if tf.shape(shift_idxs)[0] > 1:
+            shift_idx = tf.random.uniform(shape=(), minval=0, maxval=tf.shape(shift_idxs)[0], dtype=tf.int32)
+            shift_idx = tf.gather(shift_idxs, shift_idx)
+        else:
+            shift_idx = shift_idxs[0]
+            
+        shifted_weight = tf.gather(jets[config.shift_weight], shift_idx)
+        nominal_weight = tf.gather(jets[config.shift_weight], config.nominal_weight_idx)
+        jets[config.training_weight] *= shifted_weight / nominal_weight
+        return jets
+    return shift_weights
+
 
 aug_name_mapping = {
     'drop_soft': get_drop_constituents,
@@ -149,6 +179,8 @@ aug_name_mapping = {
     'boost': get_boost_augm,
     'collinear_split': get_random_split_fn,
     'soft_smear': get_soft_smear_fn,
+    'pt_smear': get_pt_smear_fn,
+    'shift_weights': get_shift_weights_fn,
 }
 
 
@@ -157,7 +189,6 @@ def construct_augmentation(cfgs_aug: cfg.Augmentations):
         if aug_name not in aug_name_mapping:
             raise ValueError(f"Augmentation {aug_name} not implemented, use one of {list(aug_name_mapping.keys())}")
         
-
     @tf.function
     def augmentation(jets):
         for aug_name in cfgs_aug.order:

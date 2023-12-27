@@ -36,10 +36,10 @@ tf.data.Dataset.save('main_folder/subfolder1/train')
 The saved datasets are expected to be flattened to the jet level.
 """
 from dataclasses import dataclass
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Union
 
 from jidenn.config.model_config import FC, Highway, BDT, Transformer, DeParT, ParT, PFN, ParticleNet
-from jidenn.config.augmentation_config import DropSoft, Rotation, Boost, CollinearSplit, SoftSmear
+from jidenn.config.augmentation_config import DropSoft, Rotation, Boost, CollinearSplit, SoftSmear, PTSmear, ShiftWeights
 
 @dataclass
 class Data:
@@ -91,7 +91,8 @@ class Data:
         subfolder_weights (Optional[List[float]]): Weights to apply to the individual subfolders separately when combining. 
             `None` is viable only if `subfolders` is `None`. 
     """
-    path: str
+    path: Union[str, List[str]]   # Path to data folder.
+    dataset_weigths: Optional[List[float]]   # Weights for each dataset path.
     target: str
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
@@ -119,6 +120,7 @@ class Dataset:
             or `None` (`null`) to not cache it. Default is `None`.
     """
     epochs: int  # Number of epochs.
+    steps_per_epoch: Optional[int]   # Number of steps per epoch.
     batch_size: int   # Batch size.
     take: Optional[int]   # Length of data to use.
     dev_size: float   # Size of dev dataset.
@@ -228,6 +230,8 @@ class Augmentations:
     boost: Boost
     collinear_split: CollinearSplit
     soft_smear: SoftSmear
+    pt_smear: PTSmear
+    shift_weights: ShiftWeights
 
 @dataclass
 class JIDENNConfig:

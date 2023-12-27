@@ -51,6 +51,7 @@ class EvalConfig:
         batch_size (int): Batch size for evaluation.
         take (int): Number of data samples to use for evaluation. 
         binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
+        additional_variables (List[str]): List of additional variables to add to the same dataframe with the model's output.
         working_point_path (Optional[str]): Path to a folder where for each model there is a subfolder with the name of the model.
             contains a csv file with the name `threshold_file_name` containing a column with the name `threshold_var_name`.
             Folder structure: `threshold_path`/`model_name`/`threshold_file_name`.
@@ -79,5 +80,47 @@ class EvalConfig:
     metrics_to_plot: List[str]
     reference_model: str
     ylims: List[List[float]]
+    threads: Optional[int]
+    validation_plots_in_bins: bool
+
+
+@dataclass
+class SingleEvalConfig:
+    """Configuration for evaluating a machine learning model.
+
+    Args:
+        data (jidenn.config.config.Data): Configuration for the data.
+        logdir (str): Path to the log directory of the evaluation. 
+        model_path (str): Path to the directory where the model to evaluate is saved. 
+        model_names (str): Name of the model to evaluate.
+        model_input_type (str):  Types of input data expected by the model.
+        seed (int): Seed for reproducibility.
+        draw_distribution (int, optional): If not `None`, draw the distribution of the train input
+            variables for the first `draw_distribution` events.
+        test_subfolder (str): Subfolder of the data folder to use for evaluation. 
+            One of 'test', 'train', 'dev'.
+        batch_size (int): Batch size for evaluation.
+        take (int): Number of data samples to use for evaluation. 
+        binning (jidenn.config.eval_config.Binning): Configuration for binning of test data.
+        additional_variables (List[str]): List of additional variables to add to the same dataframe with the model's output.
+        working_point_path (Optional[str]): Path to a pickled `WorkingPoint` object. Must have the same binning as `binning`.
+        threads (Optional[int]): Number of threads to use for evaluation. If `None`, single-threaded evaluation is used.
+        validation_plots_in_bins (bool): If `True`, create validation plots for each bin in the binning.
+    """
+    data: Data
+    logdir: str
+    cache_scores: str
+    model_path: str
+    model_name: str
+    model_input_type: str
+    save_path: str
+    seed: int
+    draw_distribution: Optional[int]
+    test_subfolder: str
+    batch_size: int
+    take: int
+    binning: Binning
+    additional_variables: List[str]
+    working_point_path: Optional[str]
     threads: Optional[int]
     validation_plots_in_bins: bool

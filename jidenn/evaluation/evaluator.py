@@ -275,3 +275,69 @@ def evaluate_multiple_models(model_paths: List[str],
             tech_info.append(tech_info_current) 
 
     return dataset, pd.concat(tech_info)
+
+
+def evaluate_single_model(model_path: str,
+                          model_name: str,
+                          dataset: JIDENNDataset,
+                          model_input_name: Literal['highlevel',
+                                                    'highlevel_constituents',
+                                                    'constituents',
+                                                    'relative_constituents',
+                                                    'interaction_constituents'],
+                          batch_size: int,
+                          take: Optional[int] = None,
+                          log: Optional[logging.Logger] = None,
+                          custom_objects: Optional[Dict[str, Callable]] = None,
+                          distribution_drawer: Optional[Callable[[JIDENNDataset, str], None]] = None) -> Tuple[JIDENNDataset, Dict]:
+    """Evaluate a Keras model on a JIDENNDataset. The explicit training input is created automatically
+    from the JIDENNDataset. Input type is deduced from the `model_input_name` argument.
+
+    Args:
+        model_path (str): Path to the Keras model file. It will be loaded with
+            `tf.keras.models.load_model(model_path, custom_objects=custom_objects)`.
+        model_name (str): Name of the model.
+        dataset (JIDENNDataset): JIDENNDataset to evaluate the model on and to add the scores to.
+        model_input_name (str): Input name for the model. See `jidenn.data.TrainInput.input_classes_lookup`
+            for options.
+        batch_size (int): Batch size to use for the evaluation.
+        take (int, optional): Number of events to evaluate. If not provided, all events will be used. Default is None.
+        log (logging.Logger, optional): Logger to use for logging messages and evaluation/loading times. Default is None.
+        custom_objects (Dict[str, Callable], optional): Dictionary of custom objects to use when loading the model.
+            Passed to `tf.keras.models.load_model(model_path, custom_objects=custom_objects)`. Default is None.
+        distribution_drawer (Callable[[JIDENNDataset], None], optional): Function to plot the data distribution of 
+            the input variables which are automatically created with the `jidenn.data.TrainInput` class
+    """
+    
+    
+    log.info(f'Batches will be of size: {batch_size}, total number of events: {take}') if log is not None else None
+    train_input_class = input_classes_lookup(model_input_name)
+    train_input_class = train_input_class()
+    model_input = tf.function(func=train_input_class)
+    ds = dataset.remap_data(model_input)
+    if distribution_drawer is not None and 'interaction_constituents' not in model_input_name:
+        log.info(
+            f'----- Drawing data distribution for: {model_input_name}') if log is not None else None
+        distribution_drawer(ds, model_input_name)
+            
+    ds = ds.get_prepared_dataset(batch_size=batch_size,
+                                    ragged=False if 'gnn' in model_input_name else True,
+                                    shuffle_buffer_size=None,
+                                    take=take)
+
+    log.info(f'----- Loading model: {model_name}') if log is not None else None
+    start = time.time()
+    model : tf.keras.Model = tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
+    model.compile()
+    stop = time.time()
+    loading_time = stop-start
+    log.info(f'----- Loading model took: {stop-start:.2f} s') if log is not None else None
+    log.info(f'----- Predicting with model: {model_name}') if log is not None else None
+    start = time.time()
+    score, total_time, max_memory = predict(model, ds)
+    stop = time.time()
+    log.info(f'----- Predicting took: {total_time:.2f} s') if log is not None else None
+    log.info(f'----- Max memory used: {max_memory*1e-6:.2f} MB') if log is not None else None
+    tech_info_current = {'time': total_time, 'memory': max_memory*1e-6, 'loading_time': loading_time, 'num_params': model.count_params()}
+
+    return score, tech_info_current

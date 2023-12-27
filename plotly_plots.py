@@ -140,7 +140,7 @@ def update_graph(value, paths, reference):
                         size=15,
                         color=COLORS[model_idx%len(COLORS)]
                     ),
-                    name=model,
+                    name=model[:30],
                     showlegend=True if idx == 0 else False,
                     legendgroup=model,
                     
