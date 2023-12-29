@@ -74,6 +74,8 @@ def get_filter_ragged_values_fn(reference_variable: str = 'jets_PartonTruthLabel
     def _filter_unwanted_ragged_values_fn(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
         reference_tensor = sample[reference_variable]
+        if tf.size(reference_tensor) == 0:
+            return sample
         mask = tf.math.equal(tf.expand_dims(reference_tensor, axis=1), tf.tile(
             tf.expand_dims(wanted_values, axis=0), [tf.shape(reference_tensor)[0], 1]))
         mask = tf.reduce_any(mask, axis=1)
@@ -101,21 +103,6 @@ def get_filter_ragged_cut(variable: str = 'jets_eta',
     Returns:
         Callable[[ROOTVariables], ROOTVariables]: A function that filters out unwanted values from a ROOTVariables
     """
-    # lower_cut = tf.broadcast_to(lower_cut, [])
-    # if upper_cut is not None and lower_cut is not None:
-    #     @tf.function
-    #     def cut_fn(x):
-    #         return
-    # elif upper_cut is not None:
-    #     @tf.function
-    #     def cut_fn(x):
-    #         return tf.math.greater(x, lower_cut)
-    # elif lower_cut is not None:
-    #     @tf.function
-    #     def cut_fn(x):
-    #         return tf.math.less(x, upper_cut)
-    # else:
-    #     raise ValueError('Both upper_cut and lower_cut cannot be None')
 
     @tf.function
     def _filter_unwanted_ragged_cut_fn(sample: ROOTVariables) -> ROOTVariables:
@@ -132,6 +119,34 @@ def get_filter_ragged_cut(variable: str = 'jets_eta',
     return _filter_unwanted_ragged_cut_fn
 
 
+def get_select_max_ragged_idx(max_idx: int = 1,
+                              reference_variable: str = 'jets_PartonTruthLabelID',
+                              key_phrase: str = 'jets') -> Callable[[ROOTVariables], ROOTVariables]:
+    """Get a function that selects only the first `max_idx` elements from a 'RaggedTensor' in a ROOTVariables dictionary, which
+     contains a RaggedTensor. Reference variable is used to infer the intended shape of the other variables containing the `key_phrase`.
+
+    Args:
+        max_idx (int, optional): The number of elements to keep. Defaults to 1.
+        reference_variable (str, optional): The variable to use as reference for infering the shape of
+            variables to flatten. Defaults to 'jets_PartonTruthLabelID'.
+        key_phrase (str, optional): The phrase to use to identify variables to flatten. Defaults to 'jets'.
+    """
+    @tf.function
+    def _select_max_ragged_idx(sample: ROOTVariables) -> ROOTVariables:
+        sample = sample.copy()
+        reference_tensor = sample[reference_variable]
+        if tf.size(reference_tensor) == 0:
+            return sample
+        mask = tf.math.less(tf.range(tf.size(reference_tensor)), max_idx)
+        for key, item in sample.items():
+            if item.shape.num_elements() == 0 or item.shape.num_elements() == 1:
+                continue
+            if key_phrase in key:
+                sample[key] = tf.ragged.boolean_mask(item, mask)
+        return sample
+    return _select_max_ragged_idx
+
+
 def get_keys_to_remove_fn(keys_to_remove: List[str]) -> Callable[[ROOTVariables], ROOTVariables]:
     """Get a function that removes keys from a ROOTVariables dictionary. The intended use is to use this function in a
     tf.data.Dataset.map call to remove unwanted keys from a dataset.
@@ -146,7 +161,7 @@ def get_keys_to_remove_fn(keys_to_remove: List[str]) -> Callable[[ROOTVariables]
     def _remove_keys(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
         for key in keys_to_remove:
-            sample.pop(key)
+            sample.pop(key) if key in sample.keys() else None
         return sample
     return _remove_keys
 
@@ -158,7 +173,8 @@ def flatten_dataset(dataset: tf.data.Dataset,
                     variables: Optional[Union[str, List[str]]] = None,
                     upper_cuts: Optional[Union[float, List[float]]] = None,
                     lower_cuts: Optional[Union[float, List[float]]] = None,
-                    keys_to_remove: Optional[Union[List[str], str]] = ['jets_bTagged', 'jets_truth_flavor']) -> tf.data.Dataset:
+                    max_idx: Optional[int] = None,
+                    keys_to_remove: Optional[Union[List[str], str]] = ['jets_bTagged', 'jets_truth_flavor', 'jets_Constituent_isCharged', 'jets_Constituent_type']) -> tf.data.Dataset:
     """Apply a series of transformations to a tf.data.Dataset to flatten it. The flattening is done by the reference
     variable, which is assumed to be a tf.RaggedTensor. The shape of the reference variable is used to infer the shape
     of the other variables. The other variables are tiled to match the shape of the reference variable. The dataset is
@@ -178,6 +194,10 @@ def flatten_dataset(dataset: tf.data.Dataset,
         if isinstance(keys_to_remove, str):
             keys_to_remove = [keys_to_remove]
         dataset = dataset.map(get_keys_to_remove_fn(keys_to_remove))
+
+    if max_idx is not None:
+        dataset = dataset.map(get_select_max_ragged_idx(
+            max_idx, reference_variable, key_phrase))
 
     if wanted_values is None:
         return (

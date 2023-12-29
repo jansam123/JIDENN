@@ -1,9 +1,22 @@
 from typing import Callable, List, Dict, Union, Optional
 import tensorflow as tf
 
-from jidenn.data.JIDENNDataset import ROOTVariables
+
 from jidenn.histogram.BinnedVariable import Binning
 
+ROOTVariables = Dict[str, Union[tf.RaggedTensor, tf.Tensor]]
+"""Type alias for a dictionary of ROOT variables. The keys are the variable  names and the values are the corresponding 
+Tensorflow `tf.RaggedTensor` or `tf.Tensor`.
+
+Example:
+```python
+variables = {
+    'jets_pt': tf.RaggedTensor([[1, 2, 3, 4, 5], [2, 3]], dtype=tf.float32),
+    'eventNumber': tf.Tensor([1, 2], dtype=tf.int32),
+    ...
+}
+```
+"""
 
 def get_bin_idxing_fn(variable: str, bin_edges, sparse: bool = False) -> Callable[[ROOTVariables], tf.Tensor]:
     @tf.function

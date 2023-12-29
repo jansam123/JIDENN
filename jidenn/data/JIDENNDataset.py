@@ -518,6 +518,7 @@ class JIDENNDataset:
                           tf.data.Dataset], tf.data.Dataset]] = None,
                       element_spec_paths: Optional[List[str]] = None,
                       stop_on_empty_dataset: bool = False,
+                      rerandomize_each_iteration: bool = True,
                       weights: Optional[List[float]] = None,
                       mode: Literal['concatenate',
                                     'interleave',
@@ -540,7 +541,7 @@ class JIDENNDataset:
                           ) if dataset_mapper is not None else ds
             dss.append(ds)
 
-        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode=mode, weights=weights, metadata_combiner=metadata_combiner)
+        return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode=mode, weights=weights, metadata_combiner=metadata_combiner, rerandomize_each_iteration=rerandomize_each_iteration)
 
     @staticmethod
     def load_parallel(files: List[str],
@@ -640,6 +641,7 @@ class JIDENNDataset:
                 mode: Literal['concatenate', 'interleave',
                               'sample'] = 'concatenate',
                 stop_on_empty_dataset: bool = False,
+                rerandomize_each_iteration: bool = True,
                 weights: Optional[List[float]] = None,
                 metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas[key], axis=0), axis=0) for key in metas[0]}) -> JIDENNDataset:
         """Combines multiple datasets into one dataset. The samples are interleaved and the weights are used to sample from the datasets.
@@ -668,12 +670,12 @@ class JIDENNDataset:
             raise ValueError('All datasets must have the same target.')
         if not all_equal(weight):
             raise ValueError('All datasets must have the same weight.')
-        if sum_metadata and not all_equal([dataset.metadata.keys() for dataset in datasets]):
+        if metadata_combiner and not all_equal([dataset.metadata.keys() for dataset in datasets]):
             raise ValueError('All datasets must have the same metadata.')
 
         if mode == 'sample':
             dataset = tf.data.Dataset.sample_from_datasets(
-                [dataset.dataset for dataset in datasets], stop_on_empty_dataset=stop_on_empty_dataset, weights=weights)
+                [dataset.dataset for dataset in datasets], stop_on_empty_dataset=stop_on_empty_dataset, weights=weights, rerandomize_each_iteration=rerandomize_each_iteration)
         elif mode == 'concatenate':
             logging.warning('Weights are ignored in concatenate mode.') if weights is not None else None
             dataset = datasets[0].dataset

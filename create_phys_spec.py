@@ -29,6 +29,8 @@ parser.add_argument("--JZs_to_skip", type=int, nargs='+',
                     default=None, help="JZs to skip")
 parser.add_argument("--min_jz", type=int, default=2, help="Maximum JZ to use")
 parser.add_argument("--max_jz", type=int, default=7, help="Maximum JZ to use")
+parser.add_argument("--max_idx", type=int, default=2,
+                    help="Maximum index of jets to use, select ľ to use leading and subleading")
 parser.add_argument("--eta_cut", type=float, default=2.1, help="Eta cut")
 parser.add_argument("--pt_lower_cut", type=float,
                     default=0.2e6, help="Pt lower cut")
@@ -81,7 +83,7 @@ def main(args: argparse.Namespace) -> None:
     # tf.data.experimental.enable_debug_mode()
 
     jz_description = pd.read_csv(args.jz_description_file)
-    print(jz_description)
+    logging.info(jz_description)
     lumi = 139_000
 
     for jz in range(args.min_jz, args.max_jz + 1):
@@ -95,7 +97,6 @@ def main(args: argparse.Namespace) -> None:
 
         dataset = JIDENNDataset.load(file)
 
-        print(dataset.element_spec)
         size = dataset.length
         norm = dataset.metadata[norm_name]
 
@@ -108,8 +109,10 @@ def main(args: argparse.Namespace) -> None:
         sizes.append(size)
         files.append(file)
 
+    logging.info(sizes)
+    sizes = [332., 408., 182., 30., 15.,]
     sampling_weights = [size / sum(sizes) for size in sizes]
-    print(sampling_weights)
+    logging.info(sampling_weights)
 
     @tf.function
     def jz_cutter(dataset: tf.data.Dataset, weight_info) -> tf.data.Dataset:
@@ -121,13 +124,13 @@ def main(args: argparse.Namespace) -> None:
         dataset = dataset.map(write_new_variable(variable_name='JZ_slice',
                               variable_value=tf.constant(jz, dtype=tf.int32)))
         if args.skip is not None and jz == 4:
-            print(f'Skipping {args.skip} events of JZ4')
+            logging.info(f'Skipping {args.skip} events of JZ4')
             dataset = dataset.skip(args.skip)
         return dataset
 
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_cutter,
-                                          file_labels=weight_info, weights=sampling_weights, mode='sample')
-    dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
+                                          file_labels=weight_info, weights=sampling_weights, mode='sample', rerandomize_each_iteration=False, stop_on_empty_dataset=True)
+    dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable, max_idx=args.max_idx,
                                     wanted_values=args.wanted_values, variables=['jets_eta', 'jets_pt'], lower_cuts=[-args.eta_cut, args.pt_lower_cut], upper_cuts=[args.eta_cut, args.pt_upper_cut]))
     dataset = dataset.take(args.take)
     # dataset = dataset.filter(lambda x: tf.random.uniform([]) < TAKE_FRAC)
@@ -138,7 +141,7 @@ def main(args: argparse.Namespace) -> None:
     logging.info(f'Saved dataset to {args.save_path}')
     dataset = JIDENNDataset.load(args.save_path)
     size = dataset.length
-    print(f"Number of jets: {size}")
+    logging.info(f"Number of jets: {size}")
     dataset.plot_single_variable('jets_pt',
                                  weight_variable='weight',
                                  save_path=os.path.join(

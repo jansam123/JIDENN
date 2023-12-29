@@ -58,6 +58,8 @@ parser.add_argument("--reference_variable", type=str, default='jets_PartonTruthL
                     help="Variable to use as reference for flattening")
 parser.add_argument("--wanted_values", type=int, nargs='+',
                     default=[1, 2, 3, 4, 5, 6, 21], help="Values to keep in the reference variable")
+parser.add_argument("--max_idx", type=int, default=2,
+                    help="Maximum index of jets to use, select 2 to use leading and subleading")
 
 JZ_LOW_PT = [20, 60, 160, 400, 800, 1300, 1800, 2500, 3200, 3900, 4600, 5300]
 JZ_LOW_PT = [val * 1e3 for val in JZ_LOW_PT]
@@ -85,11 +87,14 @@ def main(args: argparse.Namespace) -> None:
         f'Running with args: {{{", ".join([f"{k}: {v}" for k, v in vars(args).items()])}}}')
     os.makedirs(args.save_path, exist_ok=True)
 
+    # tf.config.run_functions_eagerly(True)
+    # tf.data.experimental.enable_debug_mode()
+
     @tf.function
     def jz_mapper(dataset: tf.data.Dataset, jz) -> tf.data.Dataset:
         dataset = dataset.map(write_new_variable(
             variable_name='JZ_slice', variable_value=tf.constant(jz, dtype=tf.int32)))
-        dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable,
+        dataset = dataset.apply(partial(flatten_dataset, reference_variable=args.reference_variable, max_idx=args.max_idx,
                                 wanted_values=args.wanted_values, variables=['jets_eta', 'jets_pt'], lower_cuts=[-args.eta_cut, args.xlim[0]], upper_cuts=[args.eta_cut, args.xlim[1]]))
         if args.jz_low_cut:
             dataset = dataset.filter(get_cut_fn(
@@ -120,7 +125,7 @@ def main(args: argparse.Namespace) -> None:
     file_labels = list(range(args.min_jz, args.max_jz + 1))
     # dataset = JIDENNDataset.load_parallel(files, dataset_mapper=jz_mapper, file_labels=file_labels)
     dataset = JIDENNDataset.load_multiple(files, dataset_mapper=jz_mapper,
-                                          file_labels=file_labels, stop_on_empty_dataset=True)
+                                          file_labels=file_labels, stop_on_empty_dataset=True, mode='sample', rerandomize_each_iteration=False)
 
     # dataset = dataset.filter(get_cut_fn('jets_pt', args.xlim[0], args.xlim[1])) if args.cut else dataset
     # dataset = dataset.filter(get_cut_fn('jets_eta', -args.eta_cut, args.eta_cut)
