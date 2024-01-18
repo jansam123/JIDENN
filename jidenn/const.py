@@ -59,6 +59,7 @@ LATEX_NAMING_CONVENTION = {
     'z': r'$z$',
     'm2': r'$\log{m^2}$',
     'log_norm_p': r'$\log{\norm{p}}$',
+    'is_topo': 'isTopo',
 }
 
 
@@ -66,7 +67,10 @@ MODEL_NAMING_SCHEMA = {
     'depart_flat_pT': r'DeParT (Flat $p_{\mathrm{T}}$)',
     'basic_fc': 'FC',
     'depart': 'DeParT',
+    'idepart-col_split': 'DeParT (Col. Split)',
+    'idepart+topo': 'DeParT (+Topo)',
     'depart-m': 'DeParT',
+    'depart-ircs': 'DeParT (IRC safe)',
     'part': 'nParT',
     'part-m': 'nParT',
     'idepart_rel': 'DeParT (Relative)',
@@ -77,9 +81,12 @@ MODEL_NAMING_SCHEMA = {
     'interacting_part': 'ParT',
     'ipart': 'ParT',
     'ipart-m': 'ParT',
+    'ipart+topo': 'ParT (+Topo)',
     'pfn': 'PFN',
+    'pfn+topo': 'PFN (+Topo)',
     'pfn-m': 'PFN',
     'efn': 'EFN',
+    'efn+topo': 'EFN (+Topo)',
     'transformer': 'Transformer',
     'transformer-m': 'Transformer',
     'bdt': 'BDT',
@@ -96,8 +103,18 @@ MODEL_NAMING_SCHEMA = {
     'fc-crafted': r'FC red.',
     'fc-reduced': r'FC',
     'fc_crafted': r'FC red.',
+    'fc+topo': r'FC (Topo)',
     'highway-crafted': r'Highway red.',
     'highway_crafted': r'Highway red.',
+    'depart-Pythia8EvtGen_A14NNPDF23LO_jetjet': 'DeParT (Py)',
+    'depart-Sh_2211_Enh_clusterTune': 'DeParT (Sh Cl.)',
+    'depart-H7EG_jetjet_Cluster': 'DeParT (Hw Ang.)',
+    'depart-H7EG_jetjet_Cluster_dipole': 'DeParT (Hw Dip.)',
+    'depart-Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets': 'DeParT (Sh St.)',
+    'depart-Sh_2211_jj_DIRE': 'DeParT (Sh Dire)',
+    'depart-PhH7EG_jj': 'DeParT (PhHw)',
+    'depart-PhPy8EG_jj': 'DeParT (PhPy)',
+    'depart-multiMC': 'DeParT (Multi)',
 }
 
 

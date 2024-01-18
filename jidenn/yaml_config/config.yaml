@@ -41,19 +41,19 @@ data:
   cut:
   weight: weight_spectrum
 
-test_data:
-  path: data/all_MCs/Pythia8EvtGen_A14NNPDF23LO_jetjet/dev
-  target: jets_PartonTruthLabelID
-  labels: # list of labels to use.
-    - gluon
-    - quark
-  target_labels:
-    - [21]
-    - [1, 2, 3, 4, 5, 6]
-  variable_unknown_labels: [-1, -999]
-  label_weights:
-  cut:
-  weight: weight
+test_data: 
+  # path: data/all_MCs/Pythia8EvtGen_A14NNPDF23LO_jetjet/dev
+  # target: jets_PartonTruthLabelID
+  # labels: # list of labels to use.
+  #   - gluon
+  #   - quark
+  # target_labels:
+  #   - [21]
+  #   - [1, 2, 3, 4, 5, 6]
+  # variable_unknown_labels: [-1, -999]
+  # label_weights:
+  # cut:
+  # weight: weight
 
 optimizer:
   name: Adam # Optimizer to use, options: Adam, LAMB, Lion.
@@ -69,7 +69,7 @@ optimizer:
   epsilon: #part : 0.0001
 
 dataset:
-  epochs: 25 # Number of epochs.
+  epochs: 10 # Number of epochs.
   steps_per_epoch: # Number of steps per epoch. If None, autocomputes as: int(take * (1 - dev_size) / batch_size).
   take: # Length of data to use.
   batch_size: 1024 # Batch size.
@@ -80,7 +80,7 @@ dataset:
 
 preprocess:
   normalization_size: 150 # Size of normalization dataset (if normalize is True).
-  draw_distribution:  # Size of the distribution to draw.
+  draw_distribution: 500000 # Size of the distribution to draw.
 
 models:
   fc:
@@ -193,27 +193,34 @@ augmentations:
   order: []
   rotation:
     prob: 0.5
+    const_name: Constituent
     max_angle: 360
-  boost:
-    prob: 0.5
-    max_beta: 0.1
   collinear_split:
     prob: 0.5
+    const_name: Constituent
     splitting_amount: 0.05
   soft_smear:
     prob: 0.5
+    const_name: Constituent
     energy_scale: 1000
   pt_smear:
     prob: 0.5
+    const_name: Constituent
     std_pt_frac: 0.02
   drop_soft:
     prob: 0.5
+    const_name: Constituent
     skew: 100
     center_location: 0.5
     min_number_consti: 3
   shift_weights:
     prob: 0.5
+    const_name: Constituent
     training_weight: weight_spectrum
     shift_weight: weight_mc
     shift_weight_idxs: [1,2,3,4,5,6,7,9,10]
     nominal_weight_idx: 0
+  boost:
+    prob: 0.5
+    const_name: Constituent
+    max_beta: 0.1

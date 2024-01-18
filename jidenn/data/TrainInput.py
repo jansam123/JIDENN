@@ -31,7 +31,7 @@ class TrainInput(ABC):
 
     """
 
-    def __init__(self, variables: Optional[List[str]] = None, max_constituents: Optional[int] = 100, constituent_name: Literal['PFO', 'Constituent'] = 'PFO'):
+    def __init__(self, variables: Optional[List[str]] = None, max_constituents: Optional[int] = 100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
         self.variables = variables
         self.max_constituents = max_constituents
         self.const_name = constituent_name
@@ -150,6 +150,58 @@ class HighLevelJetVariables(TrainInput):
                 'jets_phi',
                 'jets_pt',
                 f'jets_{self.const_name}_n',
+            ]
+
+            self.idxd_variables = [
+                'jets_NumChargedPFOPt1000',
+                'jets_NumChargedPFOPt500',
+                'jets_ChargedPFOWidthPt1000',
+            ]
+
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        """Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
+
+        Args:
+            sample (ROOTVariables): The input sample.
+
+        Returns:
+            ROOTVariables: The output variables of the form `{'var_name': tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
+        """
+
+        new_sample = {var: tf.cast(sample[var], tf.float32)
+                      for var in self.variables}
+        new_sample.update(
+            {var: tf.cast(sample[var][0], tf.float32) for var in self.idxd_variables})
+        return new_sample
+
+    @property
+    def input_shape(self) -> int:
+        """The input shape is just an integer `len(self.variables)`."""
+        return len(self.variables) + len(self.idxd_variables)
+
+
+class HighLevelJetVariablesR22(TrainInput):
+    """Constructs the input variables characterizing the **whole jet**. 
+    The variables are taken from the `variable` list on the input.
+    These variables are used to train `jidenn.models.FC.FCModel` and `jidenn.models.Highway.HighwayModel`.
+
+    Args:
+        variables (List[str], optional): List of available variables. Defaults to None.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.variables is None:
+            self.variables = [
+                'jets_EMFrac',
+                'jets_chf',
+                'jets_eta',
+                'jets_m',
+                'jets_phi',
+                'jets_pt',
+                f'jets_{self.const_name}_n',
+                'jets_TopoTower_n',
             ]
 
             self.idxd_variables = [
@@ -1167,6 +1219,583 @@ class LIInteractionConstituentVariables(TrainInput):
         return (None, 8), (None, None, 1)
 
 
+class ConstituentVariablesR22(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    """
+
+    def __init__(self, variables=None, max_constituents=100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
+        super().__init__(variables, max_constituents, constituent_name)
+
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        m_const = sample[f'jets_{self.const_name}_m']
+        pt_const = sample[f'jets_{self.const_name}_pt']
+        eta_const = sample[f'jets_{self.const_name}_eta']
+        phi_const = sample[f'jets_{self.const_name}_phi']
+        e_const = sample[f'jets_{self.const_name}_e']
+
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
+            e_const = e_const[..., :self.max_constituents]
+
+        # m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+        e_jet = sample['jets_e']
+
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(e_const)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(e_const / tf.math.reduce_mean(e_jet))
+        log_m = tf.math.log(m_const)
+
+        logE = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE), tf.math.is_nan(logE)), tf.zeros_like(logE), logE)
+        logPT_PTjet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT_PTjet), tf.math.is_nan(logPT_PTjet)), tf.zeros_like(logPT_PTjet), logPT_PTjet)
+        logE_Ejet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE_Ejet), tf.math.is_nan(logE_Ejet)), tf.zeros_like(logE_Ejet), logE_Ejet)
+        log_m = tf.where(tf.math.logical_or(tf.math.is_inf(
+            log_m), tf.math.is_nan(log_m)), tf.zeros_like(log_m), log_m)
+        logPT = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT), tf.math.is_nan(logPT)), tf.zeros_like(logPT), logPT)
+
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        return {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+                'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR, 'log_m': log_m}
+
+    @property
+    def input_shape(self) -> Tuple[None, int]:
+        """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent."""
+        return (None, 8)
+
+
+class InteractionConstituentVariablesR22(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, but on top of the
+    `ConstituentVariables` it also includes the interaction variables, i.e. the variables characterizing the
+    pair of constituents.
+    These are used in the `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    ###Constituent variables:
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    ###Interaction variables:
+    - log of the angular distance between the constituents $$\\log \\Delta  = \\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}$$
+    - log of the kt variable $$\\log k_\\mathrm{T} = \\log \\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b) \\Delta $$
+    - the fraction of carried transverse momentum of the softer constituent $$z = \\frac{\\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b)}{p_{\\mathrm{T}}^a + p_{\\mathrm{T}}^b}$$
+    - the log of invariant mass $$\\log m^2 = \\log{(p^{\\mu, a} + p^{\\mu, b})^2}$$
+
+    """
+
+    def __init__(self, variables=None, max_constituents=100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
+        super().__init__(variables, max_constituents, constituent_name)
+
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m_const = sample[f'jets_{self.const_name}_m']
+        pt_const = sample[f'jets_{self.const_name}_pt']
+        eta_const = sample[f'jets_{self.const_name}_eta']
+        phi_const = sample[f'jets_{self.const_name}_phi']
+        e_const = sample[f'jets_{self.const_name}_e']
+
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
+            e_const = e_const[..., :self.max_constituents]
+
+        # m_jet = sample['jets_m']
+
+        E = e_const
+        pt = pt_const
+        eta = eta_const
+        phi = phi_const
+        m = m_const
+        _, px, py, pz = to_e_px_py_pz(m, pt, eta, phi)
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / \
+            (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+        m2 = tf.math.log(m2)
+
+        delta = tf.where(tf.math.logical_or(tf.math.is_inf(
+            delta), tf.math.is_nan(delta)), tf.zeros_like(delta), delta)
+        k_t = tf.where(tf.math.logical_or(tf.math.is_inf(
+            k_t), tf.math.is_nan(k_t)), tf.zeros_like(k_t), k_t)
+        z = tf.where(tf.math.logical_or(tf.math.is_inf(
+            z), tf.math.is_nan(z)), tf.zeros_like(z), z)
+        m2 = tf.where(tf.math.logical_or(tf.math.is_inf(
+            m2), tf.math.is_nan(m2)), tf.zeros_like(m2), m2)
+        interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+        e_jet = sample['jets_e']
+
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(e_const)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(e_const / tf.math.reduce_mean(e_jet))
+        log_m = tf.math.log(m_const)
+
+        logE = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE), tf.math.is_nan(logE)), tf.zeros_like(logE), logE)
+        logPT_PTjet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT_PTjet), tf.math.is_nan(logPT_PTjet)), tf.zeros_like(logPT_PTjet), logPT_PTjet)
+        logE_Ejet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE_Ejet), tf.math.is_nan(logE_Ejet)), tf.zeros_like(logE_Ejet), logE_Ejet)
+        log_m = tf.where(tf.math.logical_or(tf.math.is_inf(
+            log_m), tf.math.is_nan(log_m)), tf.zeros_like(log_m), log_m)
+        logPT = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT), tf.math.is_nan(logPT)), tf.zeros_like(logPT), logPT)
+
+        const_vars = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+                      'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR, 'log_m': log_m}
+
+        return const_vars, interaction_vars
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
+        """The input shape is a tuple of two tuples `(None, 8)` and `(None, None, 4)`, where the first tuple corresponds to the shape 
+        of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
+        i.e. a matrix for each jet."""
+        return (None, 8), (None, None, 4)
+
+
+class ConstituentVariablesR22Topo(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    """
+
+    def __init__(self, variables=None, max_constituents=100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
+        super().__init__(variables, max_constituents, constituent_name)
+
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        const_m_const = sample[f'jets_{self.const_name}_m']
+        const_pt_const = sample[f'jets_{self.const_name}_pt']
+        const_eta_const = sample[f'jets_{self.const_name}_eta']
+        const_phi_const = sample[f'jets_{self.const_name}_phi']
+        const_e_const = sample[f'jets_{self.const_name}_e']
+        const_is_topo = tf.zeros_like(const_m_const)
+
+        topo_m_const = sample['jets_TopoTower_m']
+        topo_pt_const = sample['jets_TopoTower_pt']
+        topo_eta_const = sample['jets_TopoTower_eta']
+        topo_phi_const = sample['jets_TopoTower_phi']
+        topo_e_const = sample['jets_TopoTower_e']
+        topo_is_topo = tf.ones_like(topo_m_const)
+
+        m_const = tf.concat([const_m_const, topo_m_const], axis=0)
+        pt_const = tf.concat([const_pt_const, topo_pt_const], axis=0)
+        eta_const = tf.concat([const_eta_const, topo_eta_const], axis=0)
+        phi_const = tf.concat([const_phi_const, topo_phi_const], axis=0)
+        e_const = tf.concat([const_e_const, topo_e_const], axis=0)
+        is_topo = tf.concat([const_is_topo, topo_is_topo], axis=0)
+
+        sort_idxs = tf.argsort(pt_const, axis=0, direction='DESCENDING')
+
+        m_const = tf.gather(m_const, sort_idxs)
+        pt_const = tf.gather(pt_const, sort_idxs)
+        eta_const = tf.gather(eta_const, sort_idxs)
+        phi_const = tf.gather(phi_const, sort_idxs)
+        e_const = tf.gather(e_const, sort_idxs)
+        is_topo = tf.gather(is_topo, sort_idxs)
+
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
+            e_const = e_const[..., :self.max_constituents]
+            is_topo = is_topo[..., :self.max_constituents]
+
+        # m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+        e_jet = sample['jets_e']
+
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(e_const)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(e_const / tf.math.reduce_mean(e_jet))
+        log_m = tf.math.log(m_const)
+
+        logE = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE), tf.math.is_nan(logE)), tf.zeros_like(logE), logE)
+        logPT_PTjet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT_PTjet), tf.math.is_nan(logPT_PTjet)), tf.zeros_like(logPT_PTjet), logPT_PTjet)
+        logE_Ejet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE_Ejet), tf.math.is_nan(logE_Ejet)), tf.zeros_like(logE_Ejet), logE_Ejet)
+        log_m = tf.where(tf.math.logical_or(tf.math.is_inf(
+            log_m), tf.math.is_nan(log_m)), tf.zeros_like(log_m), log_m)
+        logPT = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT), tf.math.is_nan(logPT)), tf.zeros_like(logPT), logPT)
+
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        return {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+                'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR, 'log_m': log_m, 'is_topo': is_topo}
+
+    @property
+    def input_shape(self) -> Tuple[None, int]:
+        """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent."""
+        return (None, 9)
+
+
+class InteractionConstituentVariablesR22Topo(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, but on top of the
+    `ConstituentVariables` it also includes the interaction variables, i.e. the variables characterizing the
+    pair of constituents.
+    These are used in the `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    ###Constituent variables:
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    ###Interaction variables:
+    - log of the angular distance between the constituents $$\\log \\Delta  = \\sqrt{(\\eta^a - \\eta^b)^2 + (\\phi^a - \\phi^b)^2}$$
+    - log of the kt variable $$\\log k_\\mathrm{T} = \\log \\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b) \\Delta $$
+    - the fraction of carried transverse momentum of the softer constituent $$z = \\frac{\\mathrm{min}(p_{\\mathrm{T}}^a, p_{\\mathrm{T}}^b)}{p_{\\mathrm{T}}^a + p_{\\mathrm{T}}^b}$$
+    - the log of invariant mass $$\\log m^2 = \\log{(p^{\\mu, a} + p^{\\mu, b})^2}$$
+
+    """
+
+    def __init__(self, variables=None, max_constituents=100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
+        super().__init__(variables, max_constituents, constituent_name)
+
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        const_m_const = sample[f'jets_{self.const_name}_m']
+        const_pt_const = sample[f'jets_{self.const_name}_pt']
+        const_eta_const = sample[f'jets_{self.const_name}_eta']
+        const_phi_const = sample[f'jets_{self.const_name}_phi']
+        const_e_const = sample[f'jets_{self.const_name}_e']
+        const_is_topo = tf.zeros_like(const_m_const)
+
+        topo_m_const = sample['jets_TopoTower_m']
+        topo_pt_const = sample['jets_TopoTower_pt']
+        topo_eta_const = sample['jets_TopoTower_eta']
+        topo_phi_const = sample['jets_TopoTower_phi']
+        topo_e_const = sample['jets_TopoTower_e']
+        topo_is_topo = tf.ones_like(topo_m_const)
+
+        m_const = tf.concat([const_m_const, topo_m_const], axis=0)
+        pt_const = tf.concat([const_pt_const, topo_pt_const], axis=0)
+        eta_const = tf.concat([const_eta_const, topo_eta_const], axis=0)
+        phi_const = tf.concat([const_phi_const, topo_phi_const], axis=0)
+        e_const = tf.concat([const_e_const, topo_e_const], axis=0)
+        is_topo = tf.concat([const_is_topo, topo_is_topo], axis=0)
+
+        sort_idxs = tf.argsort(pt_const, axis=0, direction='DESCENDING')
+
+        m_const = tf.gather(m_const, sort_idxs)
+        pt_const = tf.gather(pt_const, sort_idxs)
+        eta_const = tf.gather(eta_const, sort_idxs)
+        phi_const = tf.gather(phi_const, sort_idxs)
+        e_const = tf.gather(e_const, sort_idxs)
+        is_topo = tf.gather(is_topo, sort_idxs)
+
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
+            e_const = e_const[..., :self.max_constituents]
+            is_topo = is_topo[..., :self.max_constituents]
+
+        # m_jet = sample['jets_m']
+
+        E = e_const
+        pt = pt_const
+        eta = eta_const
+        phi = phi_const
+        m = m_const
+        _, px, py, pz = to_e_px_py_pz(m, pt, eta, phi)
+        delta = tf.math.sqrt(tf.math.square(eta[:, tf.newaxis] - eta[tf.newaxis, :]) +
+                             tf.math.square(phi[:, tf.newaxis] - phi[tf.newaxis, :]))
+        delta = tf.math.log(delta)
+        delta = tf.linalg.set_diag(delta, tf.zeros_like(m))
+
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        k_t = tf.math.log(k_t)
+        k_t = tf.linalg.set_diag(k_t, tf.zeros_like(m))
+
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / \
+            (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+        z = tf.linalg.set_diag(z, tf.zeros_like(m))
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+        m2 = tf.linalg.set_diag(m2, tf.zeros_like(m))
+        m2 = tf.math.log(m2)
+
+        delta = tf.where(tf.math.logical_or(tf.math.is_inf(
+            delta), tf.math.is_nan(delta)), tf.zeros_like(delta), delta)
+        k_t = tf.where(tf.math.logical_or(tf.math.is_inf(
+            k_t), tf.math.is_nan(k_t)), tf.zeros_like(k_t), k_t)
+        z = tf.where(tf.math.logical_or(tf.math.is_inf(
+            z), tf.math.is_nan(z)), tf.zeros_like(z), z)
+        m2 = tf.where(tf.math.logical_or(tf.math.is_inf(
+            m2), tf.math.is_nan(m2)), tf.zeros_like(m2), m2)
+        interaction_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+        e_jet = sample['jets_e']
+
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        logPT = tf.math.log(pt_const)
+
+        logE = tf.math.log(e_const)
+        logPT_PTjet = tf.math.log(pt_const / tf.math.reduce_mean(pt_jet))
+        logE_Ejet = tf.math.log(e_const / tf.math.reduce_mean(e_jet))
+        log_m = tf.math.log(m_const)
+
+        logE = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE), tf.math.is_nan(logE)), tf.zeros_like(logE), logE)
+        logPT_PTjet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT_PTjet), tf.math.is_nan(logPT_PTjet)), tf.zeros_like(logPT_PTjet), logPT_PTjet)
+        logE_Ejet = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logE_Ejet), tf.math.is_nan(logE_Ejet)), tf.zeros_like(logE_Ejet), logE_Ejet)
+        log_m = tf.where(tf.math.logical_or(tf.math.is_inf(
+            log_m), tf.math.is_nan(log_m)), tf.zeros_like(log_m), log_m)
+        logPT = tf.where(tf.math.logical_or(tf.math.is_inf(
+            logPT), tf.math.is_nan(logPT)), tf.zeros_like(logPT), logPT)
+
+        const_vars = {'log_pT': logPT, 'log_PT|PTjet': logPT_PTjet, 'log_E': logE, 'log_E|Ejet': logE_Ejet,
+                      'deltaEta': deltaEta, 'deltaPhi': deltaPhi, 'deltaR': deltaR, 'log_m': log_m, 'is_topo': is_topo}
+
+        return const_vars, interaction_vars
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, None, int]]:
+        """The input shape is a tuple of two tuples `(None, 8)` and `(None, None, 4)`, where the first tuple corresponds to the shape 
+        of the variables for each constituent and the second tuple corresponds to the shape of a variable for each pair of constituents,
+        i.e. a matrix for each jet."""
+        return (None, 9), (None, None, 4)
+
+
+class IRCSVariablesR22(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    """
+
+    def __init__(self, variables=None, max_constituents=100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
+        super().__init__(variables, max_constituents, constituent_name)
+
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        m_const = sample[f'jets_{self.const_name}_m']
+        pt_const = sample[f'jets_{self.const_name}_pt']
+        eta_const = sample[f'jets_{self.const_name}_eta']
+        phi_const = sample[f'jets_{self.const_name}_phi']
+        e_const = sample[f'jets_{self.const_name}_e']
+
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
+            e_const = e_const[..., :self.max_constituents]
+
+        # m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+        # e_jet = sample['jets_e']
+
+        # PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        # jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        PT_PTjet = pt_const / tf.math.reduce_mean(pt_jet)
+        # E_Ejet = PFO_E / tf.math.reduce_mean(jet_E)
+
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        angular = {'deltaEta': deltaEta,
+                   'deltaPhi': deltaPhi, 'deltaR': deltaR}
+        energy = {'PT|PTjet': PT_PTjet, }
+        return angular, energy
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, int]]:
+        """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent."""
+        return (None, 3), (None, 1)
+
+
+class IRCSVariablesR22Topo(TrainInput):
+    """Constructs the input variables characterizing the individual **jet constituents**, the PFO objects.
+    These variables are used to train `jidenn.models.PFN.PFNModel`, `jidenn.models.EFN.EFNModel`, 
+    `jidenn.models.Transformer.TransformerModel`, `jidenn.models.ParT.ParTModel`, `jidenn.models.DeParT.DeParTModel`.
+
+    ##Variables: 
+    - log of the constituent transverse momentum $$\\log(p_{\\mathrm{T}})$$
+    - log of the constituent energy $$\\log(E)$$
+    - mass of the constituent $$m$$
+    - log of the fraction of the constituent energy to the jet energy $$\\log(E_{\\mathrm{const}}/E_{\\mathrm{jet}})$$
+    - log of the fraction of the constituent transverse momentum to the jet transverse momentum $$\\log(p_{\\mathrm{T}}^{\\mathrm{const}}/p_{\\mathrm{T}}^{\\mathrm{jet}})$$
+    - difference in the constituent and jet pseudorapidity $$\\Delta \\eta = \\eta^{\\mathrm{const}} - \\eta^{\\mathrm{jet}}$$
+    - difference in the constituent and jet azimuthal angle $$\\Delta \\phi = \\phi^{\\mathrm{const}} - \\phi^{\\mathrm{jet}}$$
+    - angular distance between the constituent and jet $$\\Delta R = \\sqrt{(\\Delta \\eta)^2 + (\\Delta \\phi)^2}$$
+    """
+
+    def __init__(self, variables=None, max_constituents=100, constituent_name: Literal['PFO', 'Constituent'] = 'Constituent'):
+        super().__init__(variables, max_constituents, constituent_name)
+
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        const_m_const = sample[f'jets_{self.const_name}_m']
+        const_pt_const = sample[f'jets_{self.const_name}_pt']
+        const_eta_const = sample[f'jets_{self.const_name}_eta']
+        const_phi_const = sample[f'jets_{self.const_name}_phi']
+        const_e_const = sample[f'jets_{self.const_name}_e']
+        const_is_topo = tf.zeros_like(const_m_const)
+
+        topo_m_const = sample['jets_TopoTower_m']
+        topo_pt_const = sample['jets_TopoTower_pt']
+        topo_eta_const = sample['jets_TopoTower_eta']
+        topo_phi_const = sample['jets_TopoTower_phi']
+        topo_e_const = sample['jets_TopoTower_e']
+        topo_is_topo = tf.ones_like(topo_m_const)
+        
+        m_const = tf.concat([const_m_const, topo_m_const], axis=0)
+        pt_const = tf.concat([const_pt_const, topo_pt_const], axis=0)
+        eta_const = tf.concat([const_eta_const, topo_eta_const], axis=0)
+        phi_const = tf.concat([const_phi_const, topo_phi_const], axis=0)
+        e_const = tf.concat([const_e_const, topo_e_const], axis=0)
+        is_topo = tf.concat([const_is_topo, topo_is_topo], axis=0)
+
+        sort_idxs = tf.argsort(pt_const, axis=0, direction='DESCENDING')
+
+        m_const = tf.gather(m_const, sort_idxs)
+        pt_const = tf.gather(pt_const, sort_idxs)
+        eta_const = tf.gather(eta_const, sort_idxs)
+        phi_const = tf.gather(phi_const, sort_idxs)
+        e_const = tf.gather(e_const, sort_idxs)
+        is_topo = tf.gather(is_topo, sort_idxs)
+
+        if self.max_constituents is not None:
+            m_const = m_const[..., :self.max_constituents]
+            pt_const = pt_const[..., :self.max_constituents]
+            eta_const = eta_const[..., :self.max_constituents]
+            phi_const = phi_const[..., :self.max_constituents]
+            e_const = e_const[..., :self.max_constituents]
+            is_topo = is_topo[..., :self.max_constituents]
+
+        # m_jet = sample['jets_m']
+        pt_jet = sample['jets_pt']
+        eta_jet = sample['jets_eta']
+        phi_jet = sample['jets_phi']
+        # e_jet = sample['jets_e']
+
+        # PFO_E = tf.math.sqrt(pt_const**2 + m_const**2)
+        # jet_E = tf.math.sqrt(pt_jet**2 + m_jet**2)
+        deltaEta = eta_const - tf.math.reduce_mean(eta_jet)
+        deltaPhi = phi_const - tf.math.reduce_mean(phi_jet)
+        deltaR = tf.math.sqrt(deltaEta**2 + deltaPhi**2)
+
+        PT_PTjet = pt_const / tf.math.reduce_mean(pt_jet)
+        # E_Ejet = PFO_E / tf.math.reduce_mean(jet_E)
+
+        # data = [logPT, logPT_PTjet, logE, logE_Ejet, m, deltaEta, deltaPhi, deltaR]
+        angular = {'deltaEta': deltaEta,
+                   'deltaPhi': deltaPhi, 'deltaR': deltaR, 'is_topo': is_topo}
+        energy = {'PT|PTjet': PT_PTjet, }
+        return angular, energy
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[None, int], Tuple[None, int]]:
+        """The input shape is `(None, 8)`, where `None` indicates that the number of constituents is not fixed, 
+        and `8` is the number of variables per constituent."""
+        return (None, 4), (None, 1)
+
+
 def input_classes_lookup(class_name: Literal['highlevel',
                                              'highlevel_constituents',
                                              'constituents',
@@ -1188,15 +1817,22 @@ def input_classes_lookup(class_name: Literal['highlevel',
     lookup_dict = {'full_highlevel': FullHighLevelJetVariables,
                    'crafted_highlevel': CraftedHighLevelJetVariables,
                    'highlevel': HighLevelJetVariables,
+                   'highlevel_r22': HighLevelJetVariablesR22,
                    'constituents': ConstituentVariables,
+                   'constituents_r22': ConstituentVariablesR22,
+                   'constituents_r22_topo': ConstituentVariablesR22Topo,
                    'constituents_no_m': ConstituentVariablesNoM,
                    'irelative_constituents': InteractingRelativeConstituentVariables,
                    'interaction_constituents': InteractionConstituentVariables,
+                   'interaction_constituents_r22': InteractionConstituentVariablesR22,
+                   'interaction_constituents_r22_topo': InteractionConstituentVariablesR22Topo,
                    'interaction_constituents_no_m': InteractionConstituentVariablesNoM,
                    'ircs_constituents': IRCSConstituentVariables,
                    'i_c': InteractionConstituentVariables,
                    'l_i_interaction_constituents': LIInteractionConstituentVariables,
                    'irc_safe': IRCSVariables,
+                   'irc_safe_r22': IRCSVariablesR22,
+                   'irc_safe_r22_topo': IRCSVariablesR22Topo,
                    'irc': IRCVariables,
                    'gnn': GNNVariables,
                    'gnn_no_m': GNNVariablesNoM,

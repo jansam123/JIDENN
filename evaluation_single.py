@@ -172,6 +172,7 @@ def main(args: eval_config.SingleEvalConfig) -> None:
     # nicely print metrics
     log.info(f'Metrics for model {args.model_name}:')
     log.info(metrics)
+    metrics.to_csv(os.path.join(args.logdir, 'overall_metrics.csv'))
 
     def validation_plotter(x: pd.DataFrame):
         bin_center_name = x['bin'].apply(lambda x: x.mid * 1e-6).iloc[0]
@@ -202,7 +203,6 @@ def main(args: eval_config.SingleEvalConfig) -> None:
 
     model_df.to_csv(
         f'{args.logdir}/binned_metrics.csv')
-
 
     if args.working_point_path is None:
         [WorkingPoint(binning=args.binning, thresholds=model_df[col].values).save(os.path.join(

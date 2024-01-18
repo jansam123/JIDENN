@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class AugmentationBase:
     prob: float
     name: str
+    const_name: str
 
 
 @dataclass

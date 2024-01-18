@@ -15,4 +15,3 @@ pdoc3==0.10.0
 atlas-ftag-tools==0.1.5
 puma-hep==0.2.6
 atlasify==0.8.0
-ray==2.8.1

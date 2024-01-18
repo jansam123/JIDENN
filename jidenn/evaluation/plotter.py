@@ -340,7 +340,8 @@ def plot_data_distributions(df: pd.DataFrame,
     df[color_column] = df[hue_variable].apply(
         lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
     df[weight_column] = df[weight_variable] if weight_variable is not None else 1
-    hue_order = ['quark', 'gluon']  # set(named_labels.values()) if named_labels is not None else None
+    # set(named_labels.values()) if named_labels is not None else None
+    hue_order = ['quark', 'gluon']
     var_names = list(df.columns) if variables is None else variables
     var_names.remove(color_column) if color_column in var_names else None
     var_names.remove(weight_column) if weight_column in var_names else None
@@ -386,13 +387,19 @@ def plot_data_distributions(df: pd.DataFrame,
         elif var_name == 'k_t':
             plt.xlim(0, 14)
 
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
-        plt.savefig(os.path.join(folder, 'jpg', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
-        plt.savefig(os.path.join(folder, 'pdf', f'{var_name}.pdf'), bbox_inches='tight')
+        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" +
+                          r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
+        plt.savefig(os.path.join(folder, 'jpg',
+                    f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
+        plt.savefig(os.path.join(folder, 'pdf',
+                    f'{var_name}.pdf'), bbox_inches='tight')
         plt.yscale('log')
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" + r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
-        plt.savefig(os.path.join(folder, 'jpg_log', f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
-        plt.savefig(os.path.join(folder, 'pdf_log', f'{var_name}.pdf'), bbox_inches='tight')
+        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" +
+                          r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
+        plt.savefig(os.path.join(folder, 'jpg_log',
+                    f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
+        plt.savefig(os.path.join(folder, 'pdf_log',
+                    f'{var_name}.pdf'), bbox_inches='tight')
 
         plt.close()
 
@@ -417,7 +424,8 @@ def plot_single_dist(df: pd.DataFrame,
                      save_path: str = 'figs.png') -> None:
 
     if log_bins and isinstance(bins, int) and xlim is not None:
-        binning = np.logspace(np.log(xlim[0]), np.log(xlim[1]), bins + 1, base=np.e)
+        binning = np.logspace(np.log(xlim[0]), np.log(
+            xlim[1]), bins + 1, base=np.e)
     elif isinstance(bins, int) and xlim:
         binning = np.linspace(xlim[0], xlim[1], bins + 1)
     elif isinstance(bins, int) and not xlim:
@@ -425,7 +433,8 @@ def plot_single_dist(df: pd.DataFrame,
     else:
         binning = 'auto'
 
-    palette = sns.color_palette("hls", 12) if hue_var == 'JZ_slice' else palette
+    palette = sns.color_palette(
+        "hls", 12) if hue_var == 'JZ_slice' else palette
     element = "bars" if hue_var == 'JZ_slice' else "step"
     # common_norm = True if hue_var == 'JZ_slice' else False
     common_norm = True
@@ -469,6 +478,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                         xlabel: Optional[str] = None,
                         ylabel_mapper: Optional[Dict[str, str]] = None,
                         ylims: Optional[List[Tuple[float, float]]] = None,
+                        xlims: Optional[Tuple[float, float]] = None,
                         xlog: bool = False,
                         figsize: Tuple[float, float] = (10, 8),
                         leg_loc='lower right',
@@ -524,6 +534,8 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             logx=xlog,
             ymin=ylims[i][0] if ylims is not None and ylims[i] is not None else None,
             ymax=ylims[i][1] if ylims is not None and ylims[i] is not None else None,
+            xmin=xlims[0] if xlims is not None and xlims[0] is not None else None,
+            xmax=xlims[1] if xlims is not None and xlims[1] is not None else None,
             n_ratio_panels=1 if ratio_reference_label is not None else 0,
             figsize=figsize[i] if isinstance(figsize, list) else figsize,
             atlas_second_tag=second_tag,
@@ -535,7 +547,8 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             atlas_fontsize=atlas_fontsize,
             leg_ncol=leg_ncol,
         )
-        markers = ['o', 's', 'v', 'D', 'P', 'X', 'd', 'p', 'h', '8', '>', '<', '^', '*', '+', '8']
+        markers = ['o', 's', 'v', 'D', 'P', 'X', 'd',
+                   'p', 'h', '8', '>', '<', '^', '*', '+', '8']
         for j, (df, label) in enumerate(zip(dfs, labels)):
             x_var = df[bin_midpoint_name].to_numpy()
             x_width = df[bin_width_name].to_numpy()
@@ -543,11 +556,13 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
 
             if n_counts is not None:
                 plot_y_std = True
-                counts = df[n_counts[i]].to_numpy() if isinstance(n_counts, list) else df[n_counts].to_numpy()
+                counts = df[n_counts[i]].to_numpy() if isinstance(
+                    n_counts, list) else df[n_counts].to_numpy()
                 if 'eff' in metric_name:
                     y_var_std = np.sqrt(y_var_mean * (1 - y_var_mean) / counts)
                 elif 'rej' in metric_name:
-                    y_var_std = np.sqrt(1 / y_var_mean * (1 - 1 / y_var_mean) / counts) * y_var_mean**2
+                    y_var_std = np.sqrt(
+                        1 / y_var_mean * (1 - 1 / y_var_mean) / counts) * y_var_mean**2
                 else:
                     plot_y_std = False
                     y_var_std = np.zeros_like(y_var_mean)
@@ -562,21 +577,24 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                     y_var_mean=y_var_mean,
                     y_var_std=y_var_std,
                     plot_y_std=plot_y_std,
-                    marker=markers[j%len(markers)],
+                    marker=markers[j % len(markers)],
                     markersize=markersize,
                     markeredgewidth=40,
                     linewidth=linewidth,
                     is_marker=True,
                     label=label,
-                    colour=colours[labels.index(label)%len(colours)] if colours is not None else None,
+                    colour=colours[labels.index(label) % len(
+                        colours)] if colours is not None else None,
                     # linestyle='-',
                 ),
                 reference=True if ratio_reference_label is not None and label == ratio_reference_label else False,
             )
 
-        plot.draw_hline(h_line_position[i]) if h_line_position is not None and h_line_position[i] is not None else None
+        plot.draw_hline(
+            h_line_position[i]) if h_line_position is not None and h_line_position[i] is not None else None
         plot.draw()
         os.makedirs(os.path.join(save_path, 'png'), exist_ok=True)
         os.makedirs(os.path.join(save_path, 'pdf'), exist_ok=True)
-        plot.savefig(os.path.join(save_path, 'png', f'{metric_name}.png'), dpi=400)
+        plot.savefig(os.path.join(save_path, 'png',
+                     f'{metric_name}.png'), dpi=400)
         plot.savefig(os.path.join(save_path, 'pdf', f'{metric_name}.pdf'))

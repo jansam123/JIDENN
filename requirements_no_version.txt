@@ -16,4 +16,3 @@ atlas-ftag-tools
 puma-hep 
 atlasify 
 pytest
-ray

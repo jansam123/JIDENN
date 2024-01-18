@@ -2,51 +2,72 @@
 Guark/gluon jet tagging with Transformers
 
 - [Documentation](http://jansam.wieno.sk/JIDENN)
-- [Bachelor Thesis](https://github.com/jansam123/bachelor_thesis)
+- [Bachelor Thesis](http://hdl.handle.net/20.500.11956/182597)
+- [ATLAS PUB Note](https://cds.cern.ch/record/2878932)
 
 <p align="center">
 <img src="images/q_g_tagging.jpeg" width="450">
 </p>
 
 ## Introduction 
-This project provides a framework for the development of deep neural networks for jet identification. 
-Jet identification is the task of classifying jets as originating from either quarks or gluons.
+This project provides a **TensorFlow** framework for the development of deep neural networks for quark gluon jet taggers. 
+Quark gluon jet tagging is the task of classifying jets as originating from either quarks or gluons.
 
 There are two main approaches to jet identification:
 - utilizing high-level features of jets
 - utilizing the full jet constituents
   
-Both can be tackled with deep neural networks.
+Both can be tackled with this framework.
+
+**Following architectures are implemented in `jidenn/models` directory (see the [architecture section](#architecture) for more details):**
+- Dynamically Enhanced Particle Transformer (DeParT)
+- Particle Transformer (ParT)
+- Vanilla Transformer
+- ParticleNet
+- Particle Flow Network (PFN)
+- Energy Flow Network (EFN)
+- Fully Connected Network (FC)
+- Highway Network
 
 ## Usage
 First, clone the repository and install the requirements:
 ``` bash
 git clone https://github.com/jansam123/JIDENN
 cd JIDENN
-pip install -r requirements.txt
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt # or requirements_no_version.txt
 ```
 
-If your data comes in the form of ROOT files, you need to convert them to `tf.data.Dataset` objects with the `convert_root.py` script:
+If your data comes in the form of ROOT files, you need to convert them to `tf.data.Dataset` objects with the `scripts/convert_root.py` script:
 ``` bash
-python convert_root.py --save_path /path/to/individual/dataset --file_path /path/to/data.root 
+python convert_root.py --save_path /path/to/individual/dataset --load_path /path/to/data.root 
 ```
 Do this for all your data files.
-Afterward, the data must be preprocessed with the `event_flattening.py` script, which performs cuts, flattens the events to individual jets, and combines the data from different files into one dataset:
-``` bash
-python event_flattening.py --save_path /path/to/save/big_dataset --file_path /path/to/individual/dataset --num_shards 128
-```
-With the `--num_shards` argument, you can specify the number of shards to split the `tf.data.Dataset` into. This is useful for large datasets, as it allows for parallel processing.
+There are more advanced scripts, that allow for parallel processing, namely `scripts/convert_root_batched.py` processes only a subset of events, and `scripts/combine_ds_from_single_root_file.py` combines the data from a single file into one dataset.
+These datasets can be further combined with a `scripts/combine_files.py` script.
 
-Afterward, you need to configure the training inside the `jidenn/config/config.yaml` folder. The configuration is done using the Hydra framework (https://hydra.cc/). See the documentation for more details. 
+Afterward, the data must be preprocessed to have a given feature with a flat spectrum. This is done with the `scripts/flatten_spectrum.py` script. 
+The script also flattens the events to individual jets.
+
+For creating a dataset with a physical spectrum (e.g. for testing) use `scripts/create_phys_spec.py`.
+This script also flattens the events to individual jets.
+
 
 Finally, you can start the training with the `jidenn/train.py` script, which loads the configuration automatically:
 ``` bash
 python train.py
 ```
+Configuration is done with the `jidenn/yaml_config/config.yaml` file.
 
-The evaluation is configured with the `jidenn/config/eval_config.yaml` file and can be started with the `jidenn/eval.py` script:
+The evaluation is configured with the `jidenn/yaml_config/eval_config.yaml` file and can be started with the `evaluation.py` script:
 ``` bash
-python eval.py
+python evaluation.py
+```
+This script can evaluate multiple models at once.
+If you want to evaluate only one model, you can use the `evaluation_single.py` configured with the `jidenn/yaml_config/single_eval_config.yaml` file:
+``` bash
+python evaluation_single.py
 ```
 
 Hydra also allows for changing the configuration from the command line. For example, you can change the number of epochs with:
@@ -55,21 +76,10 @@ python train.py dataset.epochs=10
 ```
 
 For more usage information see the [documentation.](http://jansam.wieno.sk/JIDENN)
+**Some of the scripts are not yet documented, or the documentation is not up to date as the project is still under fast development.**
 
 
-## Data Format
-The data is mainly stored in the ROOT files. In the `jidenn/data` folder is a submodule that converts the ROOT files to saved `tf.data.Dataset` objects. This provides a fast, easy, and flexible way to load the data and create the train inputs for the neural networks. 
-
-The data preprocessing consists of two steps:
-- **Offline preprocessing**: The data is converted to `tf.data.Dataset` objects and saved to disk. This is done with the `jidenn/data/ROOTDataset` submodule scripts `convert_root.py` and `event_flattening.py`. The first script purely converts the ROOT files to `tf.data.Dataset` objects. The second script performs cuts and flattens the events to individual jets, as seen in figure below.
-
-![data_off](images/data_prep_off.jpg)
-
-- **Online preprocessing**: As the data comes from different JZ slices, there are specific cuts on each of them separately, as seen in the diagram below. Afterward, the datasets are individually resampled, such that the amount of quarks and gluons is the same in each slice. The datasets are interleaved with equal probabilty and train input variables are created (`jidenn/data/TrainInput`). In the end, the variables are normalized.
-
-![data_on](images/data_prep_on.jpg)
-
-## Architecture
+## Architectures
 In the following sections, we briefly introduce the implemented architecture.
 ### Dynamically Enhanced Particle Transformer (DeParT)
 Dynamically Enhanced Particle Transformer is an extension of ParT (explained below). It uses several minor improvements based on the DeiT III paper (https://arxiv.org/abs/2204.07118), from which the Talking Multi-heads Attention is the most important. The architecture is shown in the figures below.
@@ -128,6 +138,8 @@ Particle Transformer (https://arxiv.org/abs/2202.03772) is an extension of Trans
 <img src="images/part_layers_2.jpg" width="500">
 </p>
 
+### ParticleNet
+ParticleNet (https://arxiv.org/abs/1902.08570) is a Graph Neural Network, which uses constituents as inputs. It uses several EdgeConv layers (https://arxiv.org/abs/1801.07829) to aggregate the information from the neighbors. The neighbors are defined by the k-nearest neighbors algorithm. 
 
 
 

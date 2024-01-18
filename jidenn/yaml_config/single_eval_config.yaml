@@ -34,7 +34,7 @@ seed: 42
 draw_distribution: 20_000
 test_subfolder: 
 batch_size: 512
-take: 1_000_000
+take: 10_000_000
 binning:
   variable: 'jets_pt'
   bins: [200000, 300000, 400000, 600000, 850000, 1100000, 1400000, 1750000, 2500000] 
