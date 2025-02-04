@@ -24,6 +24,8 @@ parser.add_argument("--num_shards", type=int, default=256, required=False,
                     help="Number of shards to save the dataset in")
 parser.add_argument("--weight_sum", type=float, default=None, required=False,
                     help="Number of shards to save the dataset in")
+parser.add_argument("--bins", type=int, default=100, nargs='+',
+                    help="Number of bins to use for the binning")
 
 
 def renorm_weight(weight_var, norm):
@@ -53,11 +55,11 @@ def main(args: argparse.Namespace) -> None:
     print(f'New norm: {new_norm.numpy():,}')
     print(f"Number of jets: {size}")
     dataset.plot_single_variable('jets_pt',
-                                 weight_variable='weight_spectrum',
+                                 weight_variable=args.weight_var,
                                  save_path=os.path.join(args.save_path, 'pt_new_W.png'),
                                  badge_text='$N_{\mathrm{jets}}$ = ' +
                                  f'{size:,} \n' + f'$\sum w$ = {new_norm.numpy():,}',
-                                 bins=100,
+                                 bins=args.bins,
                                  multiple='layer',
                                  hue_variable='jets_PartonTruthLabelID')
 

@@ -35,11 +35,12 @@ class ValidationFigure:
 
     """
 
-    def __init__(self, df: pd.DataFrame, name: str = 'fig', class_names: Union[List[str], None] = None):
+    def __init__(self, df: pd.DataFrame, name: str = 'fig', class_names: Union[List[str], None] = None, subplot_label: Union[str, None] = None):
         self._df = df
         self._name = name
         self._class_names = class_names
         self._data = None
+        self._subplot_label = subplot_label
         self._fig = self.get_fig()
 
     @property
@@ -59,7 +60,7 @@ class ValidationFigure:
     def save_fig(self, path: str, format: str = 'png'):
         """Saves the figure to the specified path."""
         self._fig.savefig(os.path.join(path, self._name +
-                          f".{format}"), dpi=300, bbox_inches='tight')
+                          f".{format}"), dpi=400, bbox_inches='tight')
 
     def save_data(self, path: str):
         """Saves the data to the specified path as a csv file."""
@@ -116,10 +117,10 @@ class ValidationROC(ValidationFigure):
                  linestyle='-.', label='Ideal', alpha=0.5)
         plt.xlabel('False positives [%]')
         plt.ylabel('True positives [%]')
-        plt.grid(True)
         plt.legend()
         ax = plt.gca()
         ax.set_aspect('equal')
+        atlasify.atlasify(atlas="Simulation Internal", subtext=self._subplot_label)
         return fig
 
 
@@ -142,6 +143,7 @@ class ValidationCM(ValidationFigure):
         plt.title("Confusion matrix")
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
+        atlasify.atlasify(atlas="Simulation Internal", subtext=self._subplot_label, outside=True)
         return fig
 
 
@@ -152,15 +154,25 @@ class ValidationScoreHistogram(ValidationFigure):
         weights = self._df['weight'].values if 'weight' in self._df.columns else None
 
         if fig is None:
-            fig = plt.figure(figsize=(8, 8))
+            fig = plt.figure()
         self._data = self._df[['score', 'Truth Label']]
         ax = sns.histplot(data=self._df, x='score', hue='Truth Label',
-                          palette='Set1', stat='count' if weights is None else 'density',
-                          element="step", fill=True, bins=100,
+                          palette='Set1', stat='probability',
+                          element="step", fill=False, bins=50, common_norm=False,
                           hue_order=self._class_names, weights=weights)
-        sns.move_legend(ax, 'upper center')
-        plt.xlabel('Score')
+        lss = ['-', '-']
+        # handles = ax.legend_.legendHandles[::-1]
+        # for line, ls, handle in zip(ax.lines, lss, handles):
+        #     line.set_linestyle(ls)
+        #     handle.set_ls(ls)
+        # ax.legend_.set_title(None)
+        plt.xlabel('Score',
+                   horizontalalignment='right', x=1.0)
+        plt.xlim(0, 1)
+        plt.ylabel(r"a.u.", horizontalalignment='right', y=1.0)
+        atlasify.atlasify(atlas="Simulation Internal", subtext=self._subplot_label)
         return fig
+    
 
 
 class ValidationLabelHistogram(ValidationFigure):
@@ -178,6 +190,7 @@ class ValidationLabelHistogram(ValidationFigure):
                      multiple='stack', hue_order=self._class_names,
                      palette='Set1', weights=weights)
         plt.xlabel('Predicted Tag')
+        atlasify.atlasify(atlas="Simulation Internal", subtext=self._subplot_label, outside=True)
         return fig
 
 
@@ -186,6 +199,7 @@ def plot_validation_figs(df: pd.DataFrame,
                          formats: List[str] = ['jpg', 'pdf'],
                          class_names: Optional[List[str]] = None,
                          log: Optional[Logger] = None,
+                         subtext: Union[str, None] = None,
                          score_name: str = 'score'):
     """Plots the validation figures and saves them to disk.
     Args:
@@ -199,11 +213,13 @@ def plot_validation_figs(df: pd.DataFrame,
     if score_name != 'score':
         df = df.rename(columns={score_name: 'score'})
 
-    df['prediction'] = df['score'].apply(lambda x: 1 if x > 0.5 else 0)
-    df['Truth Label'] = df['label'].apply(
-        lambda x: class_names[x]) if class_names is not None else df['label'].apply(str)
-    df['named_prediction'] = df['prediction'].apply(
-        lambda x: class_names[x]) if class_names is not None else df['prediction'].apply(str)
+    df['prediction'] = (df['score'] > 0.5).astype(int)
+    if class_names is not None:
+        df['Truth Label'] = df['label'].map(dict(enumerate(class_names)))
+        df['named_prediction'] = df['prediction'].map(dict(enumerate(class_names)))
+    else:
+        df['Truth Label'] = df['label'].astype(str)
+        df['named_prediction'] = df['prediction'].astype(str)
 
     base_path = os.path.join(logdir, "figs")
     tb_base_path = os.path.join(logdir, "plots")
@@ -223,7 +239,7 @@ def plot_validation_figs(df: pd.DataFrame,
     for validation_fig, name in zip(figure_classes, figure_names):
         try:
             log.info(f"Generating figure {name}") if log else None
-            val_fig = validation_fig(df, name, class_names=class_names)
+            val_fig = validation_fig(df, name, class_names=class_names, subplot_label=subtext)
             for fmt, path in zip(formats, format_path):
                 val_fig.save_fig(path, fmt)
             val_fig.save_data(csv_path)
@@ -277,7 +293,8 @@ def plot_train_history(data: List[float], logdir: str, name: str, epochs: int):
     g.set_xticks(range(epochs))
     g.set_xticklabels(range(1, epochs + 1))
     plt.grid(True)
-    fig.savefig(f'{logdir}/{name}.png')
+    atlasify.atlasify(atlas="Simulation Internal")
+    fig.savefig(f'{logdir}/{name}.png', dpi=400)
     plt.close()
 
 
@@ -359,7 +376,7 @@ def plot_data_distributions(df: pd.DataFrame,
 
         if dtype == 'object':
             small_df = explode_nested_variables(small_df, var_name)
-            small_df = small_df.loc[small_df[var_name] != 0]
+            # small_df = small_df.loc[small_df[var_name] != 0]
         try:
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
                               stat='probability', element="step", fill=False, weights=weight_column,
@@ -368,34 +385,27 @@ def plot_data_distributions(df: pd.DataFrame,
             ax = sns.histplot(data=small_df, x=var_name, hue=color_column,
                               stat='probability', element="step", fill=False, weights=weight_column,
                               palette='Set1', common_norm=False, hue_order=hue_order, bins=100)
-        lss = ['-', '--']
-        handles = ax.legend_.legendHandles[::-1]
-        for line, ls, handle in zip(ax.lines, lss, handles):
-            line.set_linestyle(ls)
-            handle.set_ls(ls)
-        ax.legend_.set_title(None)
+        # lss = ['-', '--']
+        # handles = ax.legend_.legendHandles[::-1]
+        # for line, ls, handle in zip(ax.lines, lss, handles):
+        #     line.set_linestyle(ls)
+        #     handle.set_ls(ls)
+        # ax.legend_.set_title(None)
+        sns.move_legend(ax, "upper right")
+        ax.get_legend().set_title("")
         plt.xlabel(xlabel_mapper[var_name] if xlabel_mapper is not None and var_name in xlabel_mapper else var_name,
                    horizontalalignment='right', x=1.0)
         plt.ylabel(r"a.u.", horizontalalignment='right', y=1.0)
+        # plt.legend(loc='upper right')
 
-        if var_name == 'z':
-            plt.xlim(0, 0.5)
-        elif var_name == 'delta':
-            plt.xlim(-7, 0)
-        elif var_name == 'm2':
-            plt.xlim(0, 25)
-        elif var_name == 'k_t':
-            plt.xlim(0, 14)
 
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" +
-                          r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
+        atlasify.atlasify(atlas="Simulation Internal", font_size=13)
         plt.savefig(os.path.join(folder, 'jpg',
                     f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf',
                     f'{var_name}.pdf'), bbox_inches='tight')
         plt.yscale('log')
-        atlasify.atlasify(atlas="Simulation Internal", subtext="13 TeV, Pythia8\n" +
-                          r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets", font_size=13)
+        atlasify.atlasify(atlas="Simulation Internal", font_size=13)
         plt.savefig(os.path.join(folder, 'jpg_log',
                     f'{var_name}.jpg'), dpi=400, bbox_inches='tight')
         plt.savefig(os.path.join(folder, 'pdf_log',
@@ -421,7 +431,8 @@ def plot_single_dist(df: pd.DataFrame,
                      stat: str = 'count',
                      multiple: str = 'layer',
                      palette: str = 'Set1',
-                     save_path: str = 'figs.png') -> None:
+                     save_path: str = 'figs.png',
+                     common_norm: bool = True,) -> None:
 
     if log_bins and isinstance(bins, int) and xlim is not None:
         binning = np.logspace(np.log(xlim[0]), np.log(
@@ -437,7 +448,6 @@ def plot_single_dist(df: pd.DataFrame,
         "hls", 12) if hue_var == 'JZ_slice' else palette
     element = "bars" if hue_var == 'JZ_slice' else "step"
     # common_norm = True if hue_var == 'JZ_slice' else False
-    common_norm = True
     try:
         ax = sns.histplot(data=df, x=variable, hue=hue_var, weights=weight_var,
                           stat=stat, element=element, fill=True, multiple=multiple,
@@ -447,8 +457,8 @@ def plot_single_dist(df: pd.DataFrame,
                           stat=stat, element=element, fill=True, multiple=multiple,
                           palette=palette, common_norm=common_norm, hue_order=hue_order, bins=list(binning))
 
-    if ax.legend_ is not None:
-        ax.legend_.set_title(None)
+    
+        
 
     plt.ylim(ylim) if ylim is not None else None
     plt.savefig(save_path)
@@ -546,6 +556,7 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
             leg_fontsize=leg_fontsize,
             atlas_fontsize=atlas_fontsize,
             leg_ncol=leg_ncol,
+            # leg_columnspacing=0.5,
         )
         markers = ['o', 's', 'v', 'D', 'P', 'X', 'd',
                    'p', 'h', '8', '>', '<', '^', '*', '+', '8']
@@ -563,15 +574,16 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                 elif 'rej' in metric_name:
                     y_var_std = np.sqrt(
                         1 / y_var_mean * (1 - 1 / y_var_mean) / counts) * y_var_mean**2
+                elif 'acc' in metric_name:
+                    y_var_std = np.sqrt(
+                        y_var_mean * (1 - y_var_mean) / counts)
                 else:
                     plot_y_std = False
                     y_var_std = np.zeros_like(y_var_mean)
             else:
                 plot_y_std = False
                 y_var_std = np.zeros_like(y_var_mean)
-
-            plot.add(
-                puma.VarVsVar(
+            plot_object = puma.VarVsVar(
                     x_var=x_var,
                     x_var_widths=x_width,
                     y_var_mean=y_var_mean,
@@ -586,9 +598,8 @@ def plot_var_dependence(dfs: List[pd.DataFrame],
                     colour=colours[labels.index(label) % len(
                         colours)] if colours is not None else None,
                     # linestyle='-',
-                ),
-                reference=True if ratio_reference_label is not None and label == ratio_reference_label else False,
-            )
+                )
+            plot.add(plot_object, reference=True if ratio_reference_label is not None and label == ratio_reference_label else False,)
 
         plot.draw_hline(
             h_line_position[i]) if h_line_position is not None and h_line_position[i] is not None else None

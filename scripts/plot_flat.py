@@ -23,12 +23,12 @@ def sns_label_plotting(df, save_path, bins=None):
         False, True), bins=bins, common_norm=False, stat="count", palette='Set1', element="step", fill=False, hue_order=['quark', 'gluon'])
 
     lss = ['-', '--']
-    handles = ax.legend_.legendHandles[::-1]
-    for line, ls, handle in zip(ax.lines, lss, handles):
-        line.set_linestyle(ls)
-        handle.set_ls(ls)
+    # handles = ax.legend_.legendHandles[::-1]
+    # for line, ls, handle in zip(ax.lines, lss, handles):
+    #     line.set_linestyle(ls)
+    #     handle.set_ls(ls)
 
-    ax.legend_.set_title(None)
+    # ax.legend_.set_title(None)
     plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
     plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(1e3, 1e6)
@@ -57,11 +57,11 @@ def sns_label_plotting_noW(df, save_path, bins=None):
     ax = sns.histplot(data=df, x=pt_name, hue=label_name, multiple="layer", log_scale=(
         False, True), bins=bins, common_norm=False, stat="count", palette='Set1', element="step", fill=False, hue_order=['quark', 'gluon'])
     lss = ['-', '--']
-    handles = ax.legend_.legendHandles[::-1]
-    for line, ls, handle in zip(ax.lines, lss, handles):
-        line.set_linestyle(ls)
-        handle.set_ls(ls)
-    ax.legend_.set_title(None)
+    # handles = ax.legend_.legendHandles[::-1]
+    # for line, ls, handle in zip(ax.lines, lss, handles):
+    #     line.set_linestyle(ls)
+    #     handle.set_ls(ls)
+    # ax.legend_.set_title(None)
     plt.xlabel(pt_name, horizontalalignment='right', x=1.0)
     plt.ylabel(r"Counts", horizontalalignment='right', y=1.0)
     plt.ylim(1e3, 1e6)

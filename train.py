@@ -7,6 +7,8 @@ import hydra
 import copy
 from functools import partial
 from hydra.core.config_store import ConfigStore
+import tf2onnx
+import onnx
 #
 from jidenn.config import config
 import jidenn.data.data_info as data_info
@@ -18,6 +20,13 @@ from jidenn.model_builders.normalization_initialization import get_normalization
 from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.model_builders.multi_gpu_strategies import choose_strategy
 from jidenn.data.augmentations import construct_augmentation
+from jidenn.const import METRIC_NAMING_SCHEMA
+from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
+
+# TF_GPU_ALLOCATOR=cuda_malloc_async
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+
+CUSTOM_OBJECTS = {'LinearWarmup': LinearWarmup,}
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
@@ -73,9 +82,13 @@ def main(args: config.JIDENNConfig) -> None:
 
     # pick input variables according to model
     # if you want to choose your own input, implement a subclass of `TrainInput` in  `jidenn.data.TrainInput` and put it into the dict in the function `input_classes_lookup`
+    stripped_model_name = ''.join([i for i in args.general.model if not i.isdigit()])
+    log.info(f"Using input type: {getattr(args.models, stripped_model_name).train_input}")
     train_input_class = input_classes_lookup(
-        getattr(args.models, args.general.model).train_input)
-    train_input_class = train_input_class()
+        getattr(args.models, stripped_model_name).train_input)
+    max_constituents = int(args.data.max_constituents)
+    log.info(f"Using max constituents: {max_constituents}")
+    train_input_class = train_input_class(max_constituents=max_constituents)
     model_input_creator = tf.function(func=train_input_class)
     input_shape = train_input_class.input_shape
 
@@ -108,7 +121,7 @@ def main(args: config.JIDENNConfig) -> None:
             args.general.logdir, args.general.backup))) > 0
     except FileNotFoundError:
         restoring_from_backup = False
-
+        
     # draw input data distribution
     if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0 and not restoring_from_backup:
         log.info(
@@ -116,9 +129,9 @@ def main(args: config.JIDENNConfig) -> None:
         dir = os.path.join(args.general.logdir, 'dist')
         os.makedirs(dir, exist_ok=True)
         named_labels = {0: args.data.labels[0], 1: args.data.labels[1]}
-        train.take(args.preprocess.draw_distribution).plot_data_distributions(hue_variable='label',
+        train.take(args.preprocess.draw_distribution).plot_data_distributions(hue_variable='label', fillna=-999,
                                                                               folder=dir, named_labels=named_labels)
-
+        
     # get proper dataset size based on the config
     if args.dataset.take is not None:
         train_size = 1 - args.dataset.dev_size
@@ -185,10 +198,15 @@ def main(args: config.JIDENNConfig) -> None:
         return model
 
     # build the model
-    model = build_model()
 
+    model = build_model()
+    
     if args.general.load_checkpoint_path is not None:
-        model.load_weights(args.general.load_checkpoint_path)
+        log.info(f'Loading weights from {args.general.load_checkpoint_path}')
+        saved_model = tf.keras.models.load_model(args.general.load_checkpoint_path, custom_objects=CUSTOM_OBJECTS)
+        # model.load_weights(args.general.load_checkpoint_path)
+        model.set_weights(saved_model.get_weights())
+        log.info(f'Done loading weights')
 
     # get callbacks based on the input
 
@@ -207,6 +225,8 @@ def main(args: config.JIDENNConfig) -> None:
         dev = dev.cache(f'{args.general.logdir}/cache/dev')
         test = test.cache(
             f'{args.general.logdir}/cache/test') if test is not None else None
+    else:
+        log.warning("No dataset caching specified")
 
     callbacks = get_callbacks(base_logdir=args.general.logdir,
                               epochs=args.dataset.epochs,
@@ -214,17 +234,27 @@ def main(args: config.JIDENNConfig) -> None:
                               backup=args.general.backup,
                               backup_freq=args.general.backup_freq,
                               checkpoint=os.path.join(
-                                  args.general.logdir, 'checkpoint'),
+                                  args.general.logdir, 'checkpoint', '{epoch}'),
                               additional_val_dataset=test,
                               additional_val_name='test')
+    
     # running training
     train = train.apply(tf.data.experimental.assert_cardinality(
         args.dataset.steps_per_epoch)) if args.dataset.steps_per_epoch is not None else train
+    
+    
+    # for i, dat in enumerate(train.take(10)):
+    #     print(f'Index: {i}')
+    #     print(dat[0][0].to_tensor().shape)
+    #     print(dat[0][1].to_tensor().shape)
+    #     print(dat[1].shape)
+    #     print('')
+    
     history = model.fit(train,
                         epochs=args.dataset.epochs,
                         callbacks=callbacks,
                         validation_data=dev,
-                        # steps_per_epoch=args.dataset.steps_per_epoch,
+                        steps_per_epoch=args.dataset.steps_per_epoch if args.dataset.steps_per_epoch is not None else None,
                         verbose=2 if args.general.model == 'bdt' else 1)
 
     model.load_weights(os.path.join(args.general.logdir, 'checkpoint'))
@@ -233,23 +263,19 @@ def main(args: config.JIDENNConfig) -> None:
     model_dir = os.path.join(args.general.logdir, 'model')
     log.info(f"Saving model to {model_dir}")
     model.save(model_dir, save_format='tf')
+    
 
-    # save the training history and plot it
-    if args.general.model != 'bdt':
-        log.info(f"Saving history")
-        history_dir = os.path.join(args.general.logdir, 'history')
-        os.makedirs(history_dir, exist_ok=True)
-        for metric in model.metrics_names:
-            metric_dict = {
-                f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}
-            if f'test_{metric}' in history.history.keys():
-                metric_dict[f'test {metric}'] = history.history[f'test_{metric}']
-            plot_train_history(metric_dict, history_dir,
-                               metric, args.dataset.epochs)
 
-        # for metric in [m for m in history.history.keys() if 'val' not in m]:
-        #     plot_train_history(
-        #         {f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}, history_dir, metric, args.dataset.epochs)
+    log.info(f"Saving history")
+    history_dir = os.path.join(args.general.logdir, 'history')
+    os.makedirs(history_dir, exist_ok=True)
+    for metric in model.metrics_names:
+        metric_dict = {
+            f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}
+        if f'test_{metric}' in history.history.keys():
+            metric_dict[f'test {metric}'] = history.history[f'test_{metric}']
+        plot_train_history(metric_dict, history_dir,
+                            METRIC_NAMING_SCHEMA[metric] if metric in METRIC_NAMING_SCHEMA else metric, args.dataset.epochs)
 
     # run simple evaluation
     log.info("Evaluating on dev set:")
@@ -257,21 +283,17 @@ def main(args: config.JIDENNConfig) -> None:
     if args.test_data is not None:
         log.info("Evaluating on test set:")
         log.info(model.evaluate(test, return_dict=True))
+        
+        
+    # try:
+    #     onnx_model, _ = tf2onnx.convert.from_keras(model, opset=13)
+    #     onnx.save(onnx_model, os.path.join(args.general.logdir, 'model.onnx'))
+    # except Exception as e:
+    #     log.warning(f"Could not save onnx model: {e}")
+        
+    if args.dataset.cache == 'disk':
+        os.system(f'rm -rf {args.general.logdir}/cache')
 
-    # if model is bdt, plot feature importances
-    if args.general.model == 'bdt':
-        model.summary(print_fn=log.info)
-        variable_importance_metric = "SUM_SCORE"
-        variable_importances = model.make_inspector().variable_importances()[
-            variable_importance_metric]
-        variable_importances = pd.DataFrame({'variable': [str(vi[0].name) for vi in variable_importances],
-                                             'score': [vi[1] for vi in variable_importances]})
-        variables_names = ['pt_jet', 'eta_jet',
-                           'N_PFO', 'W_PFO_jet', 'C1_PFO_jet']
-        variable_importances['variable'] = variable_importances['variable'].apply(
-            lambda x: variables_names[int(x.split('.')[-1])])
-        data_info.plot_feature_importance(variable_importances, os.path.join(
-            args.general.logdir, f'feature_bdt_score.png'))
     log.info("Done!")
 
 

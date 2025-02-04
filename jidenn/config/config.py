@@ -93,11 +93,13 @@ class Data:
     """
     path: Union[str, List[str]]   # Path to data folder.
     dataset_weigths: Optional[List[float]]   # Weights for each dataset path.
+    dataset_norm: Optional[List[float]]   # Equalize weights.
     target: str
     target_labels: List[List[int]]   # Original labels.
     labels: List[str]    # list of labels to use.
     variable_unknown_labels: Optional[List[int]]
     label_weights: Optional[List[float]]
+    max_constituents: int
     weight: Optional[str]
     cut: Optional[str]
 

@@ -28,12 +28,24 @@ def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
 
     files = [os.path.join(args.load_path, file) for file in os.listdir(
-        os.path.join(args.load_path)) if file.startswith('_') and len(os.listdir(os.path.join(args.load_path, file))) > 0]
+        os.path.join(args.load_path)) if file.startswith('_') and len(os.listdir(os.path.join(args.load_path, file))) > 0 and 'element_spec.pkl' in os.listdir(os.path.join(args.load_path, file))]
+    if len(files) == 0:
+        logging.error(
+            f'No files found in {args.load_path}')
+        raise ValueError(
+            f'No files found in {args.load_path}')
 
     dataset = JIDENNDataset.load_multiple(files, mode='interleave')
 
     dataset = dataset.apply(lambda x: x.prefetch(
         tf.data.AUTOTUNE), preserves_length=True)
+    
+    if args.train_frac == 1:
+        dataset.save(args.save_path, num_shards=args.num_shards)
+        logging.info(
+            f'Saved whole dataset to {args.save_path}')
+        return
+    
     dss = dataset.split_train_dev_test(
         args.train_frac, args.dev_frac, args.test_frac)
 
@@ -52,3 +64,7 @@ def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     args = parser.parse_args([] if "__file__" not in globals() else None)
     main(args)
+
+
+
+

@@ -166,7 +166,7 @@ def main(args):
         tag = args.title
     else:
         tag = '13 TeV, Pythia8\n' 
-        tag += r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets" if args.release == 'r21' else r"anti-$k_{\mathrm{T}}$, $R = 0.4$ UFO CSSK jets"
+        tag += r"anti-$k_{\mathrm{T}}$, $R = 0.4$ PFlow jets" if args.release == 'r21' else r"anti-$k_{\mathrm{T}}$, $R = 0.4$  "
         
     plot_roc = RocPlot(
         n_ratio_panels=1,

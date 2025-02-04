@@ -44,11 +44,25 @@ def get_preprocessed_dataset(args_data: config.Data,
     def filter_unknown_labels(sample: ROOTVariables) -> bool:
         is_unknown = tf.reduce_any(sample[args_data.target] == unknown_labels)
         return tf.logical_not(is_unknown)
+    
+        
+    @tf.function
+    def reweight_dataset(sample: ROOTVariables, file_label) -> ROOTVariables:
+        sample = sample.copy()
+        sample[args_data.weight] = sample[args_data.weight] / args_data.dataset_norm[file_label] 
+        return sample
 
     if isinstance(args_data.path, str):
         dataset = JIDENNDataset.load(args_data.path, shuffle_reading=shuffle_reading)
     else:
-        dataset = JIDENNDataset.load_multiple(args_data.path, mode='interleave', weights=args_data.dataset_weigths, stop_on_empty_dataset=True)
+        file_labels = list(range(len(args_data.path)))
+        dataset = JIDENNDataset.load_multiple(args_data.path, 
+                                              mode='sample', 
+                                              weights=args_data.dataset_weigths, 
+                                              stop_on_empty_dataset=True, 
+                                              only_common_variables=True,
+                                              data_mapper=reweight_dataset if args_data.dataset_norm is not None else None,
+                                              file_labels=file_labels if args_data.dataset_norm else None,)
     dataset = dataset.remap_data(count_PFO)
     dataset = dataset.filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
     dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset

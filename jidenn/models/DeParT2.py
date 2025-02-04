@@ -253,7 +253,7 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         output = tf.reshape(output, [B, N, C])  # (B, N, C)
         output = self.linear_out(output)  # (B, N, C)
         output = self.dropout(output, training)
-        return output, pure_attention
+        return output, attention_weights
 
 
 class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
@@ -322,9 +322,6 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
             attention_weights, [0, 3, 1, 2])  # (B, H, 1, N)
 
         if interaction is not None:
-            # interaction shape is (B, N, H)
-            interaction = tf.transpose(interaction, [0, 2, 1])  # (B, 1, N)
-            interaction = tf.expand_dims(interaction, axis=2)  # (B, 1, 1, N)
             attention_weights += interaction
 
         mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
@@ -440,7 +437,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         """
         attended = self.pre_mhsa_ln(inputs)
-        attended, attention = self.mhsa(attended, mask, interaction)
+        attended, attention_weights = self.mhsa(attended, mask, interaction)
         attended = self.post_mhsa_scale(attended)
         attended = self.post_mhsa_stoch_depth(attended)
         attended = attended + inputs
@@ -451,7 +448,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         ffned = self.post_ffn_stoch_depth(ffned)
         output = ffned + attended
 
-        return output, attention
+        return output, attention_weights
 
 
 class ClassAttentionBlock(tf.keras.layers.Layer):
@@ -618,9 +615,11 @@ class DeParT(tf.keras.layers.Layer):
                        :] & mask[:, tf.newaxis, :, tf.newaxis]
         hidden = inputs
         attentions = []
+        attention_weights = tf.transpose(interaction, [0, 2, 1])  # (B, 1, N)
+        attention_weights = tf.expand_dims(attention_weights, axis=2)  # (B, 1, 1, N)
         for layer in self.sa_layers:
-            hidden, attention = layer(hidden, sa_mask, interaction)
-            attentions.append(attention)
+            hidden, attention_weights = layer(hidden, sa_mask, attention_weights)
+            attentions.append(attention_weights)
 
         class_token = tf.tile(self.class_token, (tf.shape(inputs)[0], 1, 1))
         class_mask = mask[:, tf.newaxis, :]
@@ -734,7 +733,7 @@ class CNNEmbedding(tf.keras.layers.Layer):
         return out
 
 
-class DeParTModel(tf.keras.Model):
+class DeParT2Model(tf.keras.Model):
     """DeParT model with embwith embedding and output layers.
 
     The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.

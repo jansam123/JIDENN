@@ -119,8 +119,9 @@ class SingleEvalConfig:
     test_subfolder: str
     batch_size: int
     take: int
-    binning: BinningConfig
-    additional_variables: List[str]
+    # binning: BinningConfig
+    include_variables: List[str]
     working_point_path: Optional[str]
+    working_point_file: Optional[str]
     threads: Optional[int]
     validation_plots_in_bins: bool

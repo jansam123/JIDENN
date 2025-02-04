@@ -59,10 +59,10 @@ def get_bin_fn(bins: Union[int, List[float]] = 100,
 def get_label_bin_fn(bins: int = 100,
                      lower_var_limit: Union[int, float] = 60_000,
                      upper_var_limit: Union[int, float] = 5_600_000,
+                     log_binning_base: Optional[Union[int, float]] = None,
                      variable: str = 'jets_pt',
                      label_variable: str = 'jets_PartonTruthLabelID',
                      label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
-                     log_binning_base: Optional[Union[int, float]] = None,
                      label_class_2: List[int] = [21]) -> Callable[[ROOTVariables], tf.Tensor]:
     """Get a function that returns the bin index of a data sample based on the value of the binned 
     variable and the label. The intended use is to use this function with tf.data.Dataset.rejection_resample()
@@ -115,6 +115,112 @@ def get_label_bin_fn(bins: int = 100,
         else:
             return tf.constant(0, dtype=tf.int32)
     return _rebin
+
+def get_bin_index(var, bin_edges, n_bins):
+    var = tf.reshape(var, (1, ))
+    bin_indices = tf.searchsorted(bin_edges, var, side='right') - 1
+    bin_indices = tf.clip_by_value(bin_indices, 0, n_bins - 1)
+    bin_indices = tf.squeeze(bin_indices)
+    return bin_indices
+
+def get_joint_bin_index(idx1, idx2, n_bins1, n_bins2):
+    return idx1 * n_bins2 + idx2
+
+def get_2d_bin_fn(bins1: int,
+                  lower_var_limit1: Union[int, float],
+                  upper_var_limit1: Union[int, float],
+                  variable1: str,
+                  bins2: int,
+                  lower_var_limit2: Union[int, float],
+                  upper_var_limit2: Union[int, float],
+                  variable2: str,) -> Callable[[ROOTVariables], tf.Tensor]:
+
+    if isinstance(bins1, int):
+        lower_var_limit_casted1 = tf.cast(lower_var_limit1, dtype=tf.float32)
+        upper_var_limit_casted1 = tf.cast(upper_var_limit1, dtype=tf.float32)
+        bin_edges1 = tf.linspace(lower_var_limit_casted1, upper_var_limit_casted1, bins1 + 1)
+    else:
+        bin_edges1 = tf.constant(bins1, dtype=tf.float32)
+
+    try:
+        n_bins1 = len(bin_edges1) - 1
+    except TypeError:
+        n_bins1 = tf.shape(bin_edges1)[0] - 1
+        
+    if isinstance(bins2, int):
+        lower_var_limit_casted2 = tf.cast(lower_var_limit2, dtype=tf.float32)
+        upper_var_limit_casted2 = tf.cast(upper_var_limit2, dtype=tf.float32)
+        bin_edges2 = tf.linspace(lower_var_limit_casted2, upper_var_limit_casted2, bins2 + 1)
+    else:
+        bin_edges2 = tf.constant(bins2, dtype=tf.float32)
+    
+    try:
+        n_bins2 = len(bin_edges2) - 1
+    except TypeError:
+        n_bins2 = tf.shape(bin_edges2)[0] - 1
+        
+    @tf.function
+    def _rebin(data: ROOTVariables) -> tf.Tensor:
+        var1 = data[variable1]
+        var2 = data[variable2]
+        bin_indices1 = get_bin_index(var1, bin_edges1, n_bins1)
+        bin_indices2 = get_bin_index(var2, bin_edges2, n_bins2)
+        return get_joint_bin_index(bin_indices1, bin_indices2, n_bins1, n_bins2)
+    
+    return _rebin
+
+def get_label_2d_bin_fn(bins1: int,
+                        lower_var_limit1: Union[int, float],
+                        upper_var_limit1: Union[int, float],
+                        variable1: str,
+                        bins2: int,
+                        lower_var_limit2: Union[int, float],
+                        upper_var_limit2: Union[int, float],
+                        variable2: str,
+                        label_variable: str = 'jets_PartonTruthLabelID',
+                        label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                        label_class_2: List[int] = [21]) -> Callable[[ROOTVariables], tf.Tensor]:
+    
+    if isinstance(bins1, int):
+        lower_var_limit_casted1 = tf.cast(lower_var_limit1, dtype=tf.float32)
+        upper_var_limit_casted1 = tf.cast(upper_var_limit1, dtype=tf.float32)
+        bin_edges1 = tf.linspace(lower_var_limit_casted1, upper_var_limit_casted1, bins1 + 1)
+    else:
+        bin_edges1 = tf.constant(bins1, dtype=tf.float32)
+
+    try:
+        n_bins1 = len(bin_edges1) - 1
+    except TypeError:
+        n_bins1 = tf.shape(bin_edges1)[0] - 1
+        
+    if isinstance(bins2, int):
+        lower_var_limit_casted2 = tf.cast(lower_var_limit2, dtype=tf.float32)
+        upper_var_limit_casted2 = tf.cast(upper_var_limit2, dtype=tf.float32)
+        bin_edges2 = tf.linspace(lower_var_limit_casted2, upper_var_limit_casted2, bins2 + 1)
+    else:
+        bin_edges2 = tf.constant(bins2, dtype=tf.float32)
+    
+    try:
+        n_bins2 = len(bin_edges2) - 1
+    except TypeError:
+        n_bins2 = tf.shape(bin_edges2)[0] - 1
+        
+    @tf.function
+    def _rebin(data: ROOTVariables) -> tf.Tensor:
+        var1 = data[variable1]
+        var2 = data[variable2]
+        bin_indices1 = get_bin_index(var1, bin_edges1, n_bins1)
+        bin_indices2 = get_bin_index(var2, bin_edges2, n_bins2)
+        # return get_joint_bin_index(bin_indices1, bin_indices2, n_bins1, n_bins2)
+        if tf.reduce_any(tf.equal(data[label_variable], tf.constant(label_class_1, dtype=data[label_variable].dtype))):
+            return get_joint_bin_index(bin_indices1, bin_indices2, n_bins1, n_bins2)
+        elif tf.reduce_any(tf.equal(data[label_variable], tf.constant(label_class_2, dtype=data[label_variable].dtype))):
+            return get_joint_bin_index(bin_indices1, bin_indices2, n_bins1, n_bins2) + n_bins1 * n_bins2
+        else:
+            return tf.constant(0, dtype=tf.int32)
+    
+    return _rebin
+
 
 
 def resample_from_min_bin_count(dataset: tf.data.Dataset,
@@ -196,9 +302,14 @@ def resampler(dataset: tf.data.Dataset,
                                        lambda x, y: x + tf.one_hot(y, bins, dtype=tf.int64))
         min_count = tf.reduce_min(bin_counts)
         min_count = tf.cast(min_count, dtype=tf.int64)
-        bin_counts = tf.cast(bin_counts, dtype=tf.float64)
         print(f'Min count: {min_count:,}')
         print(f'Estimated number of samples: {min_count * bins:,}')
+        print(f'Bin counts: {bin_counts}')
+        bin_counts = tf.cast(bin_counts, dtype=tf.float64)
+        # if there are emty bins raise an error
+        if tf.reduce_any(tf.equal(bin_counts, 0)):
+            num_empty_bins = tf.reduce_sum(tf.cast(tf.equal(bin_counts, 0), dtype=tf.int32))
+            raise ValueError(f'There are {num_empty_bins} empty bins. Try increasing the number of bins.')
         weights = compute_uniform_weights(bin_counts)
         print(weights)
         initial_dist = bin_counts / tf.reduce_sum(bin_counts)
@@ -338,6 +449,70 @@ def resample_var_with_labels(dataset: tf.data.Dataset,
                      weight_var=weight_var,
                      precompute_init_dist=precompute_init_dist,
                      from_min_count=from_min_count)
+
+def resample_2d_var(dataset: tf.data.Dataset,
+                    bins1: int,
+                    lower_var_limit1: Union[int, float],
+                    upper_var_limit1: Union[int, float],
+                    variable1: str,
+                    bins2: int,
+                    lower_var_limit2: Union[int, float],
+                    upper_var_limit2: Union[int, float],
+                    variable2: str,
+                    target_dist: Optional[List[int]] = None,
+                    precompute_init_dist: Optional[bool] = False,
+                    weight_var: Optional[str] = None,
+                    from_min_count: bool = False) -> tf.data.Dataset:
+    
+    return resampler(dataset=dataset,
+                     binning_fn=get_2d_bin_fn(bins1=bins1,
+                                              lower_var_limit1=lower_var_limit1,
+                                              upper_var_limit1=upper_var_limit1,
+                                              variable1=variable1,
+                                              bins2=bins2,
+                                              lower_var_limit2=lower_var_limit2,
+                                              upper_var_limit2=upper_var_limit2,
+                                              variable2=variable2),
+                     bins=bins1 * bins2,
+                     target_dist=target_dist,
+                     weight_var=weight_var,
+                     precompute_init_dist=precompute_init_dist,
+                     from_min_count=from_min_count)
+
+def resample_2d_var_with_labels(dataset: tf.data.Dataset,
+                                bins1: int,
+                                lower_var_limit1: Union[int, float],
+                                upper_var_limit1: Union[int, float],
+                                variable1: str,
+                                bins2: int,
+                                lower_var_limit2: Union[int, float],
+                                upper_var_limit2: Union[int, float],
+                                variable2: str,
+                                label_variable: str = 'jets_PartonTruthLabelID',
+                                label_class_1: List[int] = [1, 2, 3, 4, 5, 6],
+                                label_class_2: List[int] = [21],
+                                target_dist: Optional[List[int]] = None,
+                                precompute_init_dist: Optional[bool] = False,
+                                weight_var: Optional[str] = None,
+                                from_min_count: bool = False) -> tf.data.Dataset:
+
+    return resampler(dataset=dataset,
+                        binning_fn=get_label_2d_bin_fn(bins1=bins1,
+                                                        lower_var_limit1=lower_var_limit1,
+                                                        upper_var_limit1=upper_var_limit1,
+                                                        variable1=variable1,
+                                                        bins2=bins2,
+                                                        lower_var_limit2=lower_var_limit2,
+                                                        upper_var_limit2=upper_var_limit2,
+                                                        variable2=variable2,
+                                                        label_variable=label_variable,
+                                                        label_class_1=label_class_1,
+                                                        label_class_2=label_class_2),
+                        bins=bins1 * bins2 * 2,
+                        target_dist=target_dist,
+                        weight_var=weight_var,
+                        precompute_init_dist=precompute_init_dist,
+                        from_min_count=from_min_count)
 
 
 def get_cut_fn(variable: str = 'jets_pt', lower_limit: Optional[float] = None, upper_limit: Optional[float] = None) -> Callable[[ROOTVariables], tf.Tensor]:

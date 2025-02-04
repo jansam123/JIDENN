@@ -39,7 +39,9 @@ def choose_strategy(model_builder: Callable[...,  tf.keras.Model], num_gpus: int
         if num_gpus < 2:
             model = model_builder(*args, **kwargs)
         else:
-            mirrored_strategy = tf.distribute.MirroredStrategy(devices=[f"/gpu:{i}" for i in range(num_gpus)], cross_device_ops=tf.distribute.ReductionToOneDevice())
+            # mirrored_strategy = tf.distribute.MirroredStrategy(devices=[f"/gpu:{i}" for i in range(num_gpus)], cross_device_ops=tf.distribute.ReductionToOneDevice())
+            mirrored_strategy = tf.distribute.MirroredStrategy()
+            assert mirrored_strategy.num_replicas_in_sync == num_gpus, "Not all GPUs are recognized"
             with mirrored_strategy.scope():
                 model = model_builder(*args, **kwargs)
         return model

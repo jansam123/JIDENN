@@ -468,6 +468,7 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
     metrics = [
         tf.keras.metrics.BinaryAccuracy(
             name='binary_accuracy', threshold=0.5), # fix the threshold to 0.5, other thresholds are useless for this metric
+        tf.keras.metrics.AUC(name='auc'),
         BinaryEfficiency(name='gluon_efficiency',
                          label_id=0, threshold=threshold),
         BinaryEfficiency(name='quark_efficiency',
@@ -476,25 +477,33 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
                         label_id=0, threshold=threshold),
         BinaryRejection(name='quark_rejection',
                         label_id=1, threshold=threshold),
-        EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_50wp',
-                                      fixed_label_id=1, working_point=0.5, returned_label_id=0),
-        EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_quark_50wp',
-                                      fixed_label_id=1, working_point=0.5, returned_label_id=1),
+        #
+        # EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_50wp',
+        #                               fixed_label_id=1, working_point=0.5, returned_label_id=0),
         RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_50wp',
                                      fixed_label_id=1, working_point=0.5, returned_label_id=0),
         ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_50wp',
-                                     fixed_label_id=1, working_point=0.5),
-        EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_80wp',
-                                      fixed_label_id=1, working_point=0.8, returned_label_id=0),
-        EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_quark_80wp',
-                                      fixed_label_id=1, working_point=0.8, returned_label_id=1),
-        RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_80wp',
-                                     fixed_label_id=1, working_point=0.8, returned_label_id=0),
-        ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_80wp',
-                                     fixed_label_id=1, working_point=0.8),
-        # EffectiveTaggingEfficiency(
-        #     name='effective_tagging_efficiency', threshold=threshold),
-        tf.keras.metrics.AUC(name='auc')]
+                                        fixed_label_id=1, working_point=0.5),
+        # EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_80wp',
+        #                               fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        # RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_80wp',
+        #                              fixed_label_id=1, working_point=0.8, returned_label_id=0),
+        # ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_80wp',
+        #                              fixed_label_id=1, working_point=0.8),
+        #
+        # EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_gluon_50wp',
+        #                               fixed_label_id=0, working_point=0.5, returned_label_id=1),
+        # RejectionAtFixedWorkingPoint(name='quark_rejection_at_gluon_50wp',
+        #                              fixed_label_id=0, working_point=0.5, returned_label_id=1),
+        # ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_gluon_50wp',
+        #                              fixed_label_id=0, working_point=0.5),
+        # EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_gluon_80wp',
+        #                               fixed_label_id=0, working_point=0.8, returned_label_id=1),
+        # RejectionAtFixedWorkingPoint(name='quark_rejection_at_gluon_80wp',
+        #                              fixed_label_id=0, working_point=0.8, returned_label_id=1),
+        # ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_gluon_80wp',
+        #                              fixed_label_id=0, working_point=0.8),
+        ]
     return metrics
 
 

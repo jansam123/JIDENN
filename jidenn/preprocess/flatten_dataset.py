@@ -70,11 +70,11 @@ def get_filter_ragged_values_fn(reference_variable: str = 'jets_PartonTruthLabel
     Returns:
         Callable[[ROOTVariables], ROOTVariables]: A function that filters out unwanted values from a ROOTVariables
     """
-    @tf.function
+    # @tf.function
     def _filter_unwanted_ragged_values_fn(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
         reference_tensor = sample[reference_variable]
-        if tf.size(reference_tensor) == 0:
+        if tf.math.equal(tf.size(reference_tensor), 0):
             return sample
         mask = tf.math.equal(tf.expand_dims(reference_tensor, axis=1), tf.tile(
             tf.expand_dims(wanted_values, axis=0), [tf.shape(reference_tensor)[0], 1]))
@@ -135,7 +135,7 @@ def get_select_max_ragged_idx(max_idx: int = 1,
     def _select_max_ragged_idx(sample: ROOTVariables) -> ROOTVariables:
         sample = sample.copy()
         reference_tensor = sample[reference_variable]
-        if tf.size(reference_tensor) == 0:
+        if tf.math.equal(tf.size(reference_tensor), 0):
             return sample
         mask = tf.math.less(tf.range(tf.size(reference_tensor)), max_idx)
         for key, item in sample.items():
@@ -206,9 +206,10 @@ def flatten_dataset(dataset: tf.data.Dataset,
             .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
         )
     elif variables is None and upper_cuts is None and lower_cuts is None:
+        dataset = dataset.map(get_filter_ragged_values_fn(reference_variable, wanted_values, key_phrase))
+        # dataset = dataset.map(get_select_max_ragged_idx(max_idx, reference_variable, key_phrase)) if max_idx is not None else dataset
         return (
             dataset
-            .map(get_filter_ragged_values_fn(reference_variable, wanted_values, key_phrase))
             .filter(get_filter_empty_fn(reference_variable))
             .interleave(get_ragged_to_dataset_fn(reference_variable, key_phrase))
         )

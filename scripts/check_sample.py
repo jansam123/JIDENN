@@ -40,7 +40,7 @@ def sns_plot_phys(hists, bins, save_path, variable, object_name, ylog=True):
     plt.xlabel(x_name, horizontalalignment='right', x=1.0, fontsize=15)
     plt.ylabel(r"Counts", horizontalalignment='right', y=1.0, fontsize=15)
     # subtext = '13 TeV\n'
-    # subtext += r'anti-$k_{\mathrm{T}}$, $R = 0.4$ UFO CSSK jets' + \
+    # subtext += r'anti-$k_{\mathrm{T}}$, $R = 0.4$  ' + \
     #     '\n' if object_name == 'jets' else ''
     # subtext += r'photons'+'\n' if object_name == 'photons' else ''
     # subtext += r'muons'+'\n' if object_name == 'muons' else ''

@@ -324,12 +324,16 @@ def data_iterator_to_dataset(iterator: Iterator[Dict[str, Union[tf.Tensor, tf.Ra
         batch_folders.append(str(batch_folder))
         element_specs.append(element_spec)
         cardinalities.append(cardinality)
-
-    dataset = tf.data.Dataset.sample_from_datasets(
-        [tf.data.Dataset.load(batch_folder, compression='GZIP', element_spec=element_spec)
-         for batch_folder, element_spec in zip(batch_folders, element_specs)],
-        stop_on_empty_dataset=False,
-    )
+    #     dataset = tf.data.Dataset.sample_from_datasets(
+    #     [tf.data.Dataset.load(batch_folder, compression='GZIP', element_spec=element_spec)
+    #      for batch_folder, element_spec in zip(batch_folders, element_specs)],
+    #     stop_on_empty_dataset=False,
+    # )
+    datasets = [tf.data.Dataset.load(batch_folder, compression='GZIP', element_spec=element_spec)
+                for batch_folder, element_spec in zip(batch_folders, element_specs)]
+    dataset = datasets[0]
+    for ds in datasets[1:]:
+        dataset = dataset.concatenate(ds)
     dataset = dataset.apply(
         tf.data.experimental.assert_cardinality(sum(cardinalities)))
     return dataset
@@ -516,6 +520,7 @@ class JIDENNDataset:
                       file_labels: Optional[List[Any]] = None,
                       dataset_mapper: Optional[Callable[[
                           tf.data.Dataset], tf.data.Dataset]] = None,
+                      data_mapper: Optional[Callable[[ROOTVariables, Any], ROOTVariables]] = None,
                       element_spec_paths: Optional[List[str]] = None,
                       stop_on_empty_dataset: bool = False,
                       rerandomize_each_iteration: bool = True,
@@ -525,7 +530,8 @@ class JIDENNDataset:
                                     'sample'] = 'interleave',
                       metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {
                           key: tf.reduce_sum(tf.stack([m[key] for m in metas], axis=0), axis=0) for key in metas[0]},
-                      metadata_paths: Optional[List[str]] = None) -> JIDENNDataset:
+                      metadata_paths: Optional[List[str]] = None,
+                      only_common_variables: bool = False,) -> JIDENNDataset:
 
         element_spec_paths = [
             None] * len(files) if element_spec_paths is None else element_spec_paths
@@ -539,7 +545,13 @@ class JIDENNDataset:
             ds = JIDENNDataset.load(file, element_spec_path, metadata_path)
             ds = ds.apply(lambda x: dataset_mapper(x, file_label)
                           ) if dataset_mapper is not None else ds
+            ds = ds.remap_data(lambda x: data_mapper(x, file_label)
+                                 ) if data_mapper is not None else ds
             dss.append(ds)
+        
+        if only_common_variables:
+            common_variables = list(set.intersection(*[set(ds.variables) for ds in dss]))
+            dss = [ds.remap_data(lambda x: {var: x[var] for var in common_variables}) for ds in dss]
 
         return JIDENNDataset.combine(dss, stop_on_empty_dataset=stop_on_empty_dataset, mode=mode, weights=weights, metadata_combiner=metadata_combiner, rerandomize_each_iteration=rerandomize_each_iteration)
 
@@ -595,7 +607,7 @@ class JIDENNDataset:
                 element_specs.append(pickle.load(f))
 
         if not all_equal(element_specs):
-            raise ValueError('All datasets must have the same element spec.')
+            raise ValueError(f'All datasets must have the same element spec: {element_specs}')
 
         if file_labels is None:
             @tf.function
@@ -641,9 +653,10 @@ class JIDENNDataset:
                 mode: Literal['concatenate', 'interleave',
                               'sample'] = 'concatenate',
                 stop_on_empty_dataset: bool = False,
-                rerandomize_each_iteration: bool = True,
+                rerandomize_each_iteration: bool = False,
                 weights: Optional[List[float]] = None,
-                metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {key: tf.reduce_sum(tf.stack(metas[key], axis=0), axis=0) for key in metas[0]}) -> JIDENNDataset:
+                metadata_combiner: Optional[Callable[[List[Dict[str, Any]]], Dict[str, Any]]] = lambda metas: {
+                          key: tf.reduce_sum(tf.stack([m[key] for m in metas], axis=0), axis=0) for key in metas[0]},) -> JIDENNDataset:
         """Combines multiple datasets into one dataset. The samples are interleaved and the weights are used to sample from the datasets.
 
         Args:
@@ -662,16 +675,16 @@ class JIDENNDataset:
         targets = [dataset.target for dataset in datasets]
         weight = [dataset.weight for dataset in datasets]
 
-        if not all_equal(element_specs):
-            raise ValueError('All datasets must have the same element spec.')
-        if not all_equal(variables):
-            raise ValueError('All datasets must have the same variables.')
-        if not all_equal(targets):
-            raise ValueError('All datasets must have the same target.')
-        if not all_equal(weight):
-            raise ValueError('All datasets must have the same weight.')
-        if metadata_combiner and not all_equal([dataset.metadata.keys() for dataset in datasets]):
-            raise ValueError('All datasets must have the same metadata.')
+        # if not all_equal(element_specs):
+        #     raise ValueError(f'All datasets must have the same element spec: {element_specs}')
+        # if not all_equal(variables):
+        #     raise ValueError(f'All datasets must have the same variables: {variables}')
+        # if not all_equal(targets):
+        #     raise ValueError(f'All datasets must have the same target: {targets}')
+        # if not all_equal(weight):
+        #     raise ValueError(f'All datasets must have the same weight: {weight}')
+        # if metadata_combiner and not all_equal([dataset.metadata.keys() for dataset in datasets]):
+        #     raise ValueError(f'All datasets must have the same metadata keys: {[dataset.metadata.keys() for dataset in datasets]}')
 
         if mode == 'sample':
             dataset = tf.data.Dataset.sample_from_datasets(
@@ -1022,7 +1035,7 @@ class JIDENNDataset:
                     tf.data.experimental.dense_to_ragged_batch(batch_size))
 
         elif batch_size is not None:
-            dataset = dataset.batch(batch_size)
+            dataset = dataset.batch(batch_size, drop_remainder=True)
 
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset
@@ -1135,6 +1148,7 @@ class JIDENNDataset:
                                 hue_variable: Optional[str] = None,
                                 named_labels: Optional[Dict[int, str]] = None,
                                 bins: int = 70,
+                                fillna: Optional[Union[int, float]] = None,
                                 xlabel_mapper: Optional[Dict[str, str]] = None) -> None:
         """Plots the data distributions of the dataset. The dataset must be loaded before calling this function.
         The function uses `jidenn.evaluation.plotter.plot_data_distributions` to plot the data distributions.
@@ -1163,6 +1177,9 @@ class JIDENNDataset:
             variables = list(self.element_spec[0].keys())
 
         df = self.to_pandas(variables)
+        # repalce nan with -999
+        if fillna is not None:
+            df = df.fillna(fillna)
         plot_data_distributions(df, folder=folder, named_labels=named_labels, weight_variable='weight' if 'weight' in df.columns else None,
                                 xlabel_mapper=xlabel_mapper, hue_variable=hue_variable, bins=bins)
 
@@ -1207,6 +1224,7 @@ class JIDENNDataset:
 
         dataset_size = self.length
         if dataset_size is not None and backend == 'cut':
+            logging.info('Using cut backend.')
             train_size = int(dataset_size * train_fraction)
             dev_size = int(dataset_size * dev_fraction)
             test_size = dataset_size - train_size - dev_size
@@ -1258,4 +1276,9 @@ class JIDENNDataset:
             return histogram_multiple(self.dataset, binning, weight_var)
         else:
             return histogram(self.dataset, binning, weight_var)
+    
+    def prefetch(self, buffer_size: int = tf.data.AUTOTUNE) -> JIDENNDataset:
+        if self.dataset is None:
+            raise ValueError('Dataset not loaded yet.')
+        return JIDENNDataset(dataset=self.dataset.prefetch(buffer_size), element_spec=self.element_spec, metadata=self.metadata, variables=self.variables, target=self.target, weight=self.weight, length=self.length)
         

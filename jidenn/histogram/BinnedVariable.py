@@ -107,6 +107,17 @@ class Binning:
     def bin_edges(self) -> np.ndarray:
         """Array of bin edges."""
         return self.bins
+    
+    def __str__(self) -> str:
+        return f'Binning({self.variable}, {self.bins})'
+    def __repr__(self) -> str:
+        return f'Binning({self.variable}, {self.bins})'
+    
+    def __eq__(self, other: Binning) -> bool:
+        return (self.variable == other.variable) and np.allclose(a=self.bins, b=other.bins)
+    
+    def __ne__(self, other: Binning) -> bool:
+        return not self.__eq__(other)
 
 class BinnedVariable:
 
@@ -154,3 +165,6 @@ class BinnedVariable:
     @property
     def bins(self) -> np.ndarray:
         return self.binning.bins
+    
+    def __str__(self) -> str:
+        return f'BinnedVariable({self.binning.variable}, {self.binning.bins})'

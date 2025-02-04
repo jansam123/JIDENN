@@ -71,7 +71,8 @@ class LogCallback(tf.keras.callbacks.Callback):
         eta = datetime.utcnow() - self.epoch_start_time if self.epoch_start_time is not None else '-:--:--'
         eta = datetime.strptime(str(eta), "%H:%M:%S.%f")
 
-        log_str = f"Epoch {epoch+1}/{self.total_epochs}: "
+        total_steps = self.model.optimizer.iterations.numpy()
+        log_str = f"Epoch {epoch+1}/{self.total_epochs}, Total Steps {total_steps}: "
         log_str += f"ETA: {eta:%T} - "
         log_str += " - ".join([f"{k}: {v:.4}" for k, v in logs.items()])
         self.specified_logger.info(log_str)
@@ -240,7 +241,7 @@ def get_callbacks(base_logdir: str,
                                                               monitor='val_binary_accuracy',
                                                               mode='max',
                                                               save_weights_only=False,
-                                                              save_best_only=True,
+                                                              save_best_only=False,
                                                               save_freq='epoch',
                                                               verbose=1,)
         callbacks.append(base_checkpoints)

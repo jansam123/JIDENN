@@ -46,6 +46,10 @@ parser.add_argument("--multiple", type=str, default='layer',
                     help="How to plot multiple distributions. Options: layer, stack")
 parser.add_argument("--shuffle", type=int, default=None,
                     help="Shuffle buffer size")
+parser.add_argument("--lower_pt_cut", type=float, default=0,
+                    help="Lower pt cut")
+parser.add_argument("--upper_pt_cut", type=float, default=0,
+                    help="Upper pt cut")
 
 HUE_MAPPER = {1: 'quark', 2: 'quark', 3: 'quark',
               4: 'quark', 5: 'quark', 6: 'quark', 21: 'gluon'}
@@ -81,6 +85,7 @@ def plot_single(dataset: JIDENNDataset,
 
     if hue_var is not None and hue_var == 'jets_PartonTruthLabelID':
         df[hue_var] = df[hue_var].replace(HUE_MAPPER)
+        hue_order = ['quark', 'gluon']
 
     print(df)
     if 'pt' in variable:
@@ -89,7 +94,7 @@ def plot_single(dataset: JIDENNDataset,
     plot_single_dist(df, variable=variable, xlim=xlim, log_bins=log_bins,
                      hue_var=hue_var, hue_order=hue_order, badge=badge,
                      save_path=save_path, bins=bins, stat=stat, multiple=multiple,
-                     ylog=ylog, xlog=xlog, xlabel=r'$p_{\mathrm{T}}$ [TeV]',
+                     ylog=ylog, xlog=xlog, xlabel=LATEX_NAMING_CONVENTION[variable] if variable in LATEX_NAMING_CONVENTION else variable,
                      badge_text=badge_text, ylim=ylim, weight_var=weight_var if weight_var is not None else None
                      )
 
@@ -115,15 +120,24 @@ def main(args: argparse.Namespace):
     ds_size = dataset.length
     if ds_size is not None:
         print(f'Dataset size: {ds_size:,}')
-
+        
+    dataset = dataset.filter(lambda x: x['jets_pt'] > args.lower_pt_cut) if args.lower_pt_cut > 0 else dataset
+    dataset = dataset.filter(lambda x: x['jets_pt'] < args.upper_pt_cut) if args.upper_pt_cut > 0 else dataset
     # badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else None
-
+    # size, sum_w = dataset.dataset.reduce(
+    #         (0., 0.), lambda x, y: (x[0] + 1, x[1] + y['weight_flat']))
+    
     if args.plot_single:
+        badge_text = r'$N_{\mathrm{jets}}$ = ' + f'{ds_size:,} \n' if ds_size is not None else ''
+        badge_text += r'$n_{\mathrm{bins}}$ = ' + f'{args.bins} \n' if args.bins is not None else ''
+        # badge_text += r'$N_{\mathrm{jets, count}}$ = ' + f'{size:,} \n' if ds_size is not None else ''
+        # badge_text += r'$w_{\mathrm{sum}}$ = ' + f'{sum_w:,} \n' if ds_size is not None else ''
+        badge_text = badge_text if badge_text != '' else None
+        
         plot_single(dataset,
                     variable=args.variables[0], hue_var=args.hue_variable,
                     save_path=args.save_path,
-                    badge_text='$N_{\mathrm{jets}}$ = ' +
-                    f'{ds_size:,} \n' if ds_size is not None else None,
+                    badge_text=badge_text,
                     multiple=args.multiple,
                     badge=not args.no_badge,
                     weight_var=args.weight, ylog=args.ylog, ylim=args.ylim, xlim=args.xlim, stat=args.stat,

@@ -38,9 +38,11 @@ class ModelBuilder:
     def model(self) -> tf.keras.Model:
         """Builds model from config."""
         model_getter = model_getter_lookup(self.model_name)
+        # get rid of number in model name
+        stripped_model_name = ''.join([i for i in self.model_name if not i.isdigit()])
         model = model_getter(input_size=self.input_size,
                              output_layer=self.output_layer,
-                             args_model=getattr(self.args_model, self.model_name),
+                             args_model=getattr(self.args_model, stripped_model_name),
                              preprocess=self.preprocess)
         return model
 

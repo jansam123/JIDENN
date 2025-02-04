@@ -13,6 +13,7 @@ def to_e_px_py_pz(mass, pt, eta, phi) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, 
     py = pt * tf.sin(phi)
     pz = pt * tf.sinh(eta)
     E = tf.sqrt(mass**2 + px**2 + py**2 + pz**2)
+    # E = pt * tf.cosh(eta)
     return E, px, py, pz
 
 

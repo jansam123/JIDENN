@@ -19,6 +19,7 @@ from ..models.PFN import PFNModel
 from ..models.EFN import EFNModel
 # from ..models.BDT import bdt_model
 from ..models.ParticleNet import ParticleNetModel
+from ..models.DeParT2 import DeParT2Model
 
 
 def get_activation(activation: Literal['relu', 'gelu', 'tanh', 'swish']) -> Callable[[tf.Tensor], tf.Tensor]:
@@ -249,6 +250,43 @@ def get_depart_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int],
         preprocess=preprocess,
         activation=get_activation(args_model.activation))
 
+def get_depart2_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
+                     output_layer: tf.keras.layers.Layer,
+                     args_model: model_config.DeParT,
+                     preprocess: Optional[tf.keras.layers.Layer] = None) -> DeParTModel:
+    """Get an instance of the DeParT model.
+
+    Args:
+        input_size (Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): Input size of the model.
+        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        args_model (model_config.DeParT): Model configuration.
+        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+
+    Returns:
+        DeParTModel: DeParT model.
+    """
+
+    return DeParT2Model(
+        input_shape=input_size,
+        output_layer=output_layer,
+        #
+        embed_dim=args_model.embed_dim,
+        embed_layers=args_model.embed_layers,
+        self_attn_layers=args_model.self_attn_layers,
+        class_attn_layers=args_model.class_attn_layers,
+        expansion=args_model.expansion,
+        heads=args_model.heads,
+        dropout=args_model.dropout,
+        layer_scale_init_value=args_model.layer_scale_init_value,
+        stochastic_depth_drop_rate=args_model.stochastic_depth_drop_rate,
+        class_dropout=args_model.class_dropout,
+        class_stochastic_depth_drop_rate=args_model.class_stochastic_depth_drop_rate,
+        interaction_embed_layers=args_model.interaction_embedding_layers,
+        interaction_embed_layer_size=args_model.interaction_embedding_layer_size,
+        #
+        preprocess=preprocess,
+        activation=get_activation(args_model.activation))
+
 
 def get_particlenet_model(input_size: Tuple[Tuple[int, int], Tuple[int, int]],
                           output_layer: tf.keras.layers.Layer,
@@ -306,6 +344,7 @@ def model_getter_lookup(model_name: Literal['fc', 'highway', 'pfn', 'efn', 'tran
                     'particlenet': get_particlenet_model,
                     'part': get_part_model,
                     'depart': get_depart_model,
+                    'depart2': get_depart2_model,
                     'bdt': get_bdt_model, }
 
     if model_name not in lookup_model:

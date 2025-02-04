@@ -58,13 +58,11 @@ def add_score_to_dataset(dataset: JIDENNDataset,
     return JIDENNDataset(dataset=new_dataset, element_spec=dataset.element_spec, metadata=dataset.metadata, target=dataset.target, weight=dataset.weight)
 
 
-def _calculate_metrics_in_bin(x):
-    y, score_variable, threshold, validation_plotter, weights_variable = x
-    inter, x = y
+def _calculate_metrics_in_bin(inter, x, score_variable, threshold, validation_plotter, weights_variable,):
     if x.empty:
-        return
-    if len(x['label'].unique()) < 2:
-        return
+        return  {'bin': inter}
+    # if len(x['label'].unique()) < 2:
+    #     return
 
     if validation_plotter is not None:
         validation_plotter(x)
@@ -75,6 +73,7 @@ def _calculate_metrics_in_bin(x):
     ret['eff_num_events_q'] = np.sum(x.query('label==1')[weights_variable])**2/np.sum(x.query('label==1')[weights_variable]**2) if weights_variable is not None else len(x.query('label==1'))
     ret['eff_num_events_g'] = np.sum(x.query('label==0')[weights_variable])**2/np.sum(x.query('label==0')[weights_variable]**2) if weights_variable is not None else len(x.query('label==0'))
     ret['bin'] = inter
+    # logging.info(ret)
     return ret
 
 
@@ -85,7 +84,7 @@ def calculate_binned_metrics(df: pd.DataFrame,
                              weights_variable: Optional[str] = None,
                              validation_plotter: Optional[Callable[[pd.DataFrame], None]] = None,
                              threshold: Union[BinnedVariable, float] = 0.5,
-                             threads: Optional[int] = None) -> pd.DataFrame:
+                             logger: Optional[logging.Logger] = None) -> pd.DataFrame:
     """Calculate metrics for a binary classification problem binned by a continuous variable.
 
     Example pd.DataFrame structure:
@@ -100,7 +99,7 @@ def calculate_binned_metrics(df: pd.DataFrame,
                                                 binned_variable=binned_variable,
                                                 score_variable=score_variable,
                                                 bins=bins)
-    print(binned_metrics)
+    logging.info(binned_metrics)
     # Output:
     #    accuracy  signal_efficiency background_efficiency num_events           bin
     # 1  0.500000           0.500000              0.500000          2   '(2.0, 5.0]'
@@ -129,21 +128,18 @@ def calculate_binned_metrics(df: pd.DataFrame,
 
     df['bin'] = pd.cut(df[binned_variable], bins=bins) if not isinstance(
         bins, BinnedVariable) else pd.cut(df[binned_variable], bins=threshold.bins)
+    # logger.info(df)
+    # logger.info(df.columns)
+    # logger.info(df['bin'])
     grouped_metrics = df.groupby('bin')
     threshold_values = threshold.values if isinstance(threshold, BinnedVariable) else [threshold] * len(grouped_metrics)
-    if weights_variable is not None:
-        args = [(x, score_variable, th, validation_plotter, weights_variable)
-                for x, th in zip(grouped_metrics, threshold_values)]
-    else:
-        args = [(x, score_variable, th, validation_plotter, None) for x, th in zip(grouped_metrics, threshold_values)]
-
-    if threads is not None and threads > 1:
-        with Pool(threads) as pool:
-            metrics = pool.map(_calculate_metrics_in_bin, args)
-    else:
-        metrics = map(_calculate_metrics_in_bin, args)
-
-    metrics = [x for x in metrics if x is not None]
+    metrics = []
+    for x, th in zip(grouped_metrics, threshold_values):
+        # logger.info(th)
+        logger.info(x[0])
+        metrics.append(_calculate_metrics_in_bin(x[0], x[1], score_variable, th, validation_plotter, weights_variable))
+        # logger.info(metrics[-1])
+        # logger.info(x[1])
     metrics = pd.DataFrame(metrics)
     return metrics
 

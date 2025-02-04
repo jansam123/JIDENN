@@ -62,17 +62,20 @@ def get_rotation_augm(config: aug_cfg.Rotation):
     @tf.function
     def rotation_augm(jets):
         jets = jets.copy()
-        jets_PFO_E, jets_PFO_px, jets_PFO_py, jets_PFO_pz = to_e_px_py_pz(
+        E, px, py, pz = to_e_px_py_pz(
             jets[f'jets_{config.const_name}_m'], jets[f'jets_{config.const_name}_pt'], jets[f'jets_{config.const_name}_eta'], jets[f'jets_{config.const_name}_phi'])
-        _, jets_px, jets_py, jets_pz = to_e_px_py_pz(
-            jets['jets_m'], jets['jets_pt'], jets['jets_eta'], jets['jets_phi'])
+        
+        jets_px = tf.reduce_sum(px, axis=-1)
+        jets_py = tf.reduce_sum(py, axis=-1)
+        jets_pz = tf.reduce_sum(pz, axis=-1)
+        
         axis = tf.stack([jets_px, jets_py, jets_pz])
-        vector = tf.stack([jets_PFO_px, jets_PFO_py, jets_PFO_pz], axis=1)
+        vector = tf.stack([px, py, pz], axis=1)
         rotated_vector = random_rotate_around_fixed_axis(vector, axis)
-        jets_PFO_px, jets_PFO_py, jets_PFO_pz = tf.unstack(
+        px, py, pz = tf.unstack(
             rotated_vector, axis=1)
         _, jets[f'jets_{config.const_name}_pt'], jets[f'jets_{config.const_name}_eta'], jets[f'jets_{config.const_name}_phi'] = to_m_pt_eta_phi(
-            jets_PFO_E, jets_PFO_px, jets_PFO_py, jets_PFO_pz)
+            E, jets_PFO_px, py, pz)
         return jets
     return rotation_augm
 
@@ -115,10 +118,8 @@ def get_random_split_fn(config: aug_cfg.CollinearSplit):
         jets = jets.copy()
         m, pt, eta, phi = jets[f'jets_{config.const_name}_m'], jets[f'jets_{config.const_name}_pt'], jets[
             f'jets_{config.const_name}_eta'], jets[f'jets_{config.const_name}_phi']
-        e = jets[f'jets_{config.const_name}_e']
         split_index = tf.where(tf.random.uniform(
             shape=tf.shape(pt), minval=0, maxval=1) < prob, True, False)
-
         frac = tf.random.uniform(shape=tf.shape(
             pt), minval=0.1, maxval=0.9, dtype=tf.float32)
         new_all_pt = pt * tf.cast(tf.logical_not(split_index), tf.float32) + \
@@ -128,10 +129,6 @@ def get_random_split_fn(config: aug_cfg.CollinearSplit):
         new_m = tf.zeros_like(new_pt)
         new_eta = tf.boolean_mask(eta, split_index)
         new_phi = tf.boolean_mask(phi, split_index)
-        new_all_e = e * tf.cast(tf.logical_not(split_index), tf.float32) + \
-            e * tf.cast(split_index, tf.float32) * frac
-        new_e = tf.boolean_mask(e, split_index) * \
-            (1 - tf.boolean_mask(frac, split_index))
         jets[f'jets_{config.const_name}_m'] = tf.concat([m, new_m], axis=0)
         jets[f'jets_{config.const_name}_pt'] = tf.concat(
             [new_all_pt, new_pt], axis=0)
@@ -139,8 +136,6 @@ def get_random_split_fn(config: aug_cfg.CollinearSplit):
             [eta, new_eta], axis=0)
         jets[f'jets_{config.const_name}_phi'] = tf.concat(
             [phi, new_phi], axis=0)
-        jets[f'jets_{config.const_name}_e'] = tf.concat(
-            [new_all_e, new_e], axis=0)
         sort_idxs = tf.argsort(
             jets[f'jets_{config.const_name}_pt'], axis=0, direction='DESCENDING')
         jets[f'jets_{config.const_name}_m'] = tf.gather(
@@ -151,8 +146,17 @@ def get_random_split_fn(config: aug_cfg.CollinearSplit):
             jets[f'jets_{config.const_name}_eta'], sort_idxs)
         jets[f'jets_{config.const_name}_phi'] = tf.gather(
             jets[f'jets_{config.const_name}_phi'], sort_idxs)
-        jets[f'jets_{config.const_name}_e'] = tf.gather(
-            jets[f'jets_{config.const_name}_e'], sort_idxs)
+        
+        if f'jets_{config.const_name}_e' in jets:
+            e = jets[f'jets_{config.const_name}_e']
+            new_all_e = e * tf.cast(tf.logical_not(split_index), tf.float32) + \
+                e * tf.cast(split_index, tf.float32) * frac
+            new_e = tf.boolean_mask(e, split_index) * \
+                (1 - tf.boolean_mask(frac, split_index))
+            jets[f'jets_{config.const_name}_e'] = tf.concat(
+                [new_all_e, new_e], axis=0)
+            jets[f'jets_{config.const_name}_e'] = tf.gather(
+                jets[f'jets_{config.const_name}_e'], sort_idxs)
         return jets
     return random_split
 
@@ -167,6 +171,8 @@ def get_soft_smear_fn(config: aug_cfg.SoftSmear):
             jets[f'jets_{config.const_name}_eta']), mean=jets[f'jets_{config.const_name}_eta'], stddev=scale / jets[f'jets_{config.const_name}_pt'])
         jets[f'jets_{config.const_name}_phi'] = tf.random.normal(shape=tf.shape(
             jets[f'jets_{config.const_name}_phi']), mean=jets[f'jets_{config.const_name}_phi'], stddev=scale / jets[f'jets_{config.const_name}_pt'])
+        jets[f'jets_{config.const_name}_eta'] = tf.clip_by_value(jets[f'jets_{config.const_name}_eta'], -5, 5)
+        jets[f'jets_{config.const_name}_phi'] = tf.clip_by_value(jets[f'jets_{config.const_name}_phi'], -np.pi, np.pi)
         return jets
     return get_soft_smear
 
@@ -177,8 +183,10 @@ def get_pt_smear_fn(config: aug_cfg.PTSmear):
     @tf.function
     def get_soft_smear(jets):
         jets = jets.copy()
-        jets[f'jets_{config.const_name}_pt'] = tf.random.normal(shape=tf.shape(
-            jets[f'jets_{config.const_name}_pt']), mean=jets[f'jets_{config.const_name}_pt'], stddev=scale * jets[f'jets_{config.const_name}_pt'])
+        random_var = tf.random.normal(shape=tf.shape(
+            jets[f'jets_{config.const_name}_pt']), mean=0, stddev=scale * jets[f'jets_{config.const_name}_pt'])
+        jets[f'jets_{config.const_name}_pt'] = jets[f'jets_{config.const_name}_pt'] + random_var
+        jets[f'jets_{config.const_name}_pt'] = tf.clip_by_value(jets[f'jets_{config.const_name}_pt'], 1e-8, 1e8)
         return jets
     return get_soft_smear
 

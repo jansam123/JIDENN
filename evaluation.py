@@ -207,7 +207,7 @@ def main(args: eval_config.EvalConfig) -> None:
                                      args.logdir, 'models', model_name, f'{bin_center_name:.2f}'),
                                  score_name=f'{model_name}_score',
                                  class_names=labels)
-        model_df = calculate_binned_metrics(df=df,
+        model_df = evaluation(df=df,
                                             binned_variable=binning_variable,
                                             score_variable=f'{model_name}_score',
                                             weights_variable=args.data.weight,

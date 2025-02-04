@@ -54,15 +54,16 @@ def main():
     figsize = (12, 6)
     model_names = ['depart', 'depart-all_aug', 'depart-coll_split', 'depart-pt_smear', 'depart-rot_drop_smear', 'depart-rotation',
                    'depart-shift_weights', 'depart-soft_drop', 'depart-soft_smear', 'pfn', 'fc_crafted', 'depart-ircs', 'efn', 'depart-Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 'depart-Sh_2211_Enh_clusterTune',
-                   'depart-Sh_2211_jj_DIRE', 'depart-H7EG_jetjet_Cluster', 'depart-H7EG_jetjet_Cluster_dipole', 'depart-multiMC']
+                   'depart-Sh_2211_jj_DIRE', 'depart-H7EG_jetjet_Cluster', 'depart-H7EG_jetjet_Cluster_dipole', 'depart-multiMC', 'pfn-multiMC', 'fc_crafted-multiMC']
     model_labels = ['DeParT', 'DeParT [all]', 'DeParT [coll. split]', 'DeParT [pT smear]', 'DeParT [rot+drop+smear]', 'DeParT [rot.]', 'DeParT [shift w.]',
                     'DeParT [soft drop]', 'DeParT [soft smear]', 'PFN', 'FC red.', 'DeParT IRCS', 'EFN', 'DeParT Sh St.', 'DeParT Sh Cl.',
-                    'DeParT Sh Dire', 'DeParT Hw Ang.', 'DeParT Hw Dip.', 'DeParT MultiMC']
+                    'DeParT Sh Dire', 'DeParT Hw Ang.', 'DeParT Hw Dip.', 'DeParT MultiMC', 'PFN MultiMC', 'FC red. MultiMC']
 
     dir_names = ['Pythia8EvtGen_A14NNPDF23LO_jetjet', 'Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 'Sh_2211_Enh_clusterTune',
                  'Sh_2211_jj_DIRE', 'H7EG_jetjet_Cluster', 'H7EG_jetjet_Cluster_dipole']
     dir_labels = ['Py', 'Sh St.', 'Sh Cl.',
                   'Sh Dire', 'Hw Ang.', 'Hw Dip.']
+    
     NOMINAL_LABEL = 'Py'
     if INCLUDE_NLO:
         dir_names += ['PhH7EG_jj', 'PhPy8EG_jj']
