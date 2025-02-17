@@ -16,10 +16,11 @@ where $U$ is the interaction matrix of shape `(batch, num_particles, num_particl
 
 """
 import tensorflow as tf
+import keras
 from typing import Callable, Union, Tuple, Optional
 
 
-class FFN(tf.keras.layers.Layer):
+class FFN(keras.layers.Layer):
     """Feed-forward network
     On top of the Transformer FFN layer, it adds a layer normalization in between the two dense layers.
 
@@ -34,10 +35,10 @@ class FFN(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
 
-        self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
-        self.dense = tf.keras.layers.Dense(dim, activation=None)
-        self.ln = tf.keras.layers.LayerNormalization()
-        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+        self.wide_dense = keras.layers.Dense(dim * expansion, activation=activation)
+        self.dense = keras.layers.Dense(dim, activation=None)
+        self.ln = keras.layers.LayerNormalization()
+        self.layer_dropout = keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super(FFN, self).get_config()
@@ -62,7 +63,7 @@ class FFN(tf.keras.layers.Layer):
         return output
 
 
-class MultiheadSelfAttention(tf.keras.layers.Layer):
+class MultiheadSelfAttention(keras.layers.Layer):
     """Multi-head self-attention layer
     Standalone implementation of the multi-head self-attention layer, which
     includes the interaction variables.
@@ -77,8 +78,8 @@ class MultiheadSelfAttention(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.heads = dim, heads
 
-        self.linear_qkv = tf.keras.layers.Dense(dim * 3)
-        self.linear_out = tf.keras.layers.Dense(dim)
+        self.linear_qkv = keras.layers.Dense(dim * 3)
+        self.linear_out = keras.layers.Dense(dim)
 
     def get_config(self):
         config = super(MultiheadSelfAttention, self).get_config()
@@ -111,7 +112,7 @@ class MultiheadSelfAttention(tf.keras.layers.Layer):
             interaction = tf.transpose(interaction, [0, 3, 1, 2])  # (B, H, N, N)
             attention_weights += interaction
 
-        attention = tf.keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
+        attention = keras.layers.Softmax()(attention_weights, mask=mask)  # (B, H, N, N)
 
         output = tf.linalg.matmul(attention, v)  # (B, H, N, C // H)
         output = tf.transpose(output, [0, 2, 1, 3])  # (B, N, H, C // H)
@@ -120,9 +121,9 @@ class MultiheadSelfAttention(tf.keras.layers.Layer):
         return output
 
 
-class MultiheadClassAttention(tf.keras.layers.Layer):
+class MultiheadClassAttention(keras.layers.Layer):
     """Multi-head class attention layer
-    This layer is a wrapper around the `tf.keras.layers.MultiHeadAttention` layer, 
+    This layer is a wrapper around the `keras.layers.MultiHeadAttention` layer, 
     to fix the key, and value to be the same as the input, and only use the class token
     as the query.
 
@@ -135,8 +136,8 @@ class MultiheadClassAttention(tf.keras.layers.Layer):
     def __init__(self, dim: int, heads: int, dropout: Optional[float] = None):
         super().__init__()
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
-        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+        self.mha = keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
+        self.layer_dropout = keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super(MultiheadClassAttention, self).get_config()
@@ -160,7 +161,7 @@ class MultiheadClassAttention(tf.keras.layers.Layer):
         return output
 
 
-class SelfAttentionBlock(tf.keras.layers.Layer):
+class SelfAttentionBlock(keras.layers.Layer):
     """Self-attention block.
     It contains a multi-head self-attention layer and a feed-forward network with residual connections
     and layer normalizations. The self-attention layer includes the interaction variables.
@@ -177,12 +178,12 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.heads, self.dropout, self.expansion, self.activation = dim, heads, dropout, expansion, activation
 
-        self.pre_mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.pre_mhsa_ln = keras.layers.LayerNormalization()
         self.mhsa = MultiheadSelfAttention(dim=dim, heads=heads)
-        self.post_mhsa_ln = tf.keras.layers.LayerNormalization()
-        self.mhsa_dropout = tf.keras.layers.Dropout(dropout)
+        self.post_mhsa_ln = keras.layers.LayerNormalization()
+        self.mhsa_dropout = keras.layers.Dropout(dropout)
 
-        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.pre_ffn_ln = keras.layers.LayerNormalization()
         self.ffn = FFN(dim=dim, expansion=expansion, activation=activation, dropout=dropout)
 
     def get_config(self):
@@ -217,7 +218,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         return output
 
 
-class ClassAttentionBlock(tf.keras.layers.Layer):
+class ClassAttentionBlock(keras.layers.Layer):
     """Class attention block.
     It allows the class token to attend to the input particles, and then feed the attended class token
     to the feed-forward network with residual connections and layer normalizations.
@@ -235,12 +236,12 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.heads, self.dropout, self.expansion = dim, heads, dropout, expansion
 
-        self.pre_mhca_ln = tf.keras.layers.LayerNormalization()
+        self.pre_mhca_ln = keras.layers.LayerNormalization()
         self.mhca = MultiheadClassAttention(dim=dim, heads=heads, dropout=dropout)
-        self.post_mhca_ln = tf.keras.layers.LayerNormalization()
-        self.mhca_dropout = tf.keras.layers.Dropout(dropout)
+        self.post_mhca_ln = keras.layers.LayerNormalization()
+        self.mhca_dropout = keras.layers.Dropout(dropout)
 
-        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.pre_ffn_ln = keras.layers.LayerNormalization()
         self.ffn = FFN(dim=dim, expansion=expansion, activation=tf.nn.gelu, dropout=dropout)
 
     def get_config(self):
@@ -276,7 +277,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         return output
 
 
-class ParT(tf.keras.layers.Layer):
+class ParT(keras.layers.Layer):
     """Pure Particle Transformer (ParT) layers without the embedding and output layers.
 
     It also creates the class token, which is used to encode the global information of the input,
@@ -306,7 +307,7 @@ class ParT(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.expansion, self.heads, self.dropout, self.activation, self.num_selfattn_layers, self.num_class_layers = dim, expansion, heads, dropout, activation, self_attn_layers, class_attn_layers
 
-        self.class_token = tf.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
+        self.class_token = keras.Variable(tf.random.truncated_normal((1, 1, dim), stddev=0.02), trainable=True)
         self.sa_layers = [SelfAttentionBlock(dim, heads, expansion, activation, dropout)
                           for _ in range(self_attn_layers)]
         self.ca_layers = [ClassAttentionBlock(dim, heads, expansion, dropout) for _ in range(class_attn_layers)]
@@ -344,7 +345,7 @@ class ParT(tf.keras.layers.Layer):
         return class_token
 
 
-class FCEmbedding(tf.keras.layers.Layer):
+class FCEmbedding(keras.layers.Layer):
     """Embedding layer as a series of fully-connected layers.
 
     Args:
@@ -357,7 +358,7 @@ class FCEmbedding(tf.keras.layers.Layer):
 
         super().__init__()
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        self.layers = [keras.layers.Dense(self.embedding_dim, activation=self.activation)
                        for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
@@ -380,7 +381,7 @@ class FCEmbedding(tf.keras.layers.Layer):
         return hidden
 
 
-class CNNEmbedding(tf.keras.layers.Layer):
+class CNNEmbedding(keras.layers.Layer):
     """Embedding layer of the interaction variables as a series of point-wise convolutional layers.
     The interaction variiables are compuetd for each pair of particles.
     This creates a redundancy in the input, as the matrix is symetric and the diagonal is always zero.
@@ -399,10 +400,10 @@ class CNNEmbedding(tf.keras.layers.Layer):
         super().__init__()
         self.activation, self.num_layers, self.layer_size, self.out_dim = activation, num_layers, layer_size, out_dim
 
-        self.conv_layers = [tf.keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
-        self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
-        self.bn = [tf.keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
-        self.activation = tf.keras.layers.Activation(activation)
+        self.conv_layers = [keras.layers.Conv1D(layer_size, 1) for _ in range(num_layers)]
+        self.conv_layers.append(keras.layers.Conv1D(out_dim, 1))
+        self.bn = [keras.layers.BatchNormalization() for _ in range(num_layers + 1)]
+        self.activation = keras.layers.Activation(activation)
 
     def get_config(self):
         config = super(CNNEmbedding, self).get_config()
@@ -421,7 +422,6 @@ class CNNEmbedding(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, num_particles, num_particles, out_dim)`
         """
-
         ones = tf.ones_like(inputs[0, :, :, 0])
         upper_tril_mask = tf.linalg.band_part(ones, 0, -1)
         diag_mask = tf.linalg.band_part(ones, 0, 0)
@@ -443,10 +443,12 @@ class CNNEmbedding(tf.keras.layers.Layer):
         return out
 
 
-class ParTModel(tf.keras.Model):
+        
+
+class ParTModel(keras.Model):
     """ParT model with embwith embedding and output layers.
 
-    The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.
+    The model already contains the `keras.layers.Input` layer, so it can be used as a standalone model.
 
     The input tensor can be either a tensor of shape `(batch_size, num_particles, num_features)` or
     a tuple of tensors `(particle_tensor, interaction_tensor)` of shapes 
@@ -476,12 +478,12 @@ class ParTModel(tf.keras.Model):
         class_attn_layers (int): number of class-attention layers
         expansion (int): expansion factor of the self-attention layers
         heads (int): number of heads of the self-attention layers
-        output_layer (tf.keras.layers.Layer): output layer
+        output_layer (keras.layers.Layer): output layer
         activation (Callable[[tf.Tensor], tf.Tensor]): activation function
         dropout (Optional[float], optional): dropout rate. Defaults to None.
         interaction_embed_layers (Optional[int], optional): number of layers of the interaction embedding layer. Defaults to None.
         interaction_embed_layer_size (Optional[int], optional): size of the layers of the interaction embedding layer. Defaults to None.
-        preprocess (Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]], optional): preprocessing layer. Defaults to None.
+        preprocess (Union[keras.layers.Layer, None, Tuple[keras.layers.Layer, keras.layers.Layer]], optional): preprocessing layer. Defaults to None.
 
     """
 
@@ -493,22 +495,26 @@ class ParTModel(tf.keras.Model):
                  class_attn_layers: int,
                  expansion: int,
                  heads: int,
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  dropout: Optional[float] = None,
                  interaction_embed_layers: Optional[int] = None,
                  interaction_embed_layer_size: Optional[int] = None,
-                 preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None):
+                 preprocess: Union[keras.layers.Layer, None, Tuple[keras.layers.Layer, keras.layers.Layer]] = None,
+                 **kwargs):
+        
+        self.input_size, self.embed_dim, self.embed_layers, self.self_attn_layers, self.class_attn_layers, self.expansion, self.heads, self.dropout, self.interaction_embed_layers, self.interaction_embed_layer_size, self.preprocess = input_shape, embed_dim, embed_layers, self_attn_layers, class_attn_layers, expansion, heads, dropout, interaction_embed_layers, interaction_embed_layer_size, preprocess
+        self.activation, self.output_layer = activation, output_layer
+        
 
-        if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
-            input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
-                     tf.keras.layers.Input(shape=input_shape[1], ragged=True))
-            row_lengths = input[0].row_lengths()
-            hidden = input[0].to_tensor()
-            interaction_hidden = input[1].to_tensor()
+        if (isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple)) or isinstance(input_shape, list) and isinstance(input_shape[0], list):
+            input = (keras.layers.Input(shape=input_shape[0]),
+                     keras.layers.Input(shape=input_shape[1]),
+                     keras.layers.Input(shape=(input_shape[0][0],), dtype=tf.bool))
+            hidden, interaction_hidden, mask = input
 
             if preprocess is not None:
-                if not isinstance(preprocess, tuple):
+                if not isinstance(preprocess, tuple) and isinstance(preprocess, list):
                     raise ValueError(
                         "preprocess must be a tuple of two layers when the input is a tuple of two tensors.")
 
@@ -527,13 +533,13 @@ class ParTModel(tf.keras.Model):
                 heads,
                 activation)(interaction_hidden)
         else:
-            input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+            input = (keras.layers.Input(shape=input_shape),
+                     keras.layers.Input(shape=(input_shape[0],), dtype=tf.bool))
+            hidden, mask = input
             embed_interaction = None
-            row_lengths = input.row_lengths()
-            hidden = input.to_tensor()
 
         if preprocess is not None:
-            if isinstance(preprocess, tuple):
+            if isinstance(preprocess, tuple) or isinstance(preprocess, list):
                 raise ValueError("preprocess must be a single layer when the input is a single tensor.")
             hidden = preprocess(hidden)
 
@@ -545,9 +551,36 @@ class ParTModel(tf.keras.Model):
                            expansion=expansion,
                            heads=heads,
                            dropout=dropout,
-                           activation=activation)(hidden, tf.sequence_mask(row_lengths), embed_interaction)
+                           activation=activation)(hidden, mask, embed_interaction)
 
-        transformed = tf.keras.layers.LayerNormalization()(transformed)
+        transformed = keras.layers.LayerNormalization()(transformed)
         output = output_layer(transformed[:, 0, :])
 
-        super().__init__(inputs=input, outputs=output)
+        super().__init__(inputs=input, outputs=output, **kwargs)
+
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({name: getattr(self, name) for name in ["embed_dim", "embed_layers", "self_attn_layers",
+                                                              "class_attn_layers", "expansion", "heads",  "dropout",
+                                                              "interaction_embed_layers", "interaction_embed_layer_size", ]})
+        config['input_shape'] = self.input_size
+        config['activation'] = keras.activations.serialize(self.activation)
+        config['output_layer'] = keras.saving.serialize_keras_object(self.output_layer)
+        if self.preprocess is not None:
+            if isinstance(self.preprocess, tuple) or isinstance(self.preprocess, list):
+                config['preprocess'] = tuple([keras.saving.serialize_keras_object(layer) for layer in self.preprocess])
+            else:
+                config['preprocess'] = keras.saving.serialize_keras_object(self.preprocess)
+        return config
+    
+    @classmethod
+    def from_config(cls, config):
+        config['activation'] = keras.activations.deserialize(config['activation'])
+        config['output_layer'] = keras.saving.deserialize_keras_object(config['output_layer'])
+        if config.get('preprocess') is not None:
+            if isinstance(config['preprocess'], tuple) or isinstance(config['preprocess'], list):
+                config['preprocess'] = tuple([keras.saving.deserialize_keras_object(layer) for layer in config['preprocess']])
+            else:
+                config['preprocess'] = keras.saving.deserialize_keras_object(config['preprocess'])
+        return cls(**config)

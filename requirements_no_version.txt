@@ -1,7 +1,5 @@
 tensorflow 
 Jinja2 
-tensorboard-plugin-profile 
-tensorflow-datasets 
 scikit-learn 
 uproot 
 vector 
@@ -13,6 +11,7 @@ typed-argument-parser
 hydra-core 
 pdoc3 
 atlas-ftag-tools 
-puma-hep 
 atlasify 
 pytest
+ray
+awkward-pandas

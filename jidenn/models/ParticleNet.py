@@ -1,27 +1,13 @@
 import tensorflow as tf
-from typing import Callable, Union, Tuple, Optional, Literal, List
+import keras
+from typing import Callable, Union, Tuple, Literal, List
 
-
-# class MatrixDistance(tf.keras.layers.Layer):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#     def call(self, A, B):
-#         # A shape is (N, P_A, C), B shape is (N, P_B, C)
-#         # D shape is (N, P_A, P_B)
-#         r_A = tf.reduce_sum(A * A, axis=2, keepdims=True)
-#         r_B = tf.reduce_sum(B * B, axis=2, keepdims=True)
-#         m = tf.matmul(A, tf.transpose(B, perm=(0, 2, 1)))
-#         D = r_A - 2 * m + tf.transpose(r_B, perm=(0, 2, 1))
-#         return D
-
-
-class kNN(tf.keras.layers.Layer):
+class kNN(keras.layers.Layer):
     def __init__(self, num_points: int, k: int):
         super().__init__()
         self.num_points = num_points
         self.k = k
-        self.top_k = tf.keras.layers.Lambda(lambda x: tf.nn.top_k(x, k=self.k + 1))
+        self.top_k = keras.layers.Lambda(lambda x: tf.nn.top_k(x, k=self.k + 1))
 
     def get_config(self):
         config = super().get_config().copy()
@@ -47,7 +33,7 @@ class kNN(tf.keras.layers.Layer):
         return indices
 
 
-class EdgeConv(tf.keras.layers.Layer):
+class EdgeConv(keras.layers.Layer):
 
     def __init__(self, k: int, channels: List[int], num_points: int, pooling: Literal['average', 'max'], activation: Callable[[tf.Tensor], tf.Tensor]):
         super().__init__()
@@ -58,11 +44,11 @@ class EdgeConv(tf.keras.layers.Layer):
         self.num_points = num_points
 
         self.knn_layer = kNN(num_points, k)
-        self.layers = [tf.keras.layers.Dense(channel, use_bias=False, activation=None) for channel in channels]
-        self.bn_layers = [tf.keras.layers.BatchNormalization() for _ in channels]
+        self.layers = [keras.layers.Dense(channel, use_bias=False, activation=None) for channel in channels]
+        self.bn_layers = [keras.layers.BatchNormalization() for _ in channels]
 
-        self.bypass = tf.keras.layers.Dense(channels[-1], use_bias=False, activation=None)
-        self.bypass_bn = tf.keras.layers.BatchNormalization()
+        self.bypass = keras.layers.Dense(channels[-1], use_bias=False, activation=None)
+        self.bypass_bn = keras.layers.BatchNormalization()
 
     def get_config(self):
         config = super().get_config().copy()
@@ -104,7 +90,7 @@ class EdgeConv(tf.keras.layers.Layer):
         return output
 
 
-class ParticleNet(tf.keras.layers.Layer):
+class ParticleNet(keras.layers.Layer):
 
     def __init__(self,
                  num_points: int,
@@ -128,11 +114,11 @@ class ParticleNet(tf.keras.layers.Layer):
         self.edge_knn = edge_knn
         self.edge_layers = edge_layers
 
-        self.bn = tf.keras.layers.BatchNormalization()
+        self.bn = keras.layers.BatchNormalization()
         self.edge_convs = [EdgeConv(k_neighbours, channels, num_points, pooling, activation)
                            for k_neighbours, channels in zip(edge_knn, edge_layers)]
-        self.fc_layers = [tf.keras.layers.Dense(units, activation=activation) for units in fc_layers]
-        self.dropout_layers = [tf.keras.layers.Dropout(dropout) for dropout in fc_dropout]
+        self.fc_layers = [keras.layers.Dense(units, activation=activation) for units in fc_layers]
+        self.dropout_layers = [keras.layers.Dropout(dropout) for dropout in fc_dropout]
 
     def get_config(self):
         config = super().get_config().copy()
@@ -148,7 +134,8 @@ class ParticleNet(tf.keras.layers.Layer):
         return config
 
     def call(self, points, features, mask):
-        mask = tf.cast(tf.not_equal(mask, 0), dtype=tf.float32)  # 1 if valid
+        mask = tf.expand_dims(mask, axis=-1)
+        mask = tf.cast(tf.not_equal(mask, False), dtype=tf.float32)  # 1 if valid
         coord_shift = tf.multiply(999., tf.cast(tf.equal(mask, 0), dtype=tf.float32))  # make non-valid positions to 99
 
         features = self.bn(features)
@@ -159,7 +146,7 @@ class ParticleNet(tf.keras.layers.Layer):
             features = layer(points, features)
 
         features = tf.multiply(features, mask)
-        hidden = tf.keras.layers.GlobalAveragePooling1D()(features)
+        hidden = keras.layers.GlobalAveragePooling1D()(features)
 
         for layer, dropout in zip(self.fc_layers, self.dropout_layers):
             hidden = layer(hidden)
@@ -168,47 +155,49 @@ class ParticleNet(tf.keras.layers.Layer):
         return hidden
 
 
-class ParticleNetModel(tf.keras.Model):
+class ParticleNetModel(keras.Model):
 
     def __init__(self,
                  input_shape: Tuple[Tuple[int, int], Tuple[int, int]],
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
-                 preprocess: Union[Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer], None] = None,
+                 preprocess: Union[Tuple[keras.layers.Layer, keras.layers.Layer], None] = None,
                  pooling: Literal['average', 'max'] = 'average',
                  fc_layers: List[int] = [256],
                  fc_dropout: List[float] = [0.1],
                  edge_knn: List[int] = [16, 16, 16],
                  edge_layers: List[List[int]] = [[64, 64, 64], [128, 128, 128], [256, 256, 256]],
+                 max_constituents: int = 100,
+                 **kwargs
                  ):
+        
+        self.input_size, self.output_layer, self.preprocess = input_shape, output_layer, preprocess
+        self.pooling = pooling
+        self.fc_layers = fc_layers
+        self.fc_dropout = fc_dropout
+        self.edge_knn = edge_knn
+        self.edge_layers = edge_layers
+        self.activation = activation
+        self.max_constituents = max_constituents
+        
+        
 
-        input = (tf.keras.Input(name='points', shape=input_shape[0]),
-                 tf.keras.Input(name='features', shape=input_shape[1]),
-                 tf.keras.Input(name='mask', shape=input_shape[2]))
+        input = (keras.Input(shape=input_shape[0]),
+                 keras.Input(shape=input_shape[1]),
+                 keras.layers.Input(shape=(input_shape[0][0],), dtype=tf.bool))
 
-        points = input[0]
-        features = input[1]
+        features = input[0]
+        points = input[1]
         mask = input[2]
 
         if preprocess is not None:
-            points = preprocess[0](points)
-            features = preprocess[1](features)
+            features = preprocess[0](features)
+            points = preprocess[1](points)
 
-        # row_lengths = points.row_lengths()
-        # mask = tf.sequence_mask(row_lengths)
-
-        # points = points.to_tensor()
-        # features = features.to_tensor()
-
-        num_points = 100
-        # pad points and features shape to (N, 100, C)
-        # points = tf.pad(points, [[0, 0], [0, num_points - tf.shape(points)[1]], [0, 0]])
-        # features = tf.pad(features, [[0, 0], [0, num_points - tf.shape(features)[1]], [0, 0]])
-        # mask = tf.pad(mask, [[0, 0], [0, num_points - tf.shape(mask)[1]]])
 
         output = ParticleNet(
             pooling=pooling,
-            num_points=num_points,
+            num_points=max_constituents,
             fc_layers=fc_layers,
             fc_dropout=fc_dropout,
             edge_knn=edge_knn,
@@ -218,4 +207,27 @@ class ParticleNetModel(tf.keras.Model):
 
         output = output_layer(output)
 
-        super().__init__(inputs=input, outputs=output)
+        super().__init__(inputs=input, outputs=output, **kwargs)
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'input_shape': self.input_size,
+            'output_layer': keras.layers.serialize(self.output_layer),
+            'preprocess': keras.layers.serialize(self.preprocess),
+            'pooling': self.pooling,
+            'fc_layers': self.fc_layers,
+            'fc_dropout': self.fc_dropout,
+            'edge_knn': self.edge_knn,
+            'edge_layers': self.edge_layers,
+            'activation': keras.activations.serialize(self.activation),
+            'max_constituents': self.max_constituents,
+        })
+        return config
+    
+    @classmethod   
+    def from_config(cls, config):
+        config['output_layer'] = keras.layers.deserialize(config['output_layer'])
+        config['preprocess'] = keras.layers.deserialize(config['preprocess'])
+        config['activation'] = keras.activations.deserialize(config['activation'])
+        return cls(**config)

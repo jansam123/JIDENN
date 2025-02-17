@@ -13,6 +13,7 @@ import pandas as pd
 import hydra
 import numpy as np
 import tensorflow as tf
+import keras
 from typing import Optional
 
 from jidenn.const import METRIC_NAMING_SCHEMA, LATEX_NAMING_CONVENTION, MODEL_NAMING_SCHEMA
@@ -74,10 +75,10 @@ def plot_attn_2d(array_2d: np.ndarray,
         plt.close()
 
 
-def attn_output_model(model_path: str, transformer_layer_index: int) -> tf.keras.Model:
-    model: tf.keras.Model = tf.keras.models.load_model(
+def attn_output_model(model_path: str, transformer_layer_index: int) -> keras.Model:
+    model: keras.Model = keras.models.load_model(
         model_path, custom_objects=CUSTOM_OBJECTS, compile=False)
-    model = tf.keras.Model(
+    model = keras.Model(
         inputs=model.inputs, outputs=model.layers[transformer_layer_index].output)
     model.summary()
     return model
@@ -110,13 +111,13 @@ def main(args: attn_plot_config.AttnPlotConfig) -> None:
         model_input = tf.function(func=train_input_class)
         dataset = dataset.remap_data(model_input)
         dataset = dataset.get_prepared_dataset(
-            batch_size=BATCH_SIZE, ragged=True, take=TOTAL_SIZE)
+            batch_size=BATCH_SIZE, take=TOTAL_SIZE)
         # model = attn_output_model(args.model_path, args.model.transformer_layer_index)
-        model: tf.keras.Model = tf.keras.models.load_model(
+        model: keras.Model = keras.models.load_model(
             model_path, custom_objects=CUSTOM_OBJECTS, compile=False)
         print(model.summary())
         print(model.layers)
-        model = tf.keras.Model(inputs=model.inputs,
+        model = keras.Model(inputs=model.inputs,
                             outputs=model.layers[-4].output)
         dataset = dataset.map(lambda x, y, z: x)
 

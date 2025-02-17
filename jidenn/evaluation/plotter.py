@@ -351,14 +351,14 @@ def plot_data_distributions(df: pd.DataFrame,
             variable names such as 'jets_pt' to a latex formatted label such as '$p_{\mathrm{T}}^\mathrm{jet}$'.
 
     """
-    # hue_order = named_labels.values() if named_labels is not None else None
+    hue_order = named_labels.values() if named_labels is not None else None
     color_column = 'Truth Label'
     weight_column = '_weight'
     df[color_column] = df[hue_variable].apply(
         lambda x: named_labels[x]) if named_labels is not None else df[hue_variable].apply(str)
     df[weight_column] = df[weight_variable] if weight_variable is not None else 1
     # set(named_labels.values()) if named_labels is not None else None
-    hue_order = ['quark', 'gluon']
+    # hue_order = ['quark', 'gluon']
     var_names = list(df.columns) if variables is None else variables
     var_names.remove(color_column) if color_column in var_names else None
     var_names.remove(weight_column) if weight_column in var_names else None

@@ -16,7 +16,6 @@ import numpy as np
 import ray
 #
 from jidenn.data.string_conversions import Cut, Expression
-from jidenn.evaluation.plotter import plot_data_distributions, plot_single_dist
 from jidenn.histogram.tf_dataset_histogram import histogram, histogram_multiple
 from jidenn.histogram.BinnedVariable import Binning
 
@@ -142,33 +141,80 @@ def read_ttree(tree: uproot.TTree, backend: Literal['pd', 'ak'] = 'pd', downcast
         logging.info(f'{var}: {output[var].shape} {output[var].dtype}')
     return output
 
+def get_stacker(max_constituents: int = 100, pad_value: float = 0.):
+    def pad_tensor(tensor: tf.Tensor) -> Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]]:
+        ndims = tensor.shape.ndims
+        # If tensor is rank 1, return it as is (no mask is created).
+        if ndims == 1:
+            return tensor
+        elif ndims == 2:
+            # For node variables: tensor is [N, C]
+            N = tf.shape(tensor)[0]
+            pad_rows = tf.maximum(0, max_constituents - N)
+            padded = tf.pad(tensor, paddings=[[0, pad_rows], [0, 0]], constant_values=pad_value)
+            padded = padded[:max_constituents, :]
+            # Create a mask of shape [max_constituents]: first N entries are True, rest False.
+            mask = tf.concat([tf.ones(N, dtype=tf.bool), tf.zeros(pad_rows, dtype=tf.bool)], axis=0)
+            mask = mask[:max_constituents]
+            return padded, mask
+        elif ndims == 3:
+            # For edge variables: tensor is [N, N, C]
+            N = tf.shape(tensor)[0]
+            pad_rows = tf.maximum(0, max_constituents - N)
+            pad_cols = tf.maximum(0, max_constituents - N)
+            padded = tf.pad(tensor, paddings=[[0, pad_rows], [0, pad_cols], [0, 0]], constant_values=pad_value)
+            padded = padded[:max_constituents, :max_constituents, :]
+            # Create a node mask (for the first dimension) of shape [max_constituents]
+            mask = tf.concat([tf.ones(N, dtype=tf.bool), tf.zeros(pad_rows, dtype=tf.bool)], axis=0)
+            mask = mask[:max_constituents]
+            return padded, mask
+        else:
+            raise ValueError(f"Unsupported tensor rank: {ndims}")
+    
+    def stack_and_pad(data_input: ROOTVariables) -> Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]]:
+        # Stack all variables along the last axis.
+        # Assumes that each data_input[var] is a tensor of shape [N, ...] where "..." must be consistent.
+        # For node variables each is [N] and for edge variables each is [N, N].
+        stacked = tf.stack(
+            [tf.cast(data_input[var], tf.float32) for var in data_input.keys()],
+            axis=-1
+        )
+        return pad_tensor(stacked)
+    
+    @tf.function
+    def dict_to_stacked_tensor(data: Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]]
+                               ) -> Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor, tf.Tensor]]:
+        """Converts ROOTVariables to a tensor (or tuple of tensors) padded to a fixed size.
 
-@tf.function
-def dict_to_stacked_tensor(data: Union[ROOTVariables, Tuple[ROOTVariables, ROOTVariables]], ) -> Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]]:
-    """Converts a `ROOTVariables` to a input for training a neural network, i.e. a tuple `(input, label, weight)`.
-    The `input` is construsted by **stacking all the variables**  in `data` `ROOTVariables` dictionary into a single `tf.Tensor`.
-
-    Optionally, the input data can be a tuple of two ROOTVariables. The output has the form `((input1, input2), label, weight)`.
-    The `input2` is constructed by **stacking all the variables** in the second `ROOTVariables` dictionary into a single `tf.Tensor`.
-
-    Args:
-        data (ROOTVariables or tuple[ROOTVariables, ROOTVariables]): The input data.
-        label (int): The label.
-        weight (float, optional): The weight. Defaults to `None`.
-
-    Returns:
-        A tuple `(input, label, weight)` where `data` is a  `tf.Tensor` or a tuple `((input1, input2), label, weight)`
-        in case `data` is a tuple of two ROOTVariables where `input1` and `input2` are `tf.Tensor`s.
-    """
-
-    if isinstance(data, tuple):
-        output_data = []
-        for data_input in data:
-            output_data.append(tf.stack(
-                [tf.cast(data_input[var], FLOAT_PRECISION) for var in data_input.keys()], axis=-1))
-        return tuple(output_data)
-    else:
-        return tf.stack([tf.cast(data[var], FLOAT_PRECISION) for var in data.keys()], axis=-1)
+        For node variables, the result is padded to shape [max_constituents, C] and a mask of shape [max_constituents] is added.
+        For edge variables, the result is padded to shape [max_constituents, max_constituents, C] and a mask of shape [max_constituents] is added.
+        For a tuple input (e.g. (node, edge)), the function returns (node_tensor, edge_tensor, mask),
+        where the mask is taken from the node variables.
+        For rank-1 inputs (vectors), no mask is added.
+        """
+        if isinstance(data, tuple):
+            # Process each dictionary separately.
+            outputs = [stack_and_pad(d) for d in data]
+            # Check if the outputs include a mask (i.e. they are tuples)
+            if isinstance(outputs[0], tuple):
+                if len(outputs) == 1:
+                    # Only one element in the tuple.
+                    return outputs[0]
+                elif len(outputs) == 2:
+                    # Assume the first is nodes and the second is edges;
+                    # return (node_tensor, edge_tensor, node_mask)
+                    node_tensor, node_mask = outputs[0]
+                    edge_tensor, _ = outputs[1]  # We ignore the edge mask.
+                    return node_tensor, edge_tensor, node_mask
+                else:
+                    raise ValueError("Tuple input with more than 2 elements is not supported.")
+            else:
+                # If no masks were produced (rank==1), return the outputs as a tuple.
+                return tuple(outputs)
+        else:
+            return stack_and_pad(data)
+    
+    return dict_to_stacked_tensor
 
 
 def get_var_picker(target: Optional[str] = None,
@@ -189,26 +235,62 @@ def get_var_picker(target: Optional[str] = None,
             return new_sample, Expression(target)(sample), Expression(weight)(sample)
     return pick_variables
 
+def get_multilabel_maker(target: list[str],
+                         new_target_name: str) -> Callable[[ROOTVariables],
+                                                                      Union[Tuple[ROOTVariables, tf.RaggedTensor, tf.RaggedTensor], ROOTVariables, Tuple[ROOTVariables, tf.RaggedTensor]]]:
+    @tf.function
+    def multilabel_maker(sample: ROOTVariables) -> ROOTVariables:
+        label = -1
+        for i, t in enumerate(target):
+            if tf.cast(sample[t], tf.int32) == 1:
+                label = i
+        return {**sample, new_target_name: label}
+    return multilabel_maker
+
+def process_uproot_batch(batch,
+                        variables: List[str] = [],
+                        downcast: bool = True,
+                        manual_cast_int: List[str] = [],
+                        manual_cast_float: List[str] = []) -> Dict[str, Union[tf.Tensor, tf.RaggedTensor]]:
+    output = {}
+    for var in variables:
+        tensor = awkward_to_tensor(batch[var])
+        if downcast:
+            if tensor.dtype == tf.float64:
+                tensor = tf.cast(tensor, FLOAT_PRECISION)
+            elif tensor.dtype == tf.int64:
+                tensor = tf.cast(tensor, INT_PRECISION)
+            elif tensor.dtype == tf.uint64:
+                tensor = tf.cast(tensor, INT_PRECISION)
+
+        if var in manual_cast_int:
+            tensor = tf.cast(tensor, INT_PRECISION)
+        elif var in manual_cast_float:
+            tensor = tf.cast(tensor, FLOAT_PRECISION)
+
+        output[var] = tensor
+    return output
 
 def root_file_iterator(filename: str,
                        treename: str,
-                       step_size: Optional[int] = None,
+                       step_size: Optional[Union[int,str]] = None,
                        entry_start: Optional[int] = None,
                        entry_stop: Optional[int] = None,
                        num_workers: int = 1,
                        downcast: bool = True,
                        manual_cast_int: List[str] = [],
-                       manual_cast_float: List[str] = []) -> Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]:
+                       manual_cast_float: List[str] = [],
+                       to_skip: List[int] = []) -> Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]]:
     """A generator that yields batches of data from a ROOT file as dictionaries of tensors. 
     Tensors are created from the awkward arrays into normal tensors or ragged tensors, 
     optionaly with multiple raggged dimensions based on the structure of the awkward array.
 
     Args:
-        filename (str): ROOT file name
+        filename (str): ROOT file name. Wildcards with * are supported.
         treename (str): name of the tree in the ROOT file
-        step_size (Optional[int], optional): Size of the batch. If None, the whole tree is loaded. Defaults to None.
-        entry_start (Optional[int], optional): Index of the first entry to load. If None, the whole tree is loaded. Defaults to None.
-        entry_stop (Optional[int], optional): Index of the last entry to load. Defaults to None.
+        step_size (Union[int,str], optional): Size of the batch. If None, the whole tree is loaded. Defaults to None.
+        entry_start (int, optional): Index of the first entry to load. If None, the whole tree is loaded. Defaults to None.
+        entry_stop (int, optional): Index of the last entry to load. Defaults to None.
         num_workers (int, optional): Number of workers to use for parallel loading in `uproot`. Defaults to 1.
         downcast (bool, optional): Downcast the output to `tf.float32`, `tf.int32` or `tf.uint32`. Defaults to True.
         manual_cast_int (List[str], optional): List of variables to cast to `tf.int32`. Defaults to [].
@@ -217,38 +299,39 @@ def root_file_iterator(filename: str,
     Yields:
         Dict[str, Union[tf.Tensor, tf.RaggedTensor]]: Dictionary of tensors with the same keys as the branches in the ROOT tree.
     """
+    
+    if '*' in filename and (entry_start is not None or entry_stop is not None):
+        raise ValueError(
+            'Wildcards in the filename are not supported with entry_start and entry_stop.')
+    if isinstance(step_size , str) and (entry_start is not None or entry_stop is not None):
+        raise ValueError(
+            'Step size as a string is not supported with entry_start and entry_stop.')
+        
+    if '*' not in filename:
+        with uproot.open(filename, num_workers=num_workers) as file:
+            tree = file[treename]
+            variables = tree.keys()
+            num_entries = tree.num_entries if entry_stop is None else entry_stop - entry_start
+            processed_events = 0
+            for i, batch in enumerate(tree.iterate(step_size=step_size, entry_start=entry_start, entry_stop=entry_stop)):
 
-    with uproot.open(filename, num_workers=num_workers) as file:
-        tree = file[treename]
-        variables = tree.keys()
-        num_entries = tree.num_entries if entry_stop is None else entry_stop - entry_start
+                processed_events += ak.num(batch[variables[0]], axis=0)
+
+                logging.info(
+                    f"Processing chunk {i}: loaded {processed_events} out of {num_entries} events ({100*processed_events/num_entries if num_entries > 0 else 0:.1f}%).")
+
+                yield process_uproot_batch(batch, variables, downcast, manual_cast_int, manual_cast_float)
+    else:
         processed_events = 0
-        for i, batch in enumerate(tree.iterate(step_size=step_size, entry_start=entry_start, entry_stop=entry_stop)):
-
+        for i, batch in enumerate(uproot.iterate(f'{filename}:{treename}', step_size=step_size,  num_workers=num_workers, library='ak')):
+            variables = batch.fields
             processed_events += ak.num(batch[variables[0]], axis=0)
-
-            logging.info(
-                f"Processing chunk {i}: loaded {processed_events} out of {num_entries} events ({100*processed_events/num_entries if num_entries > 0 else 0:.1f}%).")
-
-            output = {}
-            for var in variables:
-                tensor = awkward_to_tensor(batch[var])
-                if downcast:
-                    if tensor.dtype == tf.float64:
-                        tensor = tf.cast(tensor, FLOAT_PRECISION)
-                    elif tensor.dtype == tf.int64:
-                        tensor = tf.cast(tensor, INT_PRECISION)
-                    elif tensor.dtype == tf.uint64:
-                        tensor = tf.cast(tensor, INT_PRECISION)
-
-                if var in manual_cast_int:
-                    tensor = tf.cast(tensor, INT_PRECISION)
-                elif var in manual_cast_float:
-                    tensor = tf.cast(tensor, FLOAT_PRECISION)
-
-                output[var] = tensor
-            yield output
-            # yield {var: awkward_to_tensor(batch[var]) for var in variables}
+            if i in to_skip:
+                logging.info(f'Skipping chunk {i+1}: loaded {processed_events:,} events.')
+                yield None
+            # split the tousands in processed_events with a comma
+            logging.info(f'Processing chunk {i+1}: loaded {processed_events:,} events.')
+            yield process_uproot_batch(batch, variables, downcast, manual_cast_int, manual_cast_float) 
 
 
 @ray.remote
@@ -276,16 +359,26 @@ class BatchSaver:
         return (dataset.element_spec, dataset.cardinality())
 
 
-def save_batch(folder: str, data: Dict[str, Union[tf.Tensor, tf.RaggedTensor]], n_parallel: Optional[int] = None) -> Tuple[Any, Any]:
+def save_batch(folder: str, 
+               data: Dict[str, Union[tf.Tensor, tf.RaggedTensor]], 
+               n_parallel: Optional[int] = None,
+               use_ray: bool = True) -> Tuple[Any, Any]:
     """Saves a batch of data to a folder as a tf.data.Dataset using ray actors.
 
     Args:
         folder (str): Folder to save the batch to.
         data (Dict[str, Union[tf.Tensor, tf.RaggedTensor]]): Dictionary of tensors to save.
+        n_parallel (int, optional): Number of parallel processes to use. Defaults to None.
+        use_ray (bool, optional): Use ray actors to save the batch. Defaults to True.
 
     Returns:
         Tuple[Any, Any]: The element spec and cardinality of the saved dataset.
     """
+    if not use_ray:
+        dataset = tf.data.Dataset.from_tensor_slices(data)
+        dataset.save(folder, compression='GZIP')
+        return dataset.element_spec, dataset.cardinality()
+    
     with ray.init(num_cpus=n_parallel):
         actors = [BatchSaver.remote(folder, data)]
         output = ray.get([actor.save.remote() for actor in actors])
@@ -296,7 +389,8 @@ def save_batch(folder: str, data: Dict[str, Union[tf.Tensor, tf.RaggedTensor]], 
 def data_iterator_to_dataset(iterator: Iterator[Dict[str, Union[tf.Tensor, tf.RaggedTensor]]],
                              tmp_folder: str,
                              single_batch: bool = False,
-                             n_parallel: Optional[int] = None) -> tf.data.Dataset:
+                             n_parallel: Optional[int] = None, 
+                             use_ray: bool = True) -> tf.data.Dataset:
     """Converts a data iterator to a tf.data.Dataset. The iterator consists of batches of data in a form of dictionaries of tensors.
     Each of the tensor has an extra dimension that corresponds to the batch size. The function saves each batch to a separate folder
     and then loads the batches as tf.data.Datasets. The datasets are then merged into one dataset using tf.data.Dataset.sample_from_datasets().
@@ -318,9 +412,12 @@ def data_iterator_to_dataset(iterator: Iterator[Dict[str, Union[tf.Tensor, tf.Ra
     cardinalities = []
     for i, batch in enumerate(iterator):
         # check if iterator is empty at the beginning of the loop
+        if batch is None:
+            logging.info(f'Skipping batch {i+1}')   
+            continue
         batch_folder = os.path.join(tmp_folder, f"batch_{i}")
         os.makedirs(batch_folder, exist_ok=True)
-        element_spec, cardinality = save_batch(batch_folder, batch, n_parallel)
+        element_spec, cardinality = save_batch(batch_folder, batch, n_parallel, use_ray)
         batch_folders.append(str(batch_folder))
         element_specs.append(element_spec)
         cardinalities.append(cardinality)
@@ -410,7 +507,7 @@ class JIDENNDataset:
         self._length = length
 
     @property
-    def dataset(self) -> Union[tf.data.Dataset, None]:
+    def dataset(self) -> tf.data.Dataset:
         """The `tf.data.Dataset` object or `None` if the dataset is not set yet."""
         return self._dataset
 
@@ -484,8 +581,13 @@ class JIDENNDataset:
 
         element_spec_path = os.path.join(
             path, 'element_spec.pkl') if element_spec_path is None else element_spec_path
-        with open(element_spec_path, 'rb') as f:
-            element_spec = pickle.load(f)
+        try:
+            with open(element_spec_path, 'rb') as f:
+                element_spec = pickle.load(f)
+        except FileNotFoundError:
+            # logging.warning(
+            #     f'Element spec file `{element_spec_path}` not found.')
+            element_spec = None
 
         metadata_path = os.path.join(
             path, 'metadata.pkl') if metadata_path is None else metadata_path
@@ -493,17 +595,9 @@ class JIDENNDataset:
             with open(metadata_path, 'rb') as f:
                 metadata = pickle.load(f)
         except FileNotFoundError:
-            logging.warning(f'Metadata file `{metadata_path}` not found.')
+            # logging.warning(f'Metadata file `{metadata_path}` not found.')
             metadata = None
 
-        if isinstance(element_spec, dict):
-            variables = list(element_spec.keys())
-
-        elif isinstance(element_spec[0], dict):
-            variables = list(element_spec[0].keys())
-
-        else:
-            raise ValueError('Element spec is not a dictionary.')
 
         @tf.function
         def shuffle_reading_fn(datasets):
@@ -512,7 +606,16 @@ class JIDENNDataset:
 
         dataset = tf.data.Dataset.load(
             path, compression='GZIP', element_spec=element_spec, reader_func=shuffle_reading_fn if shuffle_reading else None)
+        
+        if element_spec is None:
+            element_spec = dataset.element_spec
 
+        if isinstance(element_spec, dict):
+            variables = list(element_spec.keys())
+
+        elif isinstance(element_spec[0], dict):
+            variables = list(element_spec[0].keys())
+            
         return JIDENNDataset(dataset=dataset, element_spec=element_spec, metadata=metadata, variables=variables, length=dataset.cardinality().numpy())
 
     @staticmethod
@@ -765,11 +868,13 @@ class JIDENNDataset:
                                step_size: int = 10,
                                entry_start: Optional[int] = None,
                                entry_stop: Optional[int] = None,
+                               use_ray: bool = True,
                                tmp_folder: str = 'tmp',
                                n_parallel: int = 1,
                                tree_name: str = 'NOMINAL',
                                metadata_hist: Optional[str] = 'h_metadata',
                                manual_cast_int: List[str] = [],
+                               to_skip: List[int] = [],
                                manual_cast_float: List[str] = []) -> JIDENNDataset:
 
         if metadata_hist is not None:
@@ -784,14 +889,14 @@ class JIDENNDataset:
             metadata = None
 
         iterator = root_file_iterator(filename, tree_name, step_size=step_size,
-                                      entry_start=entry_start, entry_stop=entry_stop, num_workers=n_parallel,
+                                      entry_start=entry_start, entry_stop=entry_stop, num_workers=n_parallel, to_skip=to_skip,
                                       manual_cast_int=manual_cast_int, manual_cast_float=manual_cast_float)
 
         single_batch = entry_stop - \
             entry_start <= step_size if entry_start is not None and entry_stop is not None else False
 
         dataset = data_iterator_to_dataset(
-            iterator, tmp_folder, single_batch=single_batch, n_parallel=n_parallel)
+            iterator, tmp_folder, single_batch=single_batch, n_parallel=n_parallel, use_ray=use_ray)
 
         variables = list(dataset.element_spec.keys())
         element_spec = dataset.element_spec
@@ -802,13 +907,19 @@ class JIDENNDataset:
                              weight=weight, length=dataset.cardinality().numpy())
 
     def set_variables_target_weight(self,
-                                    variables: Optional[List[str]] = None,
-                                    target: Optional[str] = None,
-                                    weight: Optional[str] = None) -> JIDENNDataset:
+                                    variables: list[str] | None = None,
+                                    target: str | list[str] | None = None,
+                                    weight: str | None = None,
+                                    new_target_name: str = 'label') -> JIDENNDataset:
         """Sets the `variables`, `target` and `weight` of the dataset."""
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
-        dataset = self.dataset.map(get_var_picker(
+        if not isinstance(target, str) and target is not None:
+            dataset = self.dataset.map(get_multilabel_maker(target=target, new_target_name=new_target_name))
+            target = new_target_name
+        else:
+            dataset = self.dataset
+        dataset = dataset.map(get_var_picker(
             target=target, weight=weight, variables=variables))
         new_vars = list(dataset.element_spec[0].keys())
         return JIDENNDataset(dataset=dataset,
@@ -818,7 +929,7 @@ class JIDENNDataset:
                              target=target,
                              weight=weight, length=self.length)
 
-    def save(self, file: str, num_shards: Optional[int] = None, **kwargs) -> None:
+    def save(self, file: str, num_shards: int | None = None, **kwargs) -> None:
         """Saves the dataset to a file. The dataset is stored in the `tf.data.Dataset` format.
         The `element_spec` is stored in the `element_spec` file inside the dataset directory.
         Tensorflow saves the `element_spec.pb` automatically, but manual save is required 
@@ -992,6 +1103,8 @@ class JIDENNDataset:
                              assert_length: bool = False,
                              shuffle_buffer_size: Optional[int] = None,
                              ragged: bool = True,
+                             max_constituents: int = 100,
+                             pad_value: float = 0.,
                              take: Optional[int] = None,) -> tf.data.Dataset:
         """Returns a prepared dataset for training. The dataset is prepared by stacking the arrays in the `ROOTVariables` in the dataset using `dict_to_stacked_array`.
         The dataset is also batched, shuffled, shortend (using `take`) and mapped using the `map_func` function. The function is applied before the input is stacked.
@@ -1017,7 +1130,7 @@ class JIDENNDataset:
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
 
-        self = self.remap_data(dict_to_stacked_tensor)
+        self = self.remap_data(get_stacker(max_constituents=max_constituents, pad_value=pad_value))
         dataset = self.dataset.shuffle(
             shuffle_buffer_size) if shuffle_buffer_size is not None else self.dataset
         dataset = dataset.take(take) if take is not None else dataset
@@ -1083,7 +1196,10 @@ class JIDENNDataset:
                         new_data.update({**dat})
                 else:
                     new_data = data
-                weight = weight if weight is not None else tf.ones_like(label)
+                weight = weight if weight is not None else 1.
+                label = tf.cast(label, tf.int32)
+                if tf.reduce_sum(tf.shape(label)) > 0:
+                    label = tf.argmax(label, output_type=tf.int32)
                 data = {**new_data, 'label': label, 'weight': weight}
                 return data
 
@@ -1096,7 +1212,10 @@ class JIDENNDataset:
                         new_data.update({**dat})
                 else:
                     new_data = data
-                weight = weight if weight is not None else tf.ones_like(label)
+                weight = weight if weight is not None else 1.
+                label = tf.cast(label, tf.int32)
+                if tf.reduce_sum(tf.shape(label)) > 0:
+                    label = tf.argmax(label, output_type=tf.int32)
                 data = {**new_data, 'label': label, 'weight': weight}
                 return {k: data[k] for k in variables + ['label', 'weight']}
 
@@ -1165,6 +1284,7 @@ class JIDENNDataset:
         Returns:
             None
         """
+        from jidenn.evaluation.plotter import plot_data_distributions
         if self.dataset is None:
             raise ValueError('Dataset not loaded yet.')
         if not isinstance(self.element_spec, tuple):
@@ -1189,7 +1309,7 @@ class JIDENNDataset:
                              hue_variable: Optional[str] = None,
                              weight_variable: Optional[str] = None,
                              **kwargs):
-
+        from jidenn.evaluation.plotter import plot_single_dist
         convert_variables = [
             variable, hue_variable] if hue_variable is not None else [variable]
         if weight_variable is None:

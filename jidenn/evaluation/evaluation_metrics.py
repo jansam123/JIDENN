@@ -3,11 +3,12 @@ Module containing custom metrics for evaluating models mainly used in HEP applic
 """
 from typing import List, Dict, Literal, Optional, Union, Tuple
 import tensorflow as tf
+import keras
 # import tensorflow_probability as tfp
 import numpy as np
 
 
-class BinaryEfficiency(tf.keras.metrics.Metric):
+class BinaryEfficiency(keras.metrics.Metric):
     r"""Binary Efficiency metric.
     It is defined as
     $$\varepsilon_i=\frac{T_i}{T_i+F_i}$$
@@ -68,7 +69,7 @@ class BinaryEfficiency(tf.keras.metrics.Metric):
         return config
 
 
-class BinaryRejection(tf.keras.metrics.Metric):
+class BinaryRejection(keras.metrics.Metric):
     r"""Binary Rejection metric.
     It is defined as
     $$\varepsilon_i^{-1}=\frac{T_i+F_i}{T_i}$$
@@ -126,7 +127,7 @@ class BinaryRejection(tf.keras.metrics.Metric):
         return config
 
 
-class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
+class RejectionAtEfficiency(keras.metrics.SpecificityAtSensitivity):
     """Rejection at efficiency metric.
     in this case the threshold is chosen such that the efficiency of one class is equal to the given `efficiency`.
 
@@ -167,7 +168,7 @@ class RejectionAtEfficiency(tf.keras.metrics.SpecificityAtSensitivity):
         return 1 / super(RejectionAtEfficiency, self).result()
 
 
-class EffectiveTaggingEfficiency(tf.keras.metrics.Metric):
+class EffectiveTaggingEfficiency(keras.metrics.Metric):
 
     def __init__(self, bins: List[float] = [0, 0.1, 0.25, 0.5, 0.625, 0.75, 0.875, 1], threshold: float = 0.5, name='eff_tag_efficiency', **kwargs):
         super(EffectiveTaggingEfficiency, self).__init__(name=name, **kwargs)
@@ -225,7 +226,7 @@ class EffectiveTaggingEfficiency(tf.keras.metrics.Metric):
         self.bin_counts.assign(tf.zeros_like(self.bin_counts))
 
 
-class FixedWorkingPointBase(tf.keras.metrics.Metric):
+class FixedWorkingPointBase(keras.metrics.Metric):
     r"""
     Base class for metrics that calculate the efficiencies and threshold at a fixed working point, 
     i.e. one fixed efficiency with variables threshold.
@@ -456,19 +457,19 @@ class ThresholdAtFixedWorkingPoint(FixedWorkingPointBase):
         return tf.gather(self.thresholds, closest_index)
 
 
-def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
+def get_metrics(threshold: float = 0.5) -> List[keras.metrics.Metric]:
     """Returns a list of metrics.
 
     Args:
         threshold (float, optional): The threshold for the prediction. Defaults to 0.5.
 
     Returns:
-        List[tf.keras.metrics.Metric]: The list of selected metrics.
+        List[keras.metrics.Metric]: The list of selected metrics.
     """
     metrics = [
-        tf.keras.metrics.BinaryAccuracy(
+        keras.metrics.BinaryAccuracy(
             name='binary_accuracy', threshold=0.5), # fix the threshold to 0.5, other thresholds are useless for this metric
-        tf.keras.metrics.AUC(name='auc'),
+        keras.metrics.AUC(name='auc'),
         BinaryEfficiency(name='gluon_efficiency',
                          label_id=0, threshold=threshold),
         BinaryEfficiency(name='quark_efficiency',
@@ -477,32 +478,10 @@ def get_metrics(threshold: float = 0.5) -> List[tf.keras.metrics.Metric]:
                         label_id=0, threshold=threshold),
         BinaryRejection(name='quark_rejection',
                         label_id=1, threshold=threshold),
-        #
-        # EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_50wp',
-        #                               fixed_label_id=1, working_point=0.5, returned_label_id=0),
         RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_50wp',
                                      fixed_label_id=1, working_point=0.5, returned_label_id=0),
         ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_50wp',
                                         fixed_label_id=1, working_point=0.5),
-        # EfficiencyAtFixedWorkingPoint(name='gluon_efficiency_at_quark_80wp',
-        #                               fixed_label_id=1, working_point=0.8, returned_label_id=0),
-        # RejectionAtFixedWorkingPoint(name='gluon_rejection_at_quark_80wp',
-        #                              fixed_label_id=1, working_point=0.8, returned_label_id=0),
-        # ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_quark_80wp',
-        #                              fixed_label_id=1, working_point=0.8),
-        #
-        # EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_gluon_50wp',
-        #                               fixed_label_id=0, working_point=0.5, returned_label_id=1),
-        # RejectionAtFixedWorkingPoint(name='quark_rejection_at_gluon_50wp',
-        #                              fixed_label_id=0, working_point=0.5, returned_label_id=1),
-        # ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_gluon_50wp',
-        #                              fixed_label_id=0, working_point=0.5),
-        # EfficiencyAtFixedWorkingPoint(name='quark_efficiency_at_gluon_80wp',
-        #                               fixed_label_id=0, working_point=0.8, returned_label_id=1),
-        # RejectionAtFixedWorkingPoint(name='quark_rejection_at_gluon_80wp',
-        #                              fixed_label_id=0, working_point=0.8, returned_label_id=1),
-        # ThresholdAtFixedWorkingPoint(name='threshold_at_fixed_gluon_80wp',
-        #                              fixed_label_id=0, working_point=0.8),
         ]
     return metrics
 

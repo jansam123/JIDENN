@@ -17,6 +17,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, help="Path to save the dataset")
 parser.add_argument("--load_path", type=str, help="Path to the root file")
 parser.add_argument("--backend", type=str, default='pd', help="Backend to use for loading the dataset")
+parser.add_argument("--ttree", type=str, default='NOMINAL', help="TTree to load from the root file")
+parser.add_argument("--metadata", type=str, default='h_metadata', help="Metadata histogram to load from the root file")
 parser.add_argument("--train_frac", type=float, default=0.8, help="Fraction of the dataset to use for training")
 parser.add_argument("--dev_frac", type=float, default=0.1, help="Fraction of the dataset to use for development")
 parser.add_argument("--test_frac", type=float, default=0.1, help="Fraction of the dataset to use for testing")
@@ -31,12 +33,16 @@ parser.add_argument("--num_shards", type=int, default=4, required=False,
 
 def main(args: argparse.Namespace) -> None:
     os.makedirs(args.save_path, exist_ok=True)
-    dataset = JIDENNDataset.from_root_file(args.load_path, backend=args.backend)
+    dataset = JIDENNDataset.from_root_file(args.load_path, backend=args.backend, tree_name=args.ttree, metadata_hist=args.metadata if args.metadata != '' else None)
 
-    dss = dataset.split_train_dev_test(args.train_frac, args.dev_frac, args.test_frac)
+    if args.train_frac > 0.:
+        dss = dataset.split_train_dev_test(args.train_frac, args.dev_frac, args.test_frac)
 
-    for name, ds in zip(['train', 'dev', 'test'], dss):
-        ds.save(os.path.join(args.save_path, name), num_shards=args.num_shards)
+        for name, ds in zip(['train', 'dev', 'test'], dss):
+            ds.save(os.path.join(args.save_path, name), num_shards=args.num_shards)
+    else:
+        os.makedirs(args.save_path, exist_ok=True)
+        dataset.save(args.save_path, num_shards=args.num_shards)
 
 
 if __name__ == "__main__":

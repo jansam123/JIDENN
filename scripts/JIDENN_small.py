@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 import tensorflow as tf
+import keras
 import uproot
 import awkward as ak
 import numpy as np
@@ -147,7 +148,7 @@ def main(args: argparse.Namespace) -> None:
     train_dataset = mixed_dataset.skip(args.test_size)
 
     # we need to create the normalization layer before other layers, because we need to calculate the variance and mean of each variable
-    normalizer = tf.keras.layers.Normalization()
+    normalizer = keras.layers.Normalization()
 
     @ tf.function
     def pick_only_data(data: tf.Tensor, x: tf.Tensor) -> tf.Tensor:
@@ -162,39 +163,39 @@ def main(args: argparse.Namespace) -> None:
     # only here we start to build the network
     # we utilize the so called 'functional API' (https://www.tensorflow.org/guide/keras/functional)
     # input layer needs to know the shape of an sample, here we omit the batch dimension
-    input = tf.keras.layers.Input(shape=(len(args.variables), ))
+    input = keras.layers.Input(shape=(len(args.variables), ))
     # firstly we apply the normalization layer on the input
     hidden = normalizer(input)
     # using the fucntional API it is easy to create multiple hidden layers in a loop
     for layer_size in args.hidden_layers:
         # we create a Dense layer (ie. Liner Perceptron, ie. Fully Connected Layer) with the ReLU = max(0, x) activation function
-        hidden = tf.keras.layers.Dense(layer_size, activation=tf.nn.relu)(hidden)
+        hidden = keras.layers.Dense(layer_size, activation=tf.nn.relu)(hidden)
         # after each dense layer it is 99% of the time good to use the dropout layer to avoid overfitting
         # this layer masks (drops out) a node from previous layer with probabilty 'DROPOUT', this is done for all nodes from previous layer
         # 90% of the time it is good to set the DROPOUT to 0.5 and rather increase the number of layer_size
         # in our case, where we have a lot of data that are randomly sampled overfitting is not an issue, so it is not neccesery
-        hidden = tf.keras.layers.Dropout(args.dropout)(hidden)
+        hidden = keras.layers.Dropout(args.dropout)(hidden)
     # output layer is just one number between 0 and 1, thats why we use the sigmoid=1/(1+exp(-x)) activation to get it
-    output = tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)(hidden)
+    output = keras.layers.Dense(1, activation=tf.nn.sigmoid)(hidden)
 
     # TODO:
     # try to change the basic FC layers to highway networks (https://arxiv.org/abs/1505.00387)
     # it is calculated using the following formula: y = H(x) * T(x) + x * (1 - T(x))
     # where H(x) is the output of the FC layer, T(x) is the output of the sigmoid layer and x is the input
-    # you can either add (multiply) two layers or use the tf.keras.layers.Add() (tf.keras.layers.Multiply()) layer
+    # you can either add (multiply) two layers or use the keras.layers.Add() (keras.layers.Multiply()) layer
     # be careful when adding two layers, because it expects the same shape of the inputs
     # END TODO
 
     # here we create the model with input and output
-    model = tf.keras.Model(inputs=input, outputs=output)
+    model = keras.Model(inputs=input, outputs=output)
     # we need to compile the model, ie. to specify the loss we want to minimize,
     # optimizer (which is used to minimize the loss) and metrics (which are used to evaluate the model)
     # in our case we use the binary crossentropy loss, which is good for binary classification (ie. quark or gluon)
     # we use the Adam optimizer, which is a good default choice
     # we use the accuracy metric, which is just the fraction of correct predictions and AUC, which is the area under the ROC curve
     model.compile(optimizer=tf.optimizers.Adam(),
-                  loss=tf.keras.losses.BinaryCrossentropy(),
-                  metrics=[tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC()])
+                  loss=keras.losses.BinaryCrossentropy(),
+                  metrics=[keras.metrics.BinaryAccuracy(), keras.metrics.AUC()])
 
     # here we print the model summary, outline
     model.summary()

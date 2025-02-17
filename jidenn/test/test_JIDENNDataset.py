@@ -7,51 +7,164 @@ import logging
 import pandas as pd
 logging.basicConfig(level=logging.INFO)
 
-from jidenn.data.JIDENNDataset import JIDENNDataset, dict_to_stacked_tensor, FLOAT_PRECISION
+from jidenn.data.JIDENNDataset import JIDENNDataset, get_stacker, FLOAT_PRECISION
 
 
-def test_dict_to_stacked_tensor():
-    # Test converting a dictionary to a stacked tensor
-    data = {
-        'feature1': tf.random.uniform((100,)),
-        'feature2': tf.random.uniform((100,)),
-        'feature3': tf.random.uniform((100,), maxval=10, dtype=tf.int32),
+@pytest.fixture
+def node_data_small():
+    # Create ROOTVariables with two variables.
+    # Each variable is a tensor of shape [N] with N=5.
+    return {
+        'var1': tf.constant(np.arange(5), dtype=tf.float32),
+        'var2': tf.constant(np.arange(100, 105), dtype=tf.float32)
     }
-    stacked_tensor = dict_to_stacked_tensor(data)
-    assert isinstance(stacked_tensor, tf.Tensor), "Stacked tensor is not a tensor"
-    assert stacked_tensor.shape == (100, 3), "Shape of stacked tensor is not correct"
-    assert tf.reduce_all(stacked_tensor[:, 0] == data['feature1']), "Feature1 is not the same"
-    assert tf.reduce_all(stacked_tensor[:, 1] == data['feature2']), "Feature2 is not the same"
-    assert tf.reduce_all(stacked_tensor[:, 2] == tf.cast(data['feature3'], FLOAT_PRECISION)), "Feature3 is not the same"
-
-
-def test_dict_to_stacked_tensor_interaction():
-    data = {
-        'feature1': np.random.rand(10),
-        'feature2': np.random.rand(10),
-        'feature3': np.random.randint(10, size=10),
+    
+@pytest.fixture
+def highlevel_data_small():
+    # Create ROOTVariables with two variables.
+    # Each variable is a scalar.
+    return {
+        'var1': tf.constant(5, dtype=tf.float32),
+        'var2': tf.constant(100, dtype=tf.float32)
     }
-    data2 = {
-        'feature1': np.random.rand(10, 10),
-        'feature2': np.random.rand(10, 10),
-        'feature3': np.random.randint(10, size=(10, 10)),
+    
+@pytest.fixture
+def node_data_exact():
+    # Create ROOTVariables where the number of constituents equals max_constituents.
+    return {
+        'var1': tf.constant(np.arange(10), dtype=tf.float32),
+        'var2': tf.constant(np.arange(200, 210), dtype=tf.float32)
     }
-    stacked_tensor = dict_to_stacked_tensor((data, data2))
 
-    assert isinstance(stacked_tensor, tuple), "Stacked tensor is not a tensor"
-    assert isinstance(stacked_tensor[0], tf.Tensor), "Stacked tensor is not a tensor"
-    assert isinstance(stacked_tensor[1], tf.Tensor), "Interaction Stacked tensor is not a tensor"
+@pytest.fixture
+def edge_data_small():
+    # Create ROOTVariables with two edge variables.
+    # Each variable is a tensor of shape [N, N] with N=3.
+    return {
+        'edge1': tf.constant(np.arange(9).reshape(3, 3), dtype=tf.float32),
+        'edge2': tf.constant(np.arange(100, 109).reshape(3, 3), dtype=tf.float32)
+    }
 
-    assert stacked_tensor[0].shape == (10, 3), "Shape of stacked tensor is not correct"
-    assert np.all(stacked_tensor[0][:, 0] == data['feature1']), "Feature1 is not the same"
-    assert np.all(stacked_tensor[0][:, 1] == data['feature2']), "Feature2 is not the same"
-    assert np.all(stacked_tensor[0][:, 2] == data['feature3']), "Feature3 is not the same"
+def test_node_padding(node_data_small):
+    max_constituents = 10
+    pad_value = -999.0
+    stacker = get_stacker(max_constituents, pad_value)
+    
+    # Call the function. For node variables (rank 2) we now expect a tuple (tensor, mask)
+    result_tensor, result_mask = stacker(node_data_small)
+    # Expected padded tensor shape: [max_constituents, num_vars] = [10, 2]
+    assert result_tensor.shape == (max_constituents, 2)
+    # Expected mask shape: [max_constituents,]
+    assert result_mask.shape == (max_constituents,)
+    
+    # Convert to numpy for easier testing.
+    result_tensor_np = result_tensor.numpy()
+    result_mask_np = result_mask.numpy()
+    # The first 5 rows should match the stacked values.
+    expected_stacked = np.stack([
+        np.array(node_data_small['var1']),
+        np.array(node_data_small['var2'])
+    ], axis=-1)
+    np.testing.assert_array_equal(result_tensor_np[:5], expected_stacked)
+    # The padded rows (rows 5 to 9) should be filled with pad_value.
+    np.testing.assert_array_equal(result_tensor_np[5:], pad_value * np.ones((max_constituents - 5, 2), dtype=np.float32))
+    # Check mask: first 5 True, rest False.
+    expected_mask = np.concatenate([np.ones(5, dtype=bool), np.zeros(max_constituents - 5, dtype=bool)])
+    np.testing.assert_array_equal(result_mask_np, expected_mask)
 
-    assert stacked_tensor[1].shape == (10, 10, 3), "Interaction Shape of stacked tensor is not correct"
-    assert np.all(stacked_tensor[1][:, :, 0] == data2['feature1']), "Interaction Feature1 is not the same"
-    assert np.all(stacked_tensor[1][:, :, 1] == data2['feature2']), "Interaction Feature2 is not the same"
-    assert np.all(stacked_tensor[1][:, :, 2] == data2['feature3']), "Interaction Feature3 is not the same"
+def test_node_exact(node_data_exact):
+    max_constituents = 10
+    pad_value = -999.0
+    stacker = get_stacker(max_constituents, pad_value)
+    
+    result_tensor, result_mask = stacker(node_data_exact)
+    assert result_tensor.shape == (max_constituents, 2)
+    assert result_mask.shape == (max_constituents,)
+    
+    result_tensor_np = result_tensor.numpy()
+    # Since the number of constituents equals max_constituents, no padding is added.
+    expected_stacked = np.stack([
+        np.array(node_data_exact['var1']),
+        np.array(node_data_exact['var2'])
+    ], axis=-1)
+    np.testing.assert_array_equal(result_tensor_np, expected_stacked)
+    # And the mask should be all True.
+    expected_mask = np.ones(max_constituents, dtype=bool)
+    np.testing.assert_array_equal(result_mask.numpy(), expected_mask)
 
+def test_edge_padding(edge_data_small):
+    max_constituents = 5
+    pad_value = -999.0
+    stacker = get_stacker(max_constituents, pad_value)
+    
+    result_tensor, result_mask = stacker(edge_data_small)
+    # Expected shape: [max_constituents, max_constituents, num_vars] = [5, 5, 2]
+    assert result_tensor.shape == (max_constituents, max_constituents, 2)
+    assert result_mask.shape == (max_constituents,)
+    
+    result_np = result_tensor.numpy()
+    # First 3 rows and columns should match the stacked edge values.
+    expected_edge1 = np.array(edge_data_small['edge1'])
+    expected_edge2 = np.array(edge_data_small['edge2'])
+    expected_stacked = np.stack([expected_edge1, expected_edge2], axis=-1)
+    np.testing.assert_array_equal(result_np[:3, :3], expected_stacked)
+    # The padded areas (rows or columns >= 3) should be pad_value.
+    pad_area = pad_value * np.ones((max_constituents, max_constituents, 2), dtype=np.float32)
+    pad_area[:3, :3] = expected_stacked
+    np.testing.assert_array_equal(result_np, pad_area)
+    # Check mask: first 3 True, rest False.
+    expected_mask = np.concatenate([np.ones(3, dtype=bool), np.zeros(max_constituents - 3, dtype=bool)])
+    np.testing.assert_array_equal(result_mask.numpy(), expected_mask)
+
+def test_tuple_input(node_data_small, node_data_exact):
+    max_constituents = 10
+    pad_value = -999.0
+    stacker = get_stacker(max_constituents, pad_value)
+    
+    # Provide a tuple of ROOTVariables.
+    # In the original function a tuple input produced a tuple (node_tensor, edge_tensor)
+    # Here we assume the first dictionary is for nodes and the second for edges.
+    result = stacker((node_data_small, node_data_exact))
+    # Now result should be a tuple of three elements: (node_tensor, edge_tensor, node_mask)
+    assert isinstance(result, tuple)
+    assert len(result) == 3
+    node_tensor, edge_tensor, node_mask = result
+    # First tensor (from node_data_small) should be padded.
+    assert node_tensor.shape == (max_constituents, 2)
+    # Second tensor (from node_data_exact) should have shape (max_constituents, 2)
+    assert edge_tensor.shape == (max_constituents, 2)
+    # The mask should have shape (max_constituents,)
+    assert node_mask.shape == (max_constituents,)
+    
+    # Check that the first tensor is padded correctly.
+    node_tensor_np = node_tensor.numpy()
+    expected0 = np.stack([
+        np.array(node_data_small['var1']),
+        np.array(node_data_small['var2'])
+    ], axis=-1)
+    np.testing.assert_array_equal(node_tensor_np[:5], expected0)
+    np.testing.assert_array_equal(node_tensor_np[5:], pad_value * np.ones((max_constituents - 5, 2), dtype=np.float32))
+    # And check the mask.
+    expected_mask = np.concatenate([np.ones(5, dtype=bool), np.zeros(max_constituents - 5, dtype=bool)])
+    np.testing.assert_array_equal(node_mask.numpy(), expected_mask)
+
+def test_highlevel_stacking(highlevel_data_small):
+    # For high-level variables the inputs are scalars, so stacking gives a rank-1 tensor.
+    stacker = get_stacker()
+    
+    result = stacker(highlevel_data_small)
+    # Since the input tensors are scalars, the stacked result is a rank-1 tensor.
+    # In that case no mask is added.
+    assert isinstance(result, tf.Tensor)
+    assert result.shape == (2,)
+    
+    result_np = result.numpy()
+    expected_stacked = np.stack([
+        np.array(highlevel_data_small['var1']),
+        np.array(highlevel_data_small['var2'])
+    ], axis=-1)
+    np.testing.assert_array_equal(result_np, expected_stacked)
+    
 
 num_events = 100
 

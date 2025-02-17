@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 import tensorflow as tf
+import keras
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
@@ -70,7 +71,7 @@ def main(args: argparse.Namespace) -> None:
     train_input_class = train_input_class()
     model_input = tf.function(func=train_input_class)
     dataset = dataset.remap_data(model_input)
-    model: tf.keras.Model = tf.keras.models.load_model(args.model_path, custom_objects=CUSTOM_OBJECTS)
+    model: keras.Model = keras.models.load_model(args.model_path, custom_objects=CUSTOM_OBJECTS)
     means = model.layers[1].mean[0, :].numpy()
     stds = model.layers[1].variance[0, :].numpy()
     stds = np.sqrt(stds)

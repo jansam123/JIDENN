@@ -92,6 +92,7 @@ class Data:
             `None` is viable only if `subfolders` is `None`. 
     """
     path: Union[str, List[str]]   # Path to data folder.
+    dev_path: str | list[str] | None  # Path to dev data folder.
     dataset_weigths: Optional[List[float]]   # Weights for each dataset path.
     dataset_norm: Optional[List[float]]   # Equalize weights.
     target: str
@@ -125,7 +126,7 @@ class Dataset:
     steps_per_epoch: Optional[int]   # Number of steps per epoch.
     batch_size: int   # Batch size.
     take: Optional[int]   # Length of data to use.
-    dev_size: float   # Size of dev dataset.
+    dev_take: int   # Size of dev dataset.
     test_take: int  # Size of test dataset.
     shuffle_buffer: Optional[int]   # Size of shuffler buffer.
     cache: Optional[str]   # Path to cached data.
@@ -177,6 +178,7 @@ class Preprocess:
     """
     draw_distribution: Optional[int]   # Number of events to draw distribution for.
     normalization_size: Optional[int]  # Size of normalization dataset.
+    min_max_normalization: Optional[bool]  # Use min-max normalization.
 
 
 @dataclass
@@ -208,6 +210,7 @@ class Optimizer:
     beta_2: Optional[float]
     epsilon: Optional[float]
     clipnorm: Optional[float]
+    clipvalue: Optional[float]
     weight_decay: Optional[float]
 
 

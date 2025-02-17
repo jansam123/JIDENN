@@ -6,6 +6,7 @@ The mapping from string names of the models in the config file is then mapped to
 """
 
 import tensorflow as tf
+import keras
 from typing import Tuple, Optional, Callable, List, Literal, Union, Any
 
 from jidenn.config import model_config
@@ -31,28 +32,28 @@ def get_activation(activation: Literal['relu', 'gelu', 'tanh', 'swish']) -> Call
         Callable[[tf.Tensor], tf.Tensor]: Activation function.
     """
     if activation == 'relu':
-        return tf.nn.relu
+        return keras.activations.relu
     elif activation == 'gelu':
-        return tf.keras.activations.gelu
+        return keras.activations.gelu
     elif activation == 'tanh':
-        return tf.nn.tanh
+        return keras.activations.tanh
     elif activation == 'swish':
-        return tf.keras.activations.swish
+        return keras.activations.swish
     else:
         raise NotImplementedError(f'Activation {activation} not supported.')
 
 
 def get_FC_model(input_size: int,
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  args_model: model_config.FC,
-                 preprocess: Optional[tf.keras.layers.Layer] = None) -> FCModel:
+                 preprocess: Optional[keras.layers.Layer] = None) -> FCModel:
     """Get an instance of the fully-connected model.
 
     Args:
         input_size (int): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (jidenn.config.model_config.FC): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
 
     Returns:
         FCModel: Fully-connected model.
@@ -69,16 +70,16 @@ def get_FC_model(input_size: int,
 
 
 def get_highway_model(input_size: int,
-                      output_layer: tf.keras.layers.Layer,
+                      output_layer: keras.layers.Layer,
                       args_model: model_config.Highway,
-                      preprocess: Optional[tf.keras.layers.Layer] = None) -> HighwayModel:
+                      preprocess: Optional[keras.layers.Layer] = None) -> HighwayModel:
     """Get an instance of the highway model.
 
     Args:
         input_size (int): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (jidenn.config.model_config.Highway): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
 
     Returns:
         HighwayModel: Highway model.
@@ -95,16 +96,16 @@ def get_highway_model(input_size: int,
 
 
 def get_pfn_model(input_size: Tuple[None, int],
-                  output_layer: tf.keras.layers.Layer,
+                  output_layer: keras.layers.Layer,
                   args_model: model_config.PFN,
-                  preprocess: Optional[tf.keras.layers.Layer] = None) -> PFNModel:
+                  preprocess: Optional[keras.layers.Layer] = None) -> PFNModel:
     """Get an instance of the PFN model.
 
     Args:
         input_size (Tuple[None, int]): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (model_config.PFN): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
 
     Returns:
         PFNModel: PFN model.
@@ -124,16 +125,16 @@ def get_pfn_model(input_size: Tuple[None, int],
 
 
 def get_efn_model(input_size: Tuple[None, int],
-                  output_layer: tf.keras.layers.Layer,
+                  output_layer: keras.layers.Layer,
                   args_model: model_config.EFN,
-                  preprocess: Optional[tf.keras.layers.Layer] = None) -> EFNModel:
+                  preprocess: Optional[keras.layers.Layer] = None) -> EFNModel:
     """Get an instance of the EFN model.
 
     Args:
         input_size (Tuple[None, int]): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (model_config.EFN): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.  
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.  
 
     Returns:
         EFNModel: EFN model.
@@ -151,16 +152,16 @@ def get_efn_model(input_size: Tuple[None, int],
 
 
 def get_transformer_model(input_size: Tuple[None, int],
-                          output_layer: tf.keras.layers.Layer,
+                          output_layer: keras.layers.Layer,
                           args_model: model_config.Transformer,
-                          preprocess: Optional[tf.keras.layers.Layer] = None) -> TransformerModel:
+                          preprocess: Optional[keras.layers.Layer] = None) -> TransformerModel:
     """Get an instance of the transformer model.
 
     Args:
         input_size (Tuple[None, int]): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (model_config.Transformer): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.  
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.  
 
     Returns:
         TransformerModel: Transformer model.
@@ -180,16 +181,16 @@ def get_transformer_model(input_size: Tuple[None, int],
 
 
 def get_part_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
-                   output_layer: tf.keras.layers.Layer,
+                   output_layer: keras.layers.Layer,
                    args_model: model_config.ParT,
-                   preprocess: Optional[tf.keras.layers.Layer] = None) -> ParTModel:
+                   preprocess: Optional[keras.layers.Layer] = None) -> ParTModel:
     """Get an instance of the ParT model.
 
     Args:
         input_size (Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (model_config.ParT): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
 
     Returns:
         ParTModel: ParT model.
@@ -214,16 +215,16 @@ def get_part_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int], T
 
 
 def get_depart_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
-                     output_layer: tf.keras.layers.Layer,
+                     output_layer: keras.layers.Layer,
                      args_model: model_config.DeParT,
-                     preprocess: Optional[tf.keras.layers.Layer] = None) -> DeParTModel:
+                     preprocess: Optional[keras.layers.Layer] = None) -> DeParTModel:
     """Get an instance of the DeParT model.
 
     Args:
         input_size (Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (model_config.DeParT): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
 
     Returns:
         DeParTModel: DeParT model.
@@ -251,16 +252,16 @@ def get_depart_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int],
         activation=get_activation(args_model.activation))
 
 def get_depart2_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]],
-                     output_layer: tf.keras.layers.Layer,
+                     output_layer: keras.layers.Layer,
                      args_model: model_config.DeParT,
-                     preprocess: Optional[tf.keras.layers.Layer] = None) -> DeParTModel:
+                     preprocess: Optional[keras.layers.Layer] = None) -> DeParTModel:
     """Get an instance of the DeParT model.
 
     Args:
         input_size (Union[Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): Input size of the model.
-        output_layer (tf.keras.layers.Layer): Output layer of the model.
+        output_layer (keras.layers.Layer): Output layer of the model.
         args_model (model_config.DeParT): Model configuration.
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None.
 
     Returns:
         DeParTModel: DeParT model.
@@ -289,9 +290,9 @@ def get_depart2_model(input_size: Union[Tuple[None, int], Tuple[Tuple[None, int]
 
 
 def get_particlenet_model(input_size: Tuple[Tuple[int, int], Tuple[int, int]],
-                          output_layer: tf.keras.layers.Layer,
+                          output_layer: keras.layers.Layer,
                           args_model: model_config.ParticleNet,
-                          preprocess: Optional[tf.keras.layers.Layer] = None) -> ParticleNetModel:
+                          preprocess: Optional[keras.layers.Layer] = None) -> ParticleNetModel:
 
     return ParticleNetModel(
         input_shape=input_size,
@@ -307,16 +308,16 @@ def get_particlenet_model(input_size: Tuple[Tuple[int, int], Tuple[int, int]],
 
 
 def get_bdt_model(input_size: int,
-                  output_layer: tf.keras.layers.Layer,
+                  output_layer: keras.layers.Layer,
                   args_model: model_config.BDT,
-                  preprocess: Optional[tf.keras.layers.Layer] = None):
+                  preprocess: Optional[keras.layers.Layer] = None):
     """Get an instance of the BDT model.
 
     Args:
         args_model (model_config.BDT): Model configuration.
         input_size (int): Input size of the model. UNUSED
-        output_layer (tf.keras.layers.Layer): Output layer of the model. UNUSED
-        preprocess (Optional[tf.keras.layers.Layer], optional): Preprocessing layer. Defaults to None. UNUSED
+        output_layer (keras.layers.Layer): Output layer of the model. UNUSED
+        preprocess (Optional[keras.layers.Layer], optional): Preprocessing layer. Defaults to None. UNUSED
 
     Returns:
         tfdf.keras.GradientBoostedTreesModel: BDT model.
@@ -326,14 +327,14 @@ def get_bdt_model(input_size: int,
 
 
 def model_getter_lookup(model_name: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']
-                        ) -> Callable[[Any, tf.keras.layers.Layer, model_config.Model, Optional[tf.keras.layers.Layer]], tf.keras.Model]:
+                        ) -> Callable[[Any, keras.layers.Layer, model_config.Model, Optional[keras.layers.Layer]], keras.Model]:
     """Get a model getter function.
 
     Args:
         model_name (str): Name of the model. Options are 'fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt'.
 
     Returns:
-        Callable[[Any, tf.keras.layers.Layer, model_config.Model, Optional[tf.keras.layers.Layer]], tf.keras.Model]: Model getter function.
+        Callable[[Any, keras.layers.Layer, model_config.Model, Optional[keras.layers.Layer]], keras.Model]: Model getter function.
     """
 
     lookup_model = {'fc': get_FC_model,

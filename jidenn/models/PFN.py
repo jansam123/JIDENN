@@ -18,10 +18,15 @@ On the left is the PFN model, on the right the EFN model.
 """
 
 import tensorflow as tf
+import keras
 from typing import Optional, List, Literal, Tuple, Callable
-
-
-class PFNModel(tf.keras.Model):
+    
+class MaskedReduceSum(keras.layers.Layer):
+    def call(self, inputs: tf.Tensor, mask: tf.Tensor) -> tf.Tensor:
+        hidden = inputs * tf.cast(mask, tf.float32)[:, :, tf.newaxis]
+        return tf.math.reduce_sum(hidden, axis=1)
+    
+class PFNModel(keras.Model):
     """Implements the Particle Flow Network (PFN) model.
 
     The expected input shape is `(batch_size, num_particles, num_features)`, where the second dimension is ragged.
@@ -30,7 +35,7 @@ class PFNModel(tf.keras.Model):
         input_shape (Tuple[None, int]): The shape of the input.
         Phi_sizes (List[int]): The sizes of the hidden layers of the Phi function.
         F_sizes (List[int]): The sizes of the hidden layers of the F function.
-        output_layer (tf.keras.layers.Layer): The output layer of the model.
+        output_layer (keras.layers.Layer): The output layer of the model.
         activation (Callable[[tf.Tensor], tf.Tensor]) The activation function. 
         Phi_backbone (str, optional): The backbone of the Phi function. Options are "fc" for a fully-connected network 
             and "cnn" for a convolutional network. Defaults to "fc".
@@ -39,36 +44,37 @@ class PFNModel(tf.keras.Model):
             This option is omitted from the `jidenn.config.model_config.PFN` as it is not used in the paper.
         Phi_dropout (float, optional): The dropout rate of the Phi function. Defaults to None.
         F_dropout (float, optional): The dropout rate of the F function. Defaults to None.
-        preprocess (tf.keras.layers.Layer, optional): The preprocessing layer. Defaults to None.
+        preprocess (keras.layers.Layer, optional): The preprocessing layer. Defaults to None.
     """
 
     def __init__(self,
                  input_shape: Tuple[None, int],
                  Phi_sizes: List[int],
                  F_sizes: List[int],
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  Phi_backbone: Literal["cnn", "fc"] = "fc",
                  batch_norm: bool = False,
                  Phi_dropout: Optional[float] = None,
                  F_dropout: Optional[float] = None,
-                 preprocess: Optional[tf.keras.layers.Layer] = None):
+                 preprocess: Optional[keras.layers.Layer] = None,
+                 **kwargs):
 
         self.Phi_sizes, self.F_sizes = Phi_sizes, F_sizes
         self.Phi_dropout = Phi_dropout
         self.F_dropout = F_dropout
         self.activation = activation
+        self.input_size, self.output_layer, self.preprocess, self.batch_norm, self.Phi_backbone = input_shape, output_layer, preprocess, batch_norm, Phi_backbone
 
-        input = tf.keras.layers.Input(shape=input_shape, ragged=True)
-        row_lengths = input.row_lengths()
-        mask = tf.sequence_mask(row_lengths)
-        hidden = input.to_tensor()
+        input = (keras.layers.Input(shape=input_shape),
+                 keras.layers.Input(shape=(input_shape[0],), dtype=tf.bool))
+        hidden, mask = input
 
         if preprocess is not None:
             hidden = preprocess(hidden)
 
         if batch_norm:
-            hidden = tf.keras.layers.BatchNormalization()(hidden)
+            hidden = keras.layers.BatchNormalization()(hidden)
 
         if Phi_backbone == "cnn":
             hidden = self.cnn_Phi(hidden)
@@ -77,12 +83,11 @@ class PFNModel(tf.keras.Model):
         else:
             raise ValueError(f"backbone must be either 'cnn' or 'fc', not {Phi_backbone}")
 
-        hidden = hidden * tf.expand_dims(tf.cast(mask, tf.float32), -1)
-        hidden = tf.math.reduce_sum(hidden, axis=1)
+        hidden = MaskedReduceSum()(hidden, mask)
         hidden = self.fc_F(hidden)
         output = output_layer(hidden)
 
-        super().__init__(inputs=input, outputs=output)
+        super().__init__(inputs=input, outputs=output, **kwargs)
 
     def cnn_Phi(self, inputs: tf.Tensor) -> tf.Tensor:
         """Convolutional Phi mapping.
@@ -96,11 +101,11 @@ class PFNModel(tf.keras.Model):
 
         hidden = inputs
         for size in self.Phi_sizes:
-            hidden = tf.keras.layers.Conv1D(size, 1)(hidden)
-            hidden = tf.keras.layers.BatchNormalization()(hidden)
-            hidden = tf.keras.layers.Activation(self.activation)(hidden)
+            hidden = keras.layers.Conv1D(size, 1)(hidden)
+            hidden = keras.layers.BatchNormalization()(hidden)
+            hidden = keras.layers.Activation(self.activation)(hidden)
             if self.Phi_dropout is not None:
-                hidden = tf.keras.layers.Dropout(self.Phi_dropout)(hidden)
+                hidden = keras.layers.Dropout(self.Phi_dropout)(hidden)
         return hidden
 
     def fc_Phi(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -114,10 +119,10 @@ class PFNModel(tf.keras.Model):
         """
         hidden = inputs
         for size in self.Phi_sizes:
-            hidden = tf.keras.layers.Dense(size)(hidden)
-            hidden = tf.keras.layers.Activation(self.activation)(hidden)
+            hidden = keras.layers.Dense(size)(hidden)
+            hidden = keras.layers.Activation(self.activation)(hidden)
             if self.Phi_dropout is not None:
-                hidden = tf.keras.layers.Dropout(self.Phi_dropout)(hidden)
+                hidden = keras.layers.Dropout(self.Phi_dropout)(hidden)
         return hidden
 
     def fc_F(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -131,8 +136,33 @@ class PFNModel(tf.keras.Model):
         """
         hidden = inputs
         for size in self.F_sizes:
-            hidden = tf.keras.layers.Dense(size)(hidden)
-            hidden = tf.keras.layers.Activation(self.activation)(hidden)
+            hidden = keras.layers.Dense(size)(hidden)
+            hidden = keras.layers.Activation(self.activation)(hidden)
             if self.F_dropout is not None:
-                hidden = tf.keras.layers.Dropout(self.F_dropout)(hidden)
+                hidden = keras.layers.Dropout(self.F_dropout)(hidden)
         return hidden
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            'input_shape': self.input_size,
+            'Phi_sizes': list(self.Phi_sizes),
+            'F_sizes': list(self.F_sizes),
+            'output_layer': keras.saving.serialize_keras_object(self.output_layer),
+            'activation': keras.activations.serialize(self.activation),
+            'Phi_backbone': self.Phi_backbone,
+            'batch_norm': self.batch_norm,
+            'Phi_dropout': self.Phi_dropout,
+            'F_dropout': self.F_dropout,
+            'preprocess': keras.saving.serialize_keras_object(self.preprocess),
+        })
+        return config
+    
+    @classmethod
+    def from_config(cls, config):
+        if config.get('output_layer') is not None:
+            config['output_layer'] = keras.saving.deserialize_keras_object(config['output_layer'])
+        if config.get('preprocess') is not None:
+            config['preprocess'] = keras.saving.deserialize_keras_object(config['preprocess'])
+        config['activation'] = keras.activations.deserialize(config['activation'])
+        return cls(**config)

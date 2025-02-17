@@ -3,6 +3,7 @@ Module for building models from config and compiling them.
 """
 
 import tensorflow as tf
+import keras
 from typing import Union, Tuple, List, Literal
 from dataclasses import dataclass
 
@@ -24,7 +25,7 @@ class ModelBuilder:
         input_size (Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]): Input size
         num_labels (int): Number of labels, i.e. size of output layer
         args_optimizer (config.Optimizer): Optimizer config
-        preprocess (Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]], optional): Preprocessing layer(s). Defaults to None.
+        preprocess (Union[keras.layers.Layer, None, Tuple[keras.layers.Layer, keras.layers.Layer]], optional): Preprocessing layer(s). Defaults to None.
 
     """
     model_name: Literal['fc', 'highway', 'pfn', 'efn', 'transformer', 'part', 'depart', 'bdt']
@@ -32,10 +33,10 @@ class ModelBuilder:
     input_size: Union[int, Tuple[None, int], Tuple[Tuple[None, int], Tuple[None, None, int]]]
     num_labels: int
     args_optimizer: config.Optimizer
-    preprocess: Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]] = None
+    preprocess: Union[keras.layers.Layer, None, Tuple[keras.layers.Layer, keras.layers.Layer]] = None
 
     @property
-    def model(self) -> tf.keras.Model:
+    def model(self) -> keras.Model:
         """Builds model from config."""
         model_getter = model_getter_lookup(self.model_name)
         # get rid of number in model name
@@ -47,7 +48,7 @@ class ModelBuilder:
         return model
 
     @property
-    def compiled_model(self) -> tf.keras.Model:
+    def compiled_model(self) -> keras.Model:
         """Compiled Model."""
         model = self.model
 
@@ -61,31 +62,31 @@ class ModelBuilder:
         return model
 
     @property
-    def optimizer(self) -> tf.keras.optimizers.Optimizer:
+    def optimizer(self) -> keras.optimizers.Optimizer:
         """Instantiates optimizer from config."""
         return get_optimizer(self.args_optimizer)
 
     @property
-    def metrics(self) -> List[tf.keras.metrics.Metric]:
+    def metrics(self) -> List[keras.metrics.Metric]:
         """Metrics used in training."""
-        metrics = [tf.keras.metrics.CategoricalAccuracy() if self.num_labels >
-                   2 else tf.keras.metrics.BinaryAccuracy(),]
-        #    tf.keras.metrics.AUC(),
-        #    EffectiveTaggingEfficiency()]
+        metrics = [keras.metrics.CategoricalAccuracy() if self.num_labels >
+                   2 else keras.metrics.BinaryAccuracy(),]
         return metrics
 
     @property
-    def loss(self) -> tf.keras.losses.Loss:
+    def loss(self) -> keras.losses.Loss:
         """Loss function used in training."""""
         if self.num_labels > 2:
-            return tf.keras.losses.CategoricalCrossentropy(label_smoothing=self.args_optimizer.label_smoothing)
+            return keras.losses.CategoricalCrossentropy(label_smoothing=self.args_optimizer.label_smoothing)
         else:
-            return tf.keras.losses.BinaryCrossentropy(label_smoothing=self.args_optimizer.label_smoothing)
+            return keras.losses.BinaryCrossentropy(label_smoothing=self.args_optimizer.label_smoothing)
 
     @property
-    def output_layer(self) -> tf.keras.layers.Layer:
+    def output_layer(self) -> keras.layers.Layer:
         """Output layer for model. It is the same for all models."""
         if self.num_labels > 2:
-            return tf.keras.layers.Dense(self.num_labels, activation=tf.nn.softmax)
+            return keras.layers.Dense(self.num_labels, activation=keras.activations.softmax)
         else:
-            return tf.keras.layers.Dense(1, activation=tf.nn.sigmoid)
+            return keras.layers.Dense(1, activation=keras.activations.sigmoid)
+
+    

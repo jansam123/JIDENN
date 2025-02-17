@@ -4,10 +4,11 @@ They are used to choose the strategy for multi-gpu training.
 """
 
 import tensorflow as tf
+import keras
 from typing import Any, Callable
 
 
-def choose_strategy(model_builder: Callable[...,  tf.keras.Model], num_gpus: int) -> Callable[...,  tf.keras.Model]:
+def choose_strategy(model_builder: Callable[...,  keras.Model], num_gpus: int) -> Callable[...,  keras.Model]:
     """Decorator that chooses strategy based on the number of available GPUs.
     If there is only one GPU, no strategy is used.
     If there are more than one GPUs, `tf.distribute.MirroredStrategy` is used.
@@ -21,7 +22,7 @@ def choose_strategy(model_builder: Callable[...,  tf.keras.Model], num_gpus: int
     gpu_strategy = partial(choose_strategy, num_gpus=num_gpus)
     
     @gpu_strategy
-    def model_builder(...) -> tf.keras.Model:
+    def model_builder(...) -> keras.Model:
         ...
         return model
     
@@ -29,13 +30,13 @@ def choose_strategy(model_builder: Callable[...,  tf.keras.Model], num_gpus: int
     ```
 
     Args:
-        model_builder (Callable[...,  tf.keras.Model]): Function that builds the model.
+        model_builder (Callable[...,  keras.Model]): Function that builds the model.
         num_gpus (int): Number of available GPUs.
 
     Returns:
-        Callable[...,  tf.keras.Model]: Function that builds the model in the scope of chosen strategy.
+        Callable[...,  keras.Model]: Function that builds the model in the scope of chosen strategy.
     """
-    def _choose_strategy_wrapper(*args: Any, **kwargs: Any) -> tf.keras.Model:
+    def _choose_strategy_wrapper(*args: Any, **kwargs: Any) -> keras.Model:
         if num_gpus < 2:
             model = model_builder(*args, **kwargs)
         else:

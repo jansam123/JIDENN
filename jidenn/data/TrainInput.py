@@ -9,15 +9,12 @@ import tensorflow as tf
 from abc import ABC, abstractmethod, abstractproperty
 from typing import Union, Literal, Callable, Dict, Tuple, List, Optional, Type
 #
-from .four_vector_transform import to_e_px_py_pz, to_m_pt_eta_phi
+from .four_vector_transform import to_e_px_py_pz, to_m_pt_eta_phi, cal_delta_phi, to_m_pt_y_phi
 from .JIDENNDataset import ROOTVariables
 
 
-CLIP_MIN = 1e-36
-CLIP_MAX = 1e30
-
-# CLIP_MIN = 1e-10
-# CLIP_MAX = 1e10
+CLIP_MIN = 1e-10
+CLIP_MAX = 1e10
 
 class TrainInput(ABC):
     """Base class for all train input classes. The `TrainInput` class is used to **construct the input variables** for the neural network.
@@ -882,6 +879,155 @@ class InteractionConstituentVariables(ConstituentBase):
         else:
             id_var = len(self.const_types) 
         return (None, 8 + id_var), (None, None, 4)
+
+class JetClassVariables(TrainInput):
+    
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        
+        kinematics = self.get_kinematics(sample)
+        pid = self.get_pid(sample)
+        trajectory_displacement = self.get_trajectory_displacement(sample)
+        interaction_vars = self.get_interaction_variables(sample)
+        
+        return {**kinematics, **pid, **trajectory_displacement}, interaction_vars
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[int, int], Tuple[int, int, int]]:
+        return (self.max_constituents, 7+6+4), (self.max_constituents, self.max_constituents, 4)
+        
+    
+    def get_kinematics(self, sample: ROOTVariables) -> Dict[str, tf.Tensor]:
+        E_jet, pt_jet, eta_jet, phi_jet = sample['jet_energy'], sample['jet_pt'], sample['jet_eta'], sample['jet_phi']
+        px, py, pz, E = sample['part_px'], sample['part_py'], sample['part_pz'], sample['part_energy']
+        
+        m, pt, eta, phi = to_m_pt_eta_phi(E, px, py, pz)
+        
+        delta_eta = eta - eta_jet
+        delta_phi = cal_delta_phi(phi, phi_jet)
+        delta_R = tf.math.sqrt(delta_eta**2 + delta_phi**2)
+        log_pt = tf.math.log(tf.clip_by_value(pt, CLIP_MIN, CLIP_MAX))
+        log_E = tf.math.log(tf.clip_by_value(E, CLIP_MIN, CLIP_MAX))
+        log_pt_jet = tf.math.log(tf.clip_by_value(pt / pt_jet, CLIP_MIN, CLIP_MAX))
+        log_E_jet = tf.math.log(tf.clip_by_value(E / E_jet, CLIP_MIN, CLIP_MAX))   
+        
+        return {'log_pT': log_pt, 'log_PT|PTjet': log_pt_jet, 'log_E': log_E, 'log_E|Ejet': log_E_jet,
+                'deltaEta': delta_eta, 'deltaPhi': delta_phi, 'deltaR': delta_R}
+    
+    def get_pid(self, sample: ROOTVariables) -> Dict[str, tf.Tensor | tf.RaggedTensor]:
+        charge = sample['part_charge']
+        is_electron = sample['part_isElectron']
+        is_muon = sample['part_isMuon']
+        is_photon = sample['part_isPhoton']
+        is_neutral_hadron = sample['part_isNeutralHadron']
+        is_charged_hadron = sample['part_isChargedHadron']
+        return {'charge': charge, 'is_electron': is_electron, 'is_muon': is_muon, 'is_photon': is_photon,
+                'is_neutral_hadron': is_neutral_hadron, 'is_charged_hadron': is_charged_hadron}
+        
+    def get_trajectory_displacement(self, sample: ROOTVariables) -> Dict[str, tf.Tensor | tf.RaggedTensor]:
+        d0_err = sample['part_d0err']
+        dz_err = sample['part_dzerr']
+        tanh_d0 = tf.tanh(sample['part_d0val'])
+        tanh_dz = tf.tanh(sample['part_dzval'])
+        return {'d0_err': d0_err, 'dz_err': dz_err, 'tanh_d0': tanh_d0, 'tanh_dz': tanh_dz}
+    
+    def get_interaction_variables(self, sample: ROOTVariables) -> Dict[str, tf.Tensor]:
+        px, py, pz, E = sample['part_px'], sample['part_py'], sample['part_pz'], sample['part_energy']
+        m, pt, y, phi = to_m_pt_y_phi(E, px, py, pz)
+        
+        delta_y = y[:, tf.newaxis] - y[tf.newaxis, :]
+        delta_phi = cal_delta_phi(phi[:, tf.newaxis], phi[tf.newaxis, :])
+        delta = tf.math.sqrt(delta_y**2 + delta_phi**2)
+        
+        k_t = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) * delta
+        
+        z = tf.math.minimum(pt[:, tf.newaxis], pt[tf.newaxis, :]) / \
+            (pt[:, tf.newaxis] + pt[tf.newaxis, :])
+
+        m2 = tf.math.square(E[:, tf.newaxis] + E[tf.newaxis, :]) - tf.math.square(px[:, tf.newaxis] + px[tf.newaxis, :]) - \
+            tf.math.square(py[:, tf.newaxis] + py[tf.newaxis, :]) - \
+            tf.math.square(pz[:, tf.newaxis] + pz[tf.newaxis, :])
+            
+        inter_vars = {'delta': delta, 'k_t': k_t, 'z': z, 'm2': m2}
+            
+        for key, value in inter_vars.items():
+            inter_vars[key] = tf.linalg.set_diag(tf.math.log(tf.clip_by_value(value, CLIP_MIN, CLIP_MAX)), tf.zeros_like(m))
+            
+        return inter_vars
+        
+class JetClassVariablesNonInteraction(JetClassVariables):
+    
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        
+        kinematics = self.get_kinematics(sample)
+        pid = self.get_pid(sample)
+        trajectory_displacement = self.get_trajectory_displacement(sample)
+        
+        return {**kinematics, **pid, **trajectory_displacement}
+
+    @property
+    def input_shape(self) -> Tuple[int, int]:
+        return (self.max_constituents, 7+6+4)
+
+class JetClassVariablesPNet(JetClassVariables):
+    
+    def __call__(self, sample: ROOTVariables) -> Tuple[ROOTVariables, ROOTVariables]:
+        kinematics = self.get_kinematics(sample)
+        pid = self.get_pid(sample)
+        trajectory_displacement = self.get_trajectory_displacement(sample)
+        
+        fts = {**kinematics, **pid, **trajectory_displacement}
+        points = {'deltaEta': fts['deltaEta'], 'deltaPhi': fts['deltaPhi']}
+        
+        return fts, points
+
+    @property
+    def input_shape(self) -> Tuple[Tuple[int, int], Tuple[int, int, int]]:
+        return (self.max_constituents, 7+6+4), (self.max_constituents, 2)
+    
+    
+class JetClassHighlevel(TrainInput):
+    """Constructs the input variables characterizing the **whole jet**. 
+    The variables are taken from the `variable` list on the input.
+    These variables are used to train `jidenn.models.FC.FCModel` and `jidenn.models.Highway.HighwayModel`.
+
+    Args:
+        variables (List[str], optional): List of available variables. Defaults to None.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.variables is None:
+            self.variables = [
+                'jet_tau4',
+                'jet_eta',
+                'jet_nparticles',
+                'jet_tau3',
+                'jet_sdmass',
+                'jet_pt',
+                'jet_tau2',
+                'jet_phi',
+                'jet_tau1',
+                'jet_energy',]
+
+    def __call__(self, sample: ROOTVariables) -> ROOTVariables:
+        """Loops over the `per_jet_variables` and `per_event_variables` and constructs the input variables.
+
+        Args:
+            sample (ROOTVariables): The input sample.
+
+        Returns:
+            ROOTVariables: The output variables of the form `{'var_name': tf.Tensor}` where `var_name` is from `per_jet_variables` and `per_event_variables`.
+        """
+
+        new_sample = {var: tf.cast(sample[var], tf.float32)
+                      for var in self.variables}
+        return new_sample
+
+    @property
+    def input_shape(self) -> int:
+        """The input shape is just an integer `len(self.variables)`."""
+        return len(self.variables)
     
     
 class InteractionConstituentVariablesTrack(InteractionConstituentVariables):
@@ -959,7 +1105,8 @@ def input_classes_lookup(class_name: Literal['highlevel',
         Type[TrainInput]: The class to use for training. **Not as instance**, but as class itself.
     """
 
-    lookup_dict = {'full_highlevel': FullHighLevelJetVariables,
+    lookup_dict = {
+                   'full_highlevel': FullHighLevelJetVariables,
                    'highlevel': HighLevelJetVariables,
                    'highlevel_no_eta': HighLevelJetVariablesNoEta,
                    'crafted_highlevel': CraftedHighLevelJetVariables,
@@ -981,7 +1128,12 @@ def input_classes_lookup(class_name: Literal['highlevel',
                    'const_topo_track': ConstituentVariablesTopoTrack,
                    'int_const_topo_track': InteractionConstituentVariablesTopoTrack,
                    'int_rel_const_topo_track': InteractingRelativeConstituentVariablesTopoTrack,
-                   'irc_safe_topo_track': IRCSVariablesTopoTrack}
+                   'irc_safe_topo_track': IRCSVariablesTopoTrack,
+                   'jet_class': JetClassVariables,
+                   'jet_class_non_int': JetClassVariablesNonInteraction,
+                   'jet_class_highlevel': JetClassHighlevel,
+                   'jet_class_pnet': JetClassVariablesPNet,
+                   }
 
     if class_name not in lookup_dict.keys():
         raise ValueError(f'Unknown input class name {class_name}')

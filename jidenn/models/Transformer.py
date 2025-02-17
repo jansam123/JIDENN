@@ -9,10 +9,11 @@ The input features are embedded into a vector of size `dim`, which is then passe
 
 """
 import tensorflow as tf
+import keras
 from typing import Callable, Tuple, Optional
 
 
-class FFN(tf.keras.layers.Layer):
+class FFN(keras.layers.Layer):
     """Feed-forward network 
 
     Args:
@@ -26,9 +27,9 @@ class FFN(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
 
-        self.wide_dense = tf.keras.layers.Dense(dim * expansion, activation=activation)
-        self.dense = tf.keras.layers.Dense(dim, activation=None)
-        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+        self.wide_dense = keras.layers.Dense(dim * expansion, activation=activation)
+        self.dense = keras.layers.Dense(dim, activation=None)
+        self.layer_dropout = keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super(FFN, self).get_config()
@@ -51,9 +52,9 @@ class FFN(tf.keras.layers.Layer):
         return output
 
 
-class MultiheadSelfAttention(tf.keras.layers.Layer):
+class MultiheadSelfAttention(keras.layers.Layer):
     """Multi-head self-attention layer
-    This layer is a wrapper around the `tf.keras.layers.MultiHeadAttention` layer, 
+    This layer is a wrapper around the `keras.layers.MultiHeadAttention` layer, 
     to fix the key, value, and query to be the same.
 
     Args:
@@ -65,7 +66,7 @@ class MultiheadSelfAttention(tf.keras.layers.Layer):
     def __init__(self, dim: int, heads: int):
         super().__init__()
         self.dim, self.heads = dim, heads
-        self.mha = tf.keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
+        self.mha = keras.layers.MultiHeadAttention(key_dim=dim // heads, num_heads=heads)
 
     def get_config(self):
         config = super(MultiheadSelfAttention, self).get_config()
@@ -88,7 +89,7 @@ class MultiheadSelfAttention(tf.keras.layers.Layer):
         return output
 
 
-class SelfAttentionBlock(tf.keras.layers.Layer):
+class SelfAttentionBlock(keras.layers.Layer):
     """Self-attention block.
     It contains a multi-head self-attention layer and a feed-forward network with residual connections
     and layer normalizations.
@@ -105,11 +106,11 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         super().__init__(*args, **kwargs)
         self.dim, self.heads, self.dropout = dim, heads, dropout
         self.expansion, self.activation = expansion, activation
-        self.mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.mhsa_ln = keras.layers.LayerNormalization()
         self.mhsa = MultiheadSelfAttention(dim, heads)
-        self.mhsa_dropout = tf.keras.layers.Dropout(dropout)
+        self.mhsa_dropout = keras.layers.Dropout(dropout)
 
-        self.ffn_ln = tf.keras.layers.LayerNormalization()
+        self.ffn_ln = keras.layers.LayerNormalization()
         self.ffn = FFN(dim, expansion, activation, dropout)
     
     def get_config(self):
@@ -140,7 +141,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         return output
 
 
-class Transformer(tf.keras.layers.Layer):
+class Transformer(keras.layers.Layer):
     """Pure Transformer layers without embedding and output layers.
 
     It also creates the class token, which is used to encode the global information of the input,
@@ -162,7 +163,7 @@ class Transformer(tf.keras.layers.Layer):
 
         super().__init__()
         self.layers, self.dim, self.expansion, self.heads, self.dropout, self.activation = layers, dim, expansion, heads, dropout, activation
-        self.class_token = tf.Variable(initial_value=tf.random.truncated_normal(
+        self.class_token = keras.Variable(tf.random.truncated_normal(
             (1, 1, dim), stddev=0.02), trainable=True)
         self.sa_layers = [SelfAttentionBlock(dim, heads, expansion, activation, dropout) for _ in range(layers)]
 
@@ -184,6 +185,7 @@ class Transformer(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: output tensor of shape `(batch_size, num_particles, dim)`
         """
+        mask = tf.concat([tf.ones_like(mask[:, :1]), mask], axis=1)
         mask = mask[:, tf.newaxis, :] & mask[:, :, tf.newaxis]
         class_tokens = tf.tile(self.class_token, [tf.shape(inputs)[0], 1, 1])
         hidden = tf.concat([class_tokens, inputs], axis=1)
@@ -192,7 +194,7 @@ class Transformer(tf.keras.layers.Layer):
         return hidden
 
 
-class FCEmbedding(tf.keras.layers.Layer):
+class FCEmbedding(keras.layers.Layer):
     """Embedding layer as a series of fully-connected layers.
 
     Args:
@@ -204,7 +206,7 @@ class FCEmbedding(tf.keras.layers.Layer):
     def __init__(self, embed_dim: int, embed_layers: int, activation: Callable[[tf.Tensor], tf.Tensor]):
         super().__init__()
         self.embedding_dim, self.activation, self.num_embeding_layers = embed_dim, activation, embed_layers
-        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        self.layers = [keras.layers.Dense(self.embedding_dim, activation=self.activation)
                        for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
@@ -227,10 +229,10 @@ class FCEmbedding(tf.keras.layers.Layer):
         return hidden
 
 
-class TransformerModel(tf.keras.Model):
+class TransformerModel(keras.Model):
     """Transformer model with embedding and output layers.
 
-    The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.
+    The model already contains the `keras.layers.Input` layer, so it can be used as a standalone model.
 
     The input tensor is first passed through the embedding layer, then the Transformer layers, and finally the output layer.
     If the preprocessing layer is not None, the input tensor is first passed through the preprocessing layer before the embedding layer.
@@ -244,9 +246,9 @@ class TransformerModel(tf.keras.Model):
         expansion (int): expansion factor of the hidden layer, i.e. the hidden layer has size `dim * expansion`
         heads (int): number of heads
         dropout (float, optional): dropout rate. Defaults to None.
-        output_layer (tf.keras.layers.Layer): output layer
+        output_layer (keras.layers.Layer): output layer
         activation (Callable[[tf.Tensor], tf.Tensor]) activation function used in all the layers
-        preprocess (tf.keras.layers.Layer, optional): preprocessing layer. Defaults to None.
+        preprocess (keras.layers.Layer, optional): preprocessing layer. Defaults to None.
     """
 
     def __init__(self,
@@ -257,25 +259,49 @@ class TransformerModel(tf.keras.Model):
                  expansion: int,
                  heads: int,
                  dropout: float,
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
-                 preprocess: Optional[tf.keras.layers.Layer] = None):
+                 preprocess: Optional[keras.layers.Layer] = None,
+                 **kwargs
+                 ):
+        
+        self.input_size, self.embed_dim, self.embed_layers, self.self_attn_layers, self.expansion, self.heads, self.dropout, self.output_layer, self.activation, self.preprocess = input_shape, embed_dim, embed_layers, self_attn_layers, expansion, heads, dropout, output_layer, activation, preprocess
 
-        input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+        input = (keras.layers.Input(shape=input_shape),
+                keras.layers.Input(shape=(input_shape[0],), dtype=tf.bool))
 
-        row_lengths = input.row_lengths()
-        hidden = input.to_tensor()
+        hidden = input[0]
+        mask = input[1]
 
         if preprocess is not None:
             hidden = preprocess(hidden)
 
         hidden = FCEmbedding(embed_dim, embed_layers, activation)(hidden)
-        row_lengths += 1
+        
+        
 
         transformed = Transformer(self_attn_layers, embed_dim, expansion,
-                                  heads, activation, dropout)(hidden, mask=tf.sequence_mask(row_lengths))
+                                  heads, activation, dropout)(hidden, mask=mask)
 
-        transformed = tf.keras.layers.LayerNormalization()(transformed[:, 0, :])
+        transformed = keras.layers.LayerNormalization()(transformed[:, 0, :])
         output = output_layer(transformed)
 
-        super().__init__(inputs=input, outputs=output)
+        super().__init__(inputs=input, outputs=output, **kwargs)
+        
+    def get_config(self):
+        config = super(TransformerModel, self).get_config()
+        config.update({name: getattr(self, name) for name in ["embed_dim", "embed_layers", "self_attn_layers", "expansion", "heads", "dropout"]})
+        config["output_layer"] = keras.layers.serialize(self.output_layer)
+        config["activation"] = keras.activations.serialize(self.activation)
+        config["preprocess"] = keras.layers.serialize(self.preprocess)
+        config["input_shape"] = self.input_size
+        return config
+    
+    @classmethod
+    def from_config(cls, config):
+        config["output_layer"] = keras.layers.deserialize(config["output_layer"])
+        config["activation"] = keras.activations.deserialize(config["activation"])
+        config["preprocess"] = keras.layers.deserialize(config["preprocess"])
+        return cls(**config)
+
+        

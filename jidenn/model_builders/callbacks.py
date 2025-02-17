@@ -4,11 +4,11 @@ a list of callbacks to be used during the training process.
 """
 
 import tensorflow as tf
+import keras
 import os
 from logging import Logger
 from typing import List, Optional, Literal
 from tensorflow.python.keras.utils import tf_utils
-import tensorflow as tf
 import shutil
 import logging
 from datetime import datetime
@@ -17,7 +17,7 @@ from datetime import datetime
 log = logging.getLogger(__name__)
 
 
-class LogCallback(tf.keras.callbacks.Callback):
+class LogCallback(keras.callbacks.Callback):
     """
     Callback to log the training progress to a specified logging.Logger object. Logs the total time elapsed during the epoch (ETA).
 
@@ -77,7 +77,7 @@ class LogCallback(tf.keras.callbacks.Callback):
         log_str += " - ".join([f"{k}: {v:.4}" for k, v in logs.items()])
         self.specified_logger.info(log_str)
 
-class AdditionalValidation(tf.keras.callbacks.Callback):
+class AdditionalValidation(keras.callbacks.Callback):
 
     def __init__(self, dataset: tf.data.Dataset, name: str = 'val2', file_writer = None) -> None:
         super(AdditionalValidation).__init__()
@@ -97,7 +97,7 @@ class AdditionalValidation(tf.keras.callbacks.Callback):
             
 
 
-class BestNModelCheckpoint(tf.keras.callbacks.ModelCheckpoint):
+class BestNModelCheckpoint(keras.callbacks.ModelCheckpoint):
     """Custom ModelCheckpoint Callback that saves the best N checkpoints based on a specified monitor metric.
 
     Original source: https://github.com/schustmi/tf_utils/blob/915fe5e231ca302b28cd02dc8ac2e4c772a62e0b/tf_utils/callbacks.py#L34
@@ -110,7 +110,7 @@ class BestNModelCheckpoint(tf.keras.callbacks.ModelCheckpoint):
     Args:
         filepath (str): path where the checkpoints will be saved. Make sure
             to pass a format string as otherwise the checkpoint will be overridden each step.
-            (see `tf.keras.callbacks.ModelCheckpoint` for detailed formatting options)
+            (see `keras.callbacks.ModelCheckpoint` for detailed formatting options)
         max_to_keep (int): Maximum number of best checkpoints to keep.
         keep_most_recent (bool): if True, the most recent checkpoint will be saved in addition to
             the best `max_to_keep` ones.
@@ -119,7 +119,7 @@ class BestNModelCheckpoint(tf.keras.callbacks.ModelCheckpoint):
             more information.
         mode (str): Depending on `mode`, the checkpoints with the highest ('max') 
             or lowest ('min') values in the monitored quantity will be kept.
-        **kwargs: Additional keyword arguments to pass to the parent class `tf.keras.callbacks.ModelCheckpoint`.
+        **kwargs: Additional keyword arguments to pass to the parent class `keras.callbacks.ModelCheckpoint`.
 
     """
 
@@ -202,7 +202,7 @@ def get_callbacks(base_logdir: str,
                   backup: Optional[str] = 'backup',
                   backup_freq: Optional[int] = None,
                   additional_val_dataset: Optional[tf.data.Dataset] = None,
-                  additional_val_name: Optional[str] = 'val2',) -> List[tf.keras.callbacks.Callback]:
+                  additional_val_name: Optional[str] = 'val2',) -> List[keras.callbacks.Callback]:
     """
     Returns a list of Keras callbacks for a training session.
 
@@ -215,14 +215,14 @@ def get_callbacks(base_logdir: str,
         backup_freq (int, optional): The frequency (in batches) at which to save backups of the training session. If None, backups will only be saved at the end of each epoch.
 
     Returns:
-        A list of Keras callbacks to use during training. The list contains a `tf.keras.callbacks.TensorBoard` callback for logging training information, a `jidenn.callbacks.LogCallback.LogCallback` callback for logging training information, a `jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint` callback for saving model checkpoints, and a `tf.keras.callbacks.BackupAndRestore` callback for saving backups of the training session.
+        A list of Keras callbacks to use during training. The list contains a `keras.callbacks.TensorBoard` callback for logging training information, a `jidenn.callbacks.LogCallback.LogCallback` callback for logging training information, a `jidenn.callbacks.BestNModelCheckpoint.BestNModelCheckpoint` callback for saving model checkpoints, and a `keras.callbacks.BackupAndRestore` callback for saving backups of the training session.
     """
     callbacks = []
     if additional_val_dataset is not None and additional_val_name is not None:
         file_writer = tf.summary.create_file_writer(os.path.join(base_logdir, 'test'))
         callbacks.append(AdditionalValidation(additional_val_dataset, name=additional_val_name, file_writer=file_writer))
 
-    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=base_logdir)
+    tb_callback = keras.callbacks.TensorBoard(log_dir=base_logdir)
     callbacks.append(tb_callback)
     log_callback = LogCallback(epochs, log)
     callbacks.append(log_callback)
@@ -237,7 +237,7 @@ def get_callbacks(base_logdir: str,
         #                                         save_best_only=True,
         #                                         save_freq='epoch',
         #                                         verbose=1,)
-        base_checkpoints = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint,
+        base_checkpoints = keras.callbacks.ModelCheckpoint(filepath=checkpoint,
                                                               monitor='val_binary_accuracy',
                                                               mode='max',
                                                               save_weights_only=False,
@@ -248,7 +248,7 @@ def get_callbacks(base_logdir: str,
 
     if backup is not None:
         os.makedirs(os.path.join(base_logdir, backup), exist_ok=True)
-        backup_callback = tf.keras.callbacks.BackupAndRestore(backup_dir=os.path.join(
+        backup_callback = keras.callbacks.BackupAndRestore(backup_dir=os.path.join(
             base_logdir, backup), delete_checkpoint=False, save_freq=backup_freq if backup_freq is not None else "epoch")
         callbacks.append(backup_callback)
 

@@ -17,12 +17,13 @@ The energy part of the input is not used in the model to maintain **Infrared and
 On the left is the PFN model, on the right the EFN model.
 """
 import tensorflow as tf
+import keras
 from typing import Optional, Callable, List, Literal, Tuple
 
 
-class EinsumLayer(tf.keras.layers.Layer):
+class EinsumLayer(keras.layers.Layer):
     """
-    This is needed to wrap the einsum operation, because the einsum operation produces an error when loded from a saved model with tf.keras.models.load_model.
+    This is needed to wrap the einsum operation, because the einsum operation produces an error when loded from a saved model with keras.models.load_model.
     For more information see https://github.com/keras-team/keras/issues/15783.
     For more information about the einsum operation see https://www.tensorflow.org/api_docs/python/tf/einsum.
 
@@ -53,7 +54,7 @@ class EinsumLayer(tf.keras.layers.Layer):
         return {"equation": self.equation}
 
 
-class EFNModel(tf.keras.Model):
+class EFNModel(keras.Model):
     """The Energy Flow Network model.
 
     The input is expected to be a tensor of shape `(batch_size, num_particles, num_features=8)`,
@@ -61,13 +62,13 @@ class EFNModel(tf.keras.Model):
     The second dimension is ragged, as the number of particles in each jet is not the same.
     See `jidenn.data.TrainInput.ConstituentVariables` for more details. 
 
-    The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.
+    The model already contains the `keras.layers.Input` layer, so it can be used as a standalone model.
 
     Args:
         input_shape (Tuple[None, int]): The shape of the input.
         Phi_sizes (List[int]): The sizes of the Phi layers.
         F_sizes (List[int]): The sizes of the F layers.
-        output_layer (tf.keras.layers.Layer): The output layer.
+        output_layer (keras.layers.Layer): The output layer.
         activation (Callable[[tf.Tensor], tf.Tensor]) The activation function for the Phi and F layers. 
         Phi_backbone (str, optional): The backbone of the Phi mapping. Options are "cnn" or "fc". Defaults to "fc".
             This argument is not in the config option, as the CNN backbone is not used in the paper and 
@@ -76,28 +77,28 @@ class EFNModel(tf.keras.Model):
             This argument is not in the config option, as it is not used in the paper and 
             might violate the Infrared and Collinear safety of the model.
         F_dropout (float, optional): The dropout rate for the F layers. Defaults to None.
-        preprocess (tf.keras.layers.Layer, optional): The preprocessing layer. Defaults to None.
+        preprocess (keras.layers.Layer, optional): The preprocessing layer. Defaults to None.
     """
 
     def __init__(self,
                  input_shape: Tuple[Tuple[None, int], Tuple[None, int]],
                  Phi_sizes: List[int],
                  F_sizes: List[int],
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  Phi_backbone: Literal["cnn", "fc"] = "fc",
                  batch_norm: bool = False,
                  Phi_dropout: Optional[float] = None,
                  F_dropout: Optional[float] = None,
-                 preprocess: Optional[tf.keras.layers.Layer] = None):
+                 preprocess: Optional[keras.layers.Layer] = None):
 
         self.Phi_sizes, self.F_sizes = Phi_sizes, F_sizes
         self.Phi_dropout = Phi_dropout
         self.F_dropout = F_dropout
         self.activation = activation
 
-        input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
-                 tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+        input = (keras.layers.Input(shape=input_shape[0]),
+                 keras.layers.Input(shape=input_shape[1]))
 
         angular, energy = input
         row_lengths = angular.row_lengths()
@@ -109,8 +110,8 @@ class EFNModel(tf.keras.Model):
             angular = preprocess(angular)
 
         if batch_norm:
-            angular = tf.keras.layers.BatchNormalization()(angular)
-            energy = tf.keras.layers.BatchNormalization()(energy)
+            angular = keras.layers.BatchNormalization()(angular)
+            energy = keras.layers.BatchNormalization()(energy)
 
         if Phi_backbone == "cnn":
             angular = self.cnn_Phi(angular)
@@ -121,7 +122,7 @@ class EFNModel(tf.keras.Model):
 
         angular = angular * tf.expand_dims(tf.cast(mask, tf.float32), -1)
         hidden = EinsumLayer('BPC,BPD->BCD')((angular, energy))
-        hidden = tf.keras.layers.Flatten()(hidden)
+        hidden = keras.layers.Flatten()(hidden)
         hidden = self.fc_F(hidden)
         output = output_layer(hidden)
 
@@ -138,11 +139,11 @@ class EFNModel(tf.keras.Model):
         """
         hidden = inputs
         for size in self.Phi_sizes:
-            hidden = tf.keras.layers.Conv1D(size, 1)(hidden)
-            hidden = tf.keras.layers.BatchNormalization()(hidden)
-            hidden = tf.keras.layers.Activation(self.activation)(hidden)
+            hidden = keras.layers.Conv1D(size, 1)(hidden)
+            hidden = keras.layers.BatchNormalization()(hidden)
+            hidden = keras.layers.Activation(self.activation)(hidden)
             if self.Phi_dropout is not None:
-                hidden = tf.keras.layers.Dropout(self.Phi_dropout)(hidden)
+                hidden = keras.layers.Dropout(self.Phi_dropout)(hidden)
         return hidden
 
     def fc_Phi(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -156,10 +157,10 @@ class EFNModel(tf.keras.Model):
         """
         hidden = inputs
         for size in self.Phi_sizes:
-            hidden = tf.keras.layers.Dense(size)(hidden)
-            hidden = tf.keras.layers.Activation(self.activation)(hidden)
+            hidden = keras.layers.Dense(size)(hidden)
+            hidden = keras.layers.Activation(self.activation)(hidden)
             if self.Phi_dropout is not None:
-                hidden = tf.keras.layers.Dropout(self.Phi_dropout)(hidden)
+                hidden = keras.layers.Dropout(self.Phi_dropout)(hidden)
         return hidden
 
     def fc_F(self, inputs: tf.Tensor) -> tf.Tensor:
@@ -173,8 +174,8 @@ class EFNModel(tf.keras.Model):
         """
         hidden = inputs
         for size in self.F_sizes:
-            hidden = tf.keras.layers.Dense(size)(hidden)
-            hidden = tf.keras.layers.Activation(self.activation)(hidden)
+            hidden = keras.layers.Dense(size)(hidden)
+            hidden = keras.layers.Activation(self.activation)(hidden)
             if self.F_dropout is not None:
-                hidden = tf.keras.layers.Dropout(self.F_dropout)(hidden)
+                hidden = keras.layers.Dropout(self.F_dropout)(hidden)
         return hidden

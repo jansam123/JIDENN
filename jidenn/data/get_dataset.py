@@ -15,30 +15,23 @@ def get_preprocessed_dataset(args_data: config.Data,
                              augmentation: Optional[Callable[[ROOTVariables], ROOTVariables]] = None,
                              shuffle_reading: bool = False):
 
-    @tf.function
-    def count_PFO(sample: ROOTVariables) -> ROOTVariables:
-        for pfo_var in ['jets_PFO_pt', 'jets_PFO_eta', 'jets_PFO_phi', 'jets_PFO_m']:
-            if pfo_var in sample.keys():
-                sample = sample.copy()
-                sample['jets_PFO_n'] = tf.reduce_sum(
-                    tf.ones_like(sample['jets_PFO_pt']))
-                break
-        return sample
 
-    var_labels_1 = tf.constant(args_data.target_labels[0], dtype=tf.int32)
-    var_labels_2 = tf.constant(args_data.target_labels[1], dtype=tf.int32)
-    unknown_labels = tf.constant(args_data.variable_unknown_labels, dtype=tf.int32)
+    var_labels = [tf.constant(labels, dtype=tf.int32) for labels in args_data.target_labels]
+    unknown_labels = tf.constant(args_data.variable_unknown_labels, dtype=tf.int32) if args_data.variable_unknown_labels is not None else None
 
     @tf.function
     def label_mapping(x: int) -> int:
         if x.dtype != tf.int32:
             x = tf.cast(x, tf.int32)
-        if tf.reduce_any(x == var_labels_1):
-            return 0
-        elif tf.reduce_any(x == var_labels_2):
-            return 1
-        else:
-            return -999
+        label = -999
+        for i, labels in enumerate(var_labels):
+            if tf.reduce_any(x == labels):
+                label = i
+        return label
+    
+    @tf.function
+    def one_hot_encode(x: int) -> tf.Tensor:
+        return tf.one_hot(x, len(var_labels))
 
     @tf.function
     def filter_unknown_labels(sample: ROOTVariables) -> bool:
@@ -63,12 +56,12 @@ def get_preprocessed_dataset(args_data: config.Data,
                                               only_common_variables=True,
                                               data_mapper=reweight_dataset if args_data.dataset_norm is not None else None,
                                               file_labels=file_labels if args_data.dataset_norm else None,)
-    dataset = dataset.remap_data(count_PFO)
     dataset = dataset.filter(Cut(args_data.cut)) if args_data.cut is not None else dataset
     dataset = dataset.filter(filter_unknown_labels) if args_data.variable_unknown_labels is not None else dataset
     dataset = dataset.remap_data(augmentation) if augmentation is not None else dataset
     dataset = dataset.set_variables_target_weight(target=args_data.target, weight=args_data.weight)
     dataset = dataset.remap_labels(label_mapping)
+    dataset = dataset.remap_labels(one_hot_encode) if len(var_labels) > 2 else dataset
     dataset = dataset.remap_data(input_creator) if input_creator is not None else dataset
     return dataset
 

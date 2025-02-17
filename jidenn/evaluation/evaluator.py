@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Tuple, Union, Callable, Literal
 import tensorflow as tf
+import keras
 import numpy as np
 import pandas as pd
 import logging
@@ -159,7 +160,7 @@ def benchmark(func):
 
 
 @benchmark
-def predict(model: tf.keras.Model, dataset: tf.data.Dataset):
+def predict(model: keras.Model, dataset: tf.data.Dataset):
     score = model.predict(dataset).ravel()
     return score
 
@@ -186,7 +187,7 @@ def evaluate_multiple_models(model_paths: List[str],
 
     Args:
         model_paths (List[str]): List of paths to the Keras model files. They will be loaded with
-            `tf.keras.models.load_model(model_path, custom_objects=custom_objects)`.
+            `keras.models.load_model(model_path, custom_objects=custom_objects)`.
         model_names (List[str]): List of names for each model.
         dataset (JIDENNDataset): JIDENNDataset to evaluate the models on and to add the scores to.
         model_input_name (List[str]): List of input names for each model. See `jidenn.data.TrainInput.input_classes_lookup`
@@ -197,7 +198,7 @@ def evaluate_multiple_models(model_paths: List[str],
             the score will be added with the name `f'{model_name}_{score_name}'`.
         log (logging.Logger, optional): Logger to use for logging messages and evaluation/loading times. Default is None.
         custom_objects (Dict[str, Callable], optional): Dictionary of custom objects to use when loading the models.
-            Passed to `tf.keras.models.load_model(model_path, custom_objects=custom_objects)`. Default is None.
+            Passed to `keras.models.load_model(model_path, custom_objects=custom_objects)`. Default is None.
         distribution_drawer (Callable[[JIDENNDataset], None], optional): Function to plot the data distribution of 
             the input variables which are automatically created with the `jidenn.data.TrainInput` class. Default is None.
 
@@ -251,7 +252,7 @@ def evaluate_multiple_models(model_paths: List[str],
                     pass
             log.info(f'----- Loading model: {model_name}') if log is not None else None
             start = time.time()
-            model : tf.keras.Model = tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
+            model : keras.Model = keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
             model.compile()
             stop = time.time()
             log.info(f'----- Loading model took: {stop-start:.2f} s') if log is not None else None
@@ -291,7 +292,7 @@ def evaluate_single_model(model_path: str,
 
     Args:
         model_path (str): Path to the Keras model file. It will be loaded with
-            `tf.keras.models.load_model(model_path, custom_objects=custom_objects)`.
+            `keras.models.load_model(model_path, custom_objects=custom_objects)`.
         model_name (str): Name of the model.
         dataset (JIDENNDataset): JIDENNDataset to evaluate the model on and to add the scores to.
         model_input_name (str): Input name for the model. See `jidenn.data.TrainInput.input_classes_lookup`
@@ -300,7 +301,7 @@ def evaluate_single_model(model_path: str,
         take (int, optional): Number of events to evaluate. If not provided, all events will be used. Default is None.
         log (logging.Logger, optional): Logger to use for logging messages and evaluation/loading times. Default is None.
         custom_objects (Dict[str, Callable], optional): Dictionary of custom objects to use when loading the model.
-            Passed to `tf.keras.models.load_model(model_path, custom_objects=custom_objects)`. Default is None.
+            Passed to `keras.models.load_model(model_path, custom_objects=custom_objects)`. Default is None.
         distribution_drawer (Callable[[JIDENNDataset], None], optional): Function to plot the data distribution of 
             the input variables which are automatically created with the `jidenn.data.TrainInput` class
     """
@@ -323,7 +324,7 @@ def evaluate_single_model(model_path: str,
 
     log.info(f'----- Loading model: {model_name}') if log is not None else None
     start = time.time()
-    model : tf.keras.Model = tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
+    model : keras.Model = keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
     model.compile()
     stop = time.time()
     loading_time = stop-start

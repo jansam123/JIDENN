@@ -15,7 +15,7 @@ hydra:
   output_subdir: config
 
 general:
-  model: transformer # Model to use, options:  transformer, basic_fc, BDT, highway.
+  model: part # Model to use, options:  transformer, basic_fc, BDT, highway.
   base_logdir: logs # Base log directory for all runs.
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
@@ -27,112 +27,100 @@ general:
   load_checkpoint_path:
 
 data:
-  #path: #[data/r22_PFO/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet, data/r22_PFO/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet, data/r22_PFO/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet]
-  # path: #sum = 193994742
-  #   - 'data/r22_PFO/fwd_2d_flat_20-160GeV_all_jets/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets'
-  #   - 'data/r22_PFO/fwd_2d_flat_20-160GeV_all_jets/Sherpa_CT10_CT14nnlo_CSShower_2to2jets'
-  #   - 'data/r22_PFO/fwd_2d_flat_20-160GeV_all_jets/Pythia8EvtGen_A14NNPDF23LO_jetjet'
-  #   - 'data/r22_PFO/fwd_2d_flat_20-160GeV_all_jets/PhPy8EG_jj'
-  #   - 'data/r22_PFO/fwd_2d_flat_20-160GeV_all_jets/H7EG_Matchbox_dipole_jetjetNLO'
-  #   - 'data/r22_PFO/fwd_2d_flat_20-160GeV_all_jets/H7EG_Matchbox_angular_jetjetNLO'
-  #   - 'data/r22_PFO/central_2d_flat_160-1300GeV_all_jets/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets'
-  #   - 'data/r22_PFO/central_2d_flat_160-1300GeV_all_jets/Sherpa_CT10_CT14nnlo_CSShower_2to2jets'
-  #   - 'data/r22_PFO/central_2d_flat_160-1300GeV_all_jets/Pythia8EvtGen_A14NNPDF23LO_jetjet'
-  #   - 'data/r22_PFO/central_2d_flat_160-1300GeV_all_jets/PhPy8EG_jj'P
-  #   - 'data/r22_PFO/central_2d_flat_160-1300GeV_all_jets/H7EG_Matchbox_dipole_jetjetNLO'
-  #   - 'data/r22_PFO/central_2d_flat_160-1300GeV_all_jets/H7EG_Matchbox_angular_jetjetNLO'
-  #   - 'data/r22_PFO/super_central_2d_flat_1300-2500GeV_all_jets/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets'
-  #   - 'data/r22_PFO/super_central_2d_flat_1300-2500GeV_all_jets/Sherpa_CT10_CT14nnlo_CSShower_2to2jets'
-  #   - 'data/r22_PFO/super_central_2d_flat_1300-2500GeV_all_jets/Pythia8EvtGen_A14NNPDF23LO_jetjet'
-  #   - 'data/r22_PFO/super_central_2d_flat_1300-2500GeV_all_jets/PhPy8EG_jj'
-  #   - 'data/r22_PFO/super_central_2d_flat_1300-2500GeV_all_jets/H7EG_Matchbox_dipole_jetjetNLO'
-  #   - 'data/r22_PFO/super_central_2d_flat_1300-2500GeV_all_jets/H7EG_Matchbox_angular_jetjetNLO' 
-  # dataset_weigths: [0.02112982010615525, 0.12106414203741667, 0.2577389442854075, 0.0515477888570815, 0.030236587546274837, 0.031197129043837694, 0.016141720995716473, 0.035589495513234065, 0.2577389442854075, 0.02577389442854075, 0.05402791277714115, 0.05439303607517362, 0.007360374746651638, 0.00733480188859964, 0.011061304950213548, 0.00515477888570815, 0.006320367177786705, 0.0061889563996533475]
-
-  # path: # total 64,678,482
-  #   - 'data/r22_PFO_v2/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet'
-  #   - 'data/r22_PFO_v2/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet'
-  #   - 'data/r22_PFO_v2/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet'
-  # dataset_weigths: [0.03314086746810168, 0.7730546304410794, 0.193804502090819]
-  path:
-    - data/r22_PFO/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet # (50M)
-    - data/r22_PFO/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet # (50M)
-    - data/r22_PFO/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet # (2.143M)
+  path: /Users/samueljankovych/Projects/Tagging/jetclass/tf_dataset/train_100M
+  dev_path: /Users/samueljankovych/Projects/Tagging/jetclass/tf_dataset/val_5M
   dataset_weigths:
-    - 0.4895058032626247
-    - 0.4895058032626247
-    - 0.02098839347475058
-    # - 0.4895058032626247
-    # - 0.4895058032626247
-    # - 0.02098839347475058
-  # dataset_weigths: [0.48949621881303335,0.48949621881303335,0.02100756237393331]
-  # path:
-  #   - data/r22_UFO/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet
-  #   - data/r22_UFO/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet
-  #   - data/r22_UFO/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet
-  # dataset_weigths:
-  #   - 0.46967126090780276
-  #   - 0.48439295584138187
-  #   - 0.045935783250815376
-  
-  # dataset_weigths: [0.46967126090780276, 0.48439295584138187, 0.045935783250815376] #UFO
-  #dataset_weigths: #[0.4895058032626247, 0.4895058032626247, 0.02098839347475058] #PFO
-  # dataset_norm: [0.47593540639309573, 0.4827016009574705, 0.04591820947437745]
-  dataset_norm: # [0.47593540639309573, 0.4827016009574705, 0.04591820947437745]
-  # equalize_dataset_weights: True
-  target: jets_PartonTruthLabelID
+  dataset_norm: 
+  target: [label_Tbl, label_Tbqq, label_Hgg, label_Hbb, label_H4q, label_Wqq, label_Hcc, label_QCD, label_Zqq, label_Hqql]
   labels: # list of labels to use.
-    - gluon
-    - quark
+    - t->b+l
+    - t->b+qq
+    - H->gg
+    - H->bb
+    - H->4q
+    - W->qq
+    - H->cc
+    - QCD
+    - Z->qq
+    - H->qq+l
   target_labels:
-    - [21]
-    - [1, 2, 3, 4, 5, 6]
-  variable_unknown_labels: [-1, -999]
-  max_constituents: 60
+    - [0]
+    - [1]
+    - [2]
+    - [3]
+    - [4]
+    - [5]
+    - [6]
+    - [7]
+    - [8]
+    - [9]
+  variable_unknown_labels: 
+  max_constituents: 100
   label_weights:
   cut:
-  weight: weight_flat
+  weight: 
 
 test_data: 
-  # path: data/all_MCs/Pythia8EvtGen_A14NNPDF23LO_jetjet/dev
-  # target: jets_PartonTruthLabelID
-  # labels: # list of labels to use.
-  #   - gluon
-  #   - quark
-  # target_labels:
-  #   - [21]
-  #   - [1, 2, 3, 4, 5, 6]
-  # variable_unknown_labels: [-1, -999]
-  # label_weights:
-  # cut:
-  # weight: weight
+  path: /Users/samueljankovych/Projects/Tagging/jetclass/tf_dataset/test_20M
+  dataset_weigths:
+  dataset_norm: 
+  target: [label_Tbl, label_Tbqq, label_Hgg, label_Hbb, label_H4q, label_Wqq, label_Hcc, label_QCD, label_Zqq, label_Hqql]
+  labels: # list of labels to use.
+    - t->b+l
+    - t->b+qq
+    - H->gg
+    - H->bb
+    - H->4q
+    - W->qq
+    - H->cc
+    - QCD
+    - Z->qq
+    - H->qq+l
+  target_labels:
+    - [0]
+    - [1]
+    - [2]
+    - [3]
+    - [4]
+    - [5]
+    - [6]
+    - [7]
+    - [8]
+    - [9]
+  variable_unknown_labels: 
+  max_constituents: 100
+  label_weights:
+  cut:
+  weight: 
 
 optimizer:
-  name: Adam # Optimizer to use, options: Adam, LAMB, Lion.
-  warmup_steps: 2_000 # Number of steps, when learning rate is increased linearly.
-  learning_rate: 0.0001 #0.000025 #0.0001 # Learning rate.
-  min_learning_rate: 0.001 # Minimal learning rate as a fraction of the initial learning rate.
-  decay_steps: 498_500 #1263000 #315_500 # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
-  clipnorm: 0.8 # Gradient clipping (maximal norm of the gradient).
-  weight_decay: # Weight decay (L2 regularization).
-  beta_1: # Adam beta_1 (optimizer parameter).
-  label_smoothing: 0. # Label smoothing.
-  beta_2: #part: 0.999
-  epsilon: #part : 0.0001
+  name: Lamb # Optimizer to use, options: Adam, RAdam, AdamW, NAdam, Lion, Lamb.
+  warmup_steps: 2_000  # Number of steps, when learning rate is increased linearly.
+  learning_rate: 0.001 #0.001 #0.000025 #0.0001 # Learning rate.
+  min_learning_rate: 0.01 # Minimal learning rate as a fraction of the initial learning rate.
+  decay_steps: 976_560 #1263000 #315_500 # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
+  clipnorm:  # Gradient clipping (maximal norm of the gradient).
+  clipvalue: 100. #100. 
+  weight_decay:   # Weight decay (L2 regularization).
+  beta_1:  # Adam beta_1 (optimizer parameter).
+  label_smoothing:  # Label smoothing.
+  beta_2:  #part: 0.999
+  epsilon:  #part : 0.0001
 
 dataset:
-  epochs: 10 # Number of epochs.
-  steps_per_epoch: 49_850 #31_550 #126300 #31_550 #49849 #49875 # Number of steps per epoch. If None, autocomputes as: int(take * (1 - dev_size) / batch_size).
-  take: # Length of data to use.
-  batch_size: 2048 #512 #2048 #1024 # Batch size.
-  dev_size: 0.1 # Size of dev dataset.
+  epochs: 1 # Number of epochs.
+  steps_per_epoch: #195_312 # Number of steps per epoch. If None, autocomputes as: int(take * (1 - dev_size) / batch_size).
+  take: 2000 # Length of data to use.
+  batch_size: 512 #512 #2048 #1024 # Batch size.
+  dev_take: 512  # Size of dev dataset.
   test_take: 100_000 # Size of test dataset.
   shuffle_buffer: 1_000 # Size of shuffler buffer.
   cache: disk # Cache dataset in memory (`mem`) or on disk (`disk`).
 
 preprocess:
-  normalization_size: 150 # Size of normalization dataset (if normalize is True).
-  draw_distribution: 50000 # Size of the distribution to draw.
+  normalization_size: 100 # Size of normalization dataset (if normalize is True).
+  draw_distribution:  # Size of the distribution to draw.
+  min_max_normalization: False
 
 models:
   fc:
@@ -140,14 +128,14 @@ models:
     num_layers: 11
     dropout: 0.2 # Dropout after FC layers.
     activation: swish # Activation function to use (relu/elu/gelu/silu).
-    train_input: highlevel
+    train_input: jet_class_highlevel
 
   highway:
     layer_size: 344 # Size of the highway layer.
     num_layers: 11 # Number of highway layers.
     dropout: 0.2 # Dropout after highway layers.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
-    train_input: highlevel
+    train_input: jet_class_highlevel
 
   transformer:
     dropout: 0.1
@@ -157,10 +145,10 @@ models:
     embed_dim: 128 #232
     embed_layers: 3 # Number of embedding layers.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
-    train_input: constituents
+    train_input: jet_class_non_int
 
   part:
-    self_attn_layers: 11
+    self_attn_layers: 8
     embed_dim: 128 #256
     class_attn_layers: 2
     expansion: 4 #4,  number of hidden units in FFN is expansion * embed_dim
@@ -169,8 +157,8 @@ models:
     embed_layers: 3 # Number of embedding layers.
     interaction_embedding_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
-    activation: gelu # Activation function to use (relu/elu/gelu/silu).
-    train_input: constituents
+    activation: gelu # Activation function to use (relu/elu/gelu/swish).
+    train_input: jet_class_non_int
 
   depart:
     self_attn_layers: 11 # 6,12
@@ -187,7 +175,7 @@ models:
     interaction_embedding_layers: 3 # Number of embedding layers. Last one must be heads
     interaction_embedding_layer_size: 64 # Size of the embedding layer.
     activation: gelu # Activation function to use (relu/elu/gelu/silu).
-    train_input: constituents
+    train_input: jet_class_non_int
 
   pfn:
     Phi_sizes: [512, 512, 512, 512, 512] # Sizes of the per particle mapping.
@@ -197,7 +185,7 @@ models:
     activation: gelu #  Activation function to use (relu/elu/gelu/silu).
     Phi_dropout: #  Dropout after PHI.
     F_dropout: #  Dropout after F.
-    train_input: constituents
+    train_input: jet_class_non_int
 
   efn:
     Phi_sizes: [512, 512, 512, 512, 136] # Sizes of the per particle mapping.
@@ -238,7 +226,7 @@ models:
       - [256, 256, 256] #  Number of channels.
       - [256, 256, 256] #  Number of channels.
       - [512, 512, 512]
-    train_input: gnn
+    train_input: jet_class_pnet
     activation: gelu #  Activation function to use (relu/elu/gelu/silu).
 
 augmentations:
@@ -277,81 +265,3 @@ augmentations:
     const_name: Constituent
     max_beta: 0.1
 
-
-# data.path=['data/r22_PFO/fwd_2d_flat_20-160GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#         'data/r22_PFO/fwd_2d_flat_20-160GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#         'data/r22_PFO/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet', 
-#         'data/r22_PFO/fwd_2d_flat_20-160GeV/PhPy8EG_jj', 
-#         'data/r22_PFO/fwd_2d_flat_20-160GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#         'data/r22_PFO/fwd_2d_flat_20-160GeV/H7EG_Matchbox_angular_jetjetNLO', 
-        
-#         'data/r22_PFO/central_2d_flat_160-1300GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#         'data/r22_PFO/central_2d_flat_160-1300GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#         'data/r22_PFO/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet', 
-#         'data/r22_PFO/central_2d_flat_160-1300GeV/PhPy8EG_jj',
-#         'data/r22_PFO/central_2d_flat_160-1300GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#         'data/r22_PFO/central_2d_flat_160-1300GeV/H7EG_Matchbox_angular_jetjetNLO', 
-        
-#         'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#         'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#         'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet',
-#         'data/r22_PFO/super_central_2d_flat_1300-2500GeV/PhPy8EG_jj', 
-#         'data/r22_PFO/super_central_2d_flat_1300-2500GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#         'data/r22_PFO/super_central_2d_flat_1300-2500GeV/H7EG_Matchbox_angular_jetjetNLO' 
-#         ]
-
-
-
-# data.dataset_weigths=[
-#            4099074,#'data/r22_PFO/fwd_2d_flat_20-160GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#            23485807,#'data/r22_PFO/fwd_2d_flat_20-160GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#            50000000,#'data/r22_PFO/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet', 
-#            # 40032194,#'data/r22_PFO/fwd_2d_flat_20-160GeV/PhPy8EG_jj', 
-#            10000000,#'data/r22_PFO/fwd_2d_flat_20-160GeV/PhPy8EG_jj', 
-#            5865739,#'data/r22_PFO/fwd_2d_flat_20-160GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#            6052079,#'data/r22_PFO/fwd_2d_flat_20-160GeV/H7EG_Matchbox_angular_jetjetNLO', 
-#            #
-#            3131409,#'data/r22_PFO/central_2d_flat_160-1300GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#            6904175,#'data/r22_PFO/central_2d_flat_160-1300GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#            50000000,#'data/r22_PFO/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet', 
-#            #45101921,#'data/r22_PFO/central_2d_flat_160-1300GeV/PhPy8EG_jj',
-#            5000000,#'data/r22_PFO/central_2d_flat_160-1300GeV/PhPy8EG_jj',
-#            10481131,#'data/r22_PFO/central_2d_flat_160-1300GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#            10551963,#'data/r22_PFO/central_2d_flat_160-1300GeV/H7EG_Matchbox_angular_jetjetNLO', 
-#            #
-#            1427874,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#            1422913,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#            2145835,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet',
-#            #4362334,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/PhPy8EG_jj', 
-#            1000000,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/PhPy8EG_jj', 
-#            1226118,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#            1200625,#'data/r22_PFO/super_central_2d_flat_1300-2500GeV/H7EG_Matchbox_angular_jetjetNLO' 
-#            ]
-
-
-
-
-
-# data=sum([4099074, 23485807, 50000000, 10000000, 5865739, 6052079, 3131409, 6904175, 50000000, 5000000, 10481131, 10551963,1427874, 1422913, 2145835, 1000000, 1226118, 1200625])
-
-
-# data.path=['data/r22_PFO/fwd_2d_flat_20-160GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#            'data/r22_PFO/fwd_2d_flat_20-160GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#            'data/r22_PFO/fwd_2d_flat_20-160GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet', 
-#            'data/r22_PFO/fwd_2d_flat_20-160GeV/PhPy8EG_jj', 
-#            'data/r22_PFO/fwd_2d_flat_20-160GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#            'data/r22_PFO/fwd_2d_flat_20-160GeV/H7EG_Matchbox_angular_jetjetNLO', 
-#            'data/r22_PFO/central_2d_flat_160-1300GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#            'data/r22_PFO/central_2d_flat_160-1300GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#            'data/r22_PFO/central_2d_flat_160-1300GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet', 
-#            'data/r22_PFO/central_2d_flat_160-1300GeV/PhPy8EG_jj',
-#            'data/r22_PFO/central_2d_flat_160-1300GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#            'data/r22_PFO/central_2d_flat_160-1300GeV/H7EG_Matchbox_angular_jetjetNLO', 
-#            'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Sherpa_CT10_CT14nnlo_CSShower_Lund_2to2jets', 
-#            'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Sherpa_CT10_CT14nnlo_CSShower_2to2jets', 
-#            'data/r22_PFO/super_central_2d_flat_1300-2500GeV/Pythia8EvtGen_A14NNPDF23LO_jetjet',
-#            'data/r22_PFO/super_central_2d_flat_1300-2500GeV/PhPy8EG_jj', 
-#            'data/r22_PFO/super_central_2d_flat_1300-2500GeV/H7EG_Matchbox_dipole_jetjetNLO', 
-#            'data/r22_PFO/super_central_2d_flat_1300-2500GeV/H7EG_Matchbox_angular_jetjetNLO' 
-#            ]
-# data.dataset_weigths=[0.02112982010615525, 0.12106414203741667, 0.2577389442854075, 0.0515477888570815, 0.030236587546274837, 0.031197129043837694, 0.016141720995716473, 0.035589495513234065, 0.2577389442854075, 0.02577389442854075, 0.05402791277714115, 0.05439303607517362, 0.007360374746651638, 0.00733480188859964, 0.011061304950213548, 0.00515477888570815, 0.006320367177786705, 0.0061889563996533475]

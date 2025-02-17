@@ -18,10 +18,11 @@ The model also includes the intaraction variables as the ParT model.
 
 """
 import tensorflow as tf
+import keras
 from typing import Callable, Union, Tuple, Optional
 
 
-class RMSNorm(tf.keras.layers.Layer):
+class RMSNorm(keras.layers.Layer):
     """Root mean square normalization layer
     Root mean square normalization layer normalizes the input tensor along the last dimension,
     and then scales it by a learnable parameter.
@@ -34,7 +35,7 @@ class RMSNorm(tf.keras.layers.Layer):
     def __init__(self, dim: int, eps: float = 1e-8):
         super().__init__()
         self.eps = eps
-        self.scale = tf.Variable(tf.ones((dim,)))
+        self.scale = keras.Variable(tf.ones((dim,)))
 
     def get_config(self):
         config = super().get_config()
@@ -53,7 +54,7 @@ class RMSNorm(tf.keras.layers.Layer):
         return x * tf.math.rsqrt(tf.reduce_mean(tf.square(x), axis=-1, keepdims=True) + self.eps) * self.scale
 
 
-class FFN(tf.keras.layers.Layer):
+class FFN(keras.layers.Layer):
     """Feed-forward network
     On top of the Transformer FFN layer, it adds a layer normalization in between the two dense layers.
 
@@ -73,14 +74,14 @@ class FFN(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.expansion, self.activation, self.dropout = dim, expansion, activation, dropout
 
-        self.wide_dense = tf.keras.layers.Dense(
+        self.wide_dense = keras.layers.Dense(
             int(dim * expansion * 2 / 3), activation=activation, use_bias=False)
-        self.gate_dense = tf.keras.layers.Dense(
+        self.gate_dense = keras.layers.Dense(
             int(dim * expansion * 2 / 3), activation=None, use_bias=False)
-        self.dense = tf.keras.layers.Dense(
+        self.dense = keras.layers.Dense(
             dim, activation=None, use_bias=False)
-        self.ln = tf.keras.layers.LayerNormalization()
-        self.layer_dropout = tf.keras.layers.Dropout(dropout)
+        self.ln = keras.layers.LayerNormalization()
+        self.layer_dropout = keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super().get_config()
@@ -105,7 +106,7 @@ class FFN(tf.keras.layers.Layer):
         return output
 
 
-class LayerScale(tf.keras.layers.Layer):
+class LayerScale(keras.layers.Layer):
     """Layer scale layer
     Layer Scale layer helps to stabilize the training of the model.
     When the model has a large number of layers, the variance of the input to each layer can be very different.
@@ -119,7 +120,7 @@ class LayerScale(tf.keras.layers.Layer):
 
     def __init__(self, init_values: float, dim: int, ):
         super().__init__()
-        self.gamma = tf.Variable(init_values * tf.ones((dim,)))
+        self.gamma = keras.Variable(init_values * tf.ones((dim,)))
 
     def call(self, x: tf.Tensor, training=False) -> tf.Tensor:
         """Forward pass of the layer scale layer
@@ -132,7 +133,7 @@ class LayerScale(tf.keras.layers.Layer):
         return x * self.gamma
 
 
-class StochasticDepth(tf.keras.layers.Layer):
+class StochasticDepth(keras.layers.Layer):
     """Stochastic depth layer.
 
     Stochastic depth is a regularization technique that randomly drops layers instead 
@@ -168,7 +169,7 @@ class StochasticDepth(tf.keras.layers.Layer):
         return x
 
 
-class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
+class TalkingMultiheadSelfAttention(keras.layers.Layer):
     """Talking Multi-head self-attention layer
     Standalone implementation of the multi-head self-attention layer, which
     includes the interaction variables and the talking heads mechanism.
@@ -185,17 +186,17 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         self.dim, self.heads = dim, heads
         self.project_interaction = project_interaction
 
-        self.linear_qkv = tf.keras.layers.Dense(dim * 3)
-        self.linear_out = tf.keras.layers.Dense(dim)
+        self.linear_qkv = keras.layers.Dense(dim * 3)
+        self.linear_out = keras.layers.Dense(dim)
         if project_interaction:
-            self.interaction_projs = [tf.keras.layers.Dense(
-                heads, activation=tf.nn.gelu), tf.keras.layers.Dense(heads, activation=tf.nn.gelu)]
+            self.interaction_projs = [keras.layers.Dense(
+                heads, activation=tf.nn.gelu), keras.layers.Dense(heads, activation=tf.nn.gelu)]
 
-        self.linear_talking_1 = tf.keras.layers.Dense(heads)
-        self.linear_talking_2 = tf.keras.layers.Dense(heads)
+        self.linear_talking_1 = keras.layers.Dense(heads)
+        self.linear_talking_2 = keras.layers.Dense(heads)
 
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        self.attn_drop = tf.keras.layers.Dropout(dropout)
+        self.dropout = keras.layers.Dropout(dropout)
+        self.attn_drop = keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super(TalkingMultiheadSelfAttention, self).get_config()
@@ -241,7 +242,7 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
                 interaction, [0, 3, 1, 2])  # (B, H, N, N)
             attention_weights += interaction
 
-        pure_attention = tf.keras.layers.Softmax()(
+        pure_attention = keras.layers.Softmax()(
             attention_weights, mask=mask)  # (B, H, N, N)
         attention = self.linear_talking_2(tf.transpose(
             pure_attention, [0, 2, 3, 1]))  # (B, N, N, H)
@@ -256,7 +257,7 @@ class TalkingMultiheadSelfAttention(tf.keras.layers.Layer):
         return output, attention_weights
 
 
-class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
+class TalkingMultiheadClassAttention(keras.layers.Layer):
     """Talking Multi-head class-attention layer
     Standalone implementation of the multi-head class-attention layer, which
     includes the talking heads mechanism.
@@ -272,15 +273,15 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.heads = dim, heads
 
-        self.linear_kv = tf.keras.layers.Dense(dim * 2)
-        self.linear_q = tf.keras.layers.Dense(dim)
-        self.linear_out = tf.keras.layers.Dense(dim)
+        self.linear_kv = keras.layers.Dense(dim * 2)
+        self.linear_q = keras.layers.Dense(dim)
+        self.linear_out = keras.layers.Dense(dim)
 
-        self.linear_talking_1 = tf.keras.layers.Dense(heads)
-        self.linear_talking_2 = tf.keras.layers.Dense(heads)
+        self.linear_talking_1 = keras.layers.Dense(heads)
+        self.linear_talking_2 = keras.layers.Dense(heads)
 
-        self.dropout = tf.keras.layers.Dropout(dropout)
-        self.attn_drop = tf.keras.layers.Dropout(dropout)
+        self.dropout = keras.layers.Dropout(dropout)
+        self.attn_drop = keras.layers.Dropout(dropout)
 
     def get_config(self):
         config = super(TalkingMultiheadClassAttention, self).get_config()
@@ -325,7 +326,7 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
             attention_weights += interaction
 
         mask = tf.expand_dims(mask, axis=1)  # (B, 1, 1, N)
-        attention = tf.keras.layers.Softmax()(
+        attention = keras.layers.Softmax()(
             attention_weights, mask=mask)  # (B, H, 1, N)
         attention = self.linear_talking_2(tf.transpose(
             attention, [0, 2, 3, 1]))  # (B, 1, N, H)
@@ -340,9 +341,9 @@ class TalkingMultiheadClassAttention(tf.keras.layers.Layer):
         return output
 
 
-class MultiheadClassAttention(tf.keras.layers.Layer):
+class MultiheadClassAttention(keras.layers.Layer):
     """Multi-head class attention layer
-    This layer is a wrapper around the `tf.keras.layers.MultiHeadAttention` layer, 
+    This layer is a wrapper around the `keras.layers.MultiHeadAttention` layer, 
     to fix the key, and value to be the same as the input, and only use the class token
     as the query.
 
@@ -355,7 +356,7 @@ class MultiheadClassAttention(tf.keras.layers.Layer):
     def __init__(self, dim: int, heads: int, dropout: Optional[float] = None):
         super().__init__()
         self.dim, self.heads, self.dropout = dim, heads, dropout
-        self.mha = tf.keras.layers.MultiHeadAttention(
+        self.mha = keras.layers.MultiHeadAttention(
             key_dim=dim // heads, num_heads=heads, dropout=dropout)
 
     def get_config(self):
@@ -381,7 +382,7 @@ class MultiheadClassAttention(tf.keras.layers.Layer):
         return output
 
 
-class SelfAttentionBlock(tf.keras.layers.Layer):
+class SelfAttentionBlock(keras.layers.Layer):
     """Self-attention block.
     It contains a talking multi-head self-attention layer and a feed-forward network with residual connections
     and layer normalizations. The self-attention layer includes the interaction variables.
@@ -406,13 +407,13 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
         self.project_interaction = project_interaction
 
-        self.pre_mhsa_ln = tf.keras.layers.LayerNormalization()
+        self.pre_mhsa_ln = keras.layers.LayerNormalization()
         self.mhsa = TalkingMultiheadSelfAttention(
             dim, heads, dropout, project_interaction=project_interaction)
         self.post_mhsa_scale = LayerScale(layer_scale_init_value, dim)
         self.post_mhsa_stoch_depth = StochasticDepth(drop_prob=stoch_drop_prob)
 
-        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.pre_ffn_ln = keras.layers.LayerNormalization()
         self.ffn = FFN(dim, expansion, activation, dropout)
         self.post_ffn_scale = LayerScale(layer_scale_init_value, dim)
         self.post_ffn_stoch_depth = StochasticDepth(drop_prob=stoch_drop_prob)
@@ -451,7 +452,7 @@ class SelfAttentionBlock(tf.keras.layers.Layer):
         return output, attention_weights
 
 
-class ClassAttentionBlock(tf.keras.layers.Layer):
+class ClassAttentionBlock(keras.layers.Layer):
     """Class attention block.
     It allows the class token to attend to the input particles, and then feed the attended class token
     to the feed-forward network with residual connections and layer normalizations.
@@ -474,12 +475,12 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         super().__init__()
         self.dim, self.heads, self.dropout, self.stoch_drop_prob, self.layer_scale_init_value, self.activation, self.expansion = dim, heads, dropout, stoch_drop_prob, layer_scale_init_value, activation, expansion
 
-        self.pre_mhca_ln = tf.keras.layers.LayerNormalization()
+        self.pre_mhca_ln = keras.layers.LayerNormalization()
         self.mhca = TalkingMultiheadClassAttention(dim, heads, dropout)
         self.post_mhca_scale = LayerScale(layer_scale_init_value, dim)
         self.post_mhca_stoch_depth = StochasticDepth(drop_prob=stoch_drop_prob)
 
-        self.pre_ffn_ln = tf.keras.layers.LayerNormalization()
+        self.pre_ffn_ln = keras.layers.LayerNormalization()
         self.ffn = FFN(dim, expansion, activation, dropout)
         self.post_ffn_scale = LayerScale(layer_scale_init_value, dim)
         self.post_ffn_stoch_depth = StochasticDepth(drop_prob=stoch_drop_prob)
@@ -523,7 +524,7 @@ class ClassAttentionBlock(tf.keras.layers.Layer):
         return output
 
 
-class DeParT(tf.keras.layers.Layer):
+class DeParT(keras.layers.Layer):
     """Pure DeParT layers without the embedding and output layers.
 
     It also creates the class token, which is used to encode the global information of the input,
@@ -584,7 +585,7 @@ class DeParT(tf.keras.layers.Layer):
                                               expansion,
                                               class_dropout,) for i in range(class_attn_layers)]
 
-        self.class_token = tf.Variable(tf.random.truncated_normal(
+        self.class_token = keras.Variable(tf.random.truncated_normal(
             (1, 1, dim), stddev=0.02), trainable=True, name="class_token")
 
     def stochastic_prob(self, step, total_steps, drop_rate):
@@ -631,7 +632,7 @@ class DeParT(tf.keras.layers.Layer):
         return class_token, attentions
 
 
-class FCEmbedding(tf.keras.layers.Layer):
+class FCEmbedding(keras.layers.Layer):
     """Embedding layer as a series of fully-connected layers.
 
     Args:
@@ -644,7 +645,7 @@ class FCEmbedding(tf.keras.layers.Layer):
 
         super().__init__()
         self.embedding_dim, self.activation, self.num_embeding_layers = embedding_dim, activation, num_embeding_layers
-        self.layers = [tf.keras.layers.Dense(self.embedding_dim, activation=self.activation)
+        self.layers = [keras.layers.Dense(self.embedding_dim, activation=self.activation)
                        for _ in range(self.num_embeding_layers)]
 
     def get_config(self):
@@ -668,7 +669,7 @@ class FCEmbedding(tf.keras.layers.Layer):
         return hidden
 
 
-class CNNEmbedding(tf.keras.layers.Layer):
+class CNNEmbedding(keras.layers.Layer):
     """Embedding layer of the interaction variables as a series of point-wise convolutional layers.
     The interaction variiables are compuetd for each pair of particles.
     This creates a redundancy in the input, as the matrix is symetric and the diagonal is always zero.
@@ -687,12 +688,12 @@ class CNNEmbedding(tf.keras.layers.Layer):
         super().__init__()
         self.activation, self.num_layers, self.layer_size, self.out_dim = activation, num_layers, layer_size, out_dim
 
-        self.conv_layers = [tf.keras.layers.Conv1D(
+        self.conv_layers = [keras.layers.Conv1D(
             layer_size, 1) for _ in range(num_layers)]
-        self.conv_layers.append(tf.keras.layers.Conv1D(out_dim, 1))
-        self.normlizations = [tf.keras.layers.BatchNormalization()
+        self.conv_layers.append(keras.layers.Conv1D(out_dim, 1))
+        self.normlizations = [keras.layers.BatchNormalization()
                               for _ in range(num_layers + 1)]
-        self.activation_layer = tf.keras.layers.Activation(activation)
+        self.activation_layer = keras.layers.Activation(activation)
 
     def get_config(self):
         config = super(CNNEmbedding, self).get_config()
@@ -733,10 +734,10 @@ class CNNEmbedding(tf.keras.layers.Layer):
         return out
 
 
-class DeParT2Model(tf.keras.Model):
+class DeParT2Model(keras.Model):
     """DeParT model with embwith embedding and output layers.
 
-    The model already contains the `tf.keras.layers.Input` layer, so it can be used as a standalone model.
+    The model already contains the `keras.layers.Input` layer, so it can be used as a standalone model.
 
     The input tensor can be either a tensor of shape `(batch_size, num_particles, num_features)` or
     a tuple of tensors `(particle_tensor, interaction_tensor)` of shapes
@@ -769,13 +770,13 @@ class DeParT2Model(tf.keras.Model):
         layer_scale_init_value (float): initial value of the layer scale parameter
         stochastic_depth_drop_rate (float): drop rate of the stochastic depth regularization
         class_stochastic_depth_drop_rate (float): drop rate of the stochastic depth regularization of the class-attention layers
-        output_layer (tf.keras.layers.Layer): output layer
+        output_layer (keras.layers.Layer): output layer
         activation (Callable[[tf.Tensor], tf.Tensor]): activation function
         dropout (Optional[float], optional): dropout rate. Defaults to None.
         class_dropout (Optional[float], optional): dropout rate of the class-attention layers. Defaults to None.
         interaction_embed_layers (Optional[int], optional): number of layers of the interaction embedding layer. Defaults to None.
         interaction_embed_layer_size (Optional[int], optional): size of the layers of the interaction embedding layer. Defaults to None.
-        preprocess (Union[tf.keras.layers.Layer, None, Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer]], optional): preprocessing layer. Defaults to None.
+        preprocess (Union[keras.layers.Layer, None, Tuple[keras.layers.Layer, keras.layers.Layer]], optional): preprocessing layer. Defaults to None.
 
     """
 
@@ -790,12 +791,12 @@ class DeParT2Model(tf.keras.Model):
                  layer_scale_init_value: float,
                  stochastic_depth_drop_rate: float,
                  class_stochastic_depth_drop_rate: float,
-                 output_layer: tf.keras.layers.Layer,
+                 output_layer: keras.layers.Layer,
                  activation: Callable[[tf.Tensor], tf.Tensor],
                  dropout: Optional[float] = None,
                  class_dropout: Optional[float] = None,
-                 preprocess: Union[tf.keras.layers.Layer,
-                                   Tuple[tf.keras.layers.Layer, tf.keras.layers.Layer], None] = None,
+                 preprocess: Union[keras.layers.Layer,
+                                   Tuple[keras.layers.Layer, keras.layers.Layer], None] = None,
                  interaction_embed_layers: Optional[int] = None,
                  interaction_embed_layer_size: Optional[int] = None,
                  return_attentions: bool = False,
@@ -803,15 +804,15 @@ class DeParT2Model(tf.keras.Model):
 
         if isinstance(input_shape, tuple) and isinstance(input_shape[0], tuple):
             if len(input_shape) == 2:
-                input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
-                         tf.keras.layers.Input(shape=input_shape[1], ragged=True))
+                input = (keras.layers.Input(shape=input_shape[0]),
+                         keras.layers.Input(shape=input_shape[1]))
                 class_interaction = None
                 interaction = True
             elif len(input_shape) == 3:
-                input = (tf.keras.layers.Input(shape=input_shape[0], ragged=True),
-                         tf.keras.layers.Input(
-                             shape=input_shape[1], ragged=True),
-                         tf.keras.layers.Input(shape=input_shape[2], ragged=True),)
+                input = (keras.layers.Input(shape=input_shape[0]),
+                         keras.layers.Input(
+                             shape=input_shape[1]),
+                         keras.layers.Input(shape=input_shape[2]),)
                 interaction = True
                 class_interaction = input[2].to_tensor()  # (B, N, 1)
 
@@ -846,7 +847,7 @@ class DeParT2Model(tf.keras.Model):
                     heads,
                     activation)(interaction_hidden)
         else:
-            input = tf.keras.layers.Input(shape=input_shape, ragged=True)
+            input = keras.layers.Input(shape=input_shape)
             interaction = False
             embed_interaction = None
             class_interaction = None
@@ -877,7 +878,7 @@ class DeParT2Model(tf.keras.Model):
         transformed, attentions = depart_model(hidden, mask=tf.sequence_mask(
             row_lengths), interaction=embed_interaction, class_interaction=class_interaction)
 
-        transformed = tf.keras.layers.LayerNormalization()(
+        transformed = keras.layers.LayerNormalization()(
             transformed[:, 0, :])
         output = output_layer(transformed)
 

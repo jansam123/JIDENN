@@ -1,4 +1,5 @@
 import tensorflow as tf
+import keras
 import numpy as np
 import pandas as pd
 import os
@@ -7,11 +8,8 @@ import hydra
 import copy
 from functools import partial
 from hydra.core.config_store import ConfigStore
-import tf2onnx
-import onnx
 #
 from jidenn.config import config
-import jidenn.data.data_info as data_info
 from jidenn.model_builders.ModelBuilder import ModelBuilder
 from jidenn.data.get_dataset import get_preprocessed_dataset
 from jidenn.model_builders.callbacks import get_callbacks
@@ -27,6 +25,7 @@ from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
 CUSTOM_OBJECTS = {'LinearWarmup': LinearWarmup,}
+PADDING_VALUE = 0.
 
 cs = ConfigStore.instance()
 cs.store(name="args", node=config.JIDENNConfig)
@@ -42,8 +41,12 @@ def main(args: config.JIDENNConfig) -> None:
         log.warning("No GPU found, using CPU")
     for i, gpu in enumerate(gpus):
         gpu_info = tf.config.experimental.get_device_details(gpu)
+        if 'compute_capability' in gpu_info:
+            gpu_compute_capability = f"{gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}"
+        else:
+            gpu_compute_capability = 'N/A'
         log.info(
-            f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_info['compute_capability'][0]}.{gpu_info['compute_capability'][1]}")
+            f"GPU {i}: {gpu_info['device_name']} with compute capability {gpu_compute_capability}")
 
     # CUDA logging
     system_config = tf.sysconfig.get_build_info()
@@ -54,7 +57,7 @@ def main(args: config.JIDENNConfig) -> None:
     # debug mode for tensorflow
     if args.general.debug:
         log.info("Debug mode enabled")
-        tf.config.run_functions_eagerly(True)
+        # tf.config.run_functions_eagerly(True)
         tf.data.experimental.enable_debug_mode()
 
     # fixing seed for reproducibility
@@ -96,11 +99,15 @@ def main(args: config.JIDENNConfig) -> None:
         args.augmentations) if args.augmentations is not None else None
     log.info(f"Using augmentations: {args.augmentations.order}") if args.augmentations is not None else log.warning(
         "No augmentations specified")
-
-    train_path = [os.path.join(path, 'train') for path in list(args.data.path)] if not isinstance(
-        args.data.path, str) else os.path.join(args.data.path, 'train')
-    dev_path = [os.path.join(path, 'dev') for path in list(args.data.path)] if not isinstance(
-        args.data.path, str) else os.path.join(args.data.path, 'dev')
+    if args.data.dev_path is None:
+        train_path = [os.path.join(path, 'train') for path in list(args.data.path)] if not isinstance(
+            args.data.path, str) else os.path.join(args.data.path, 'train')
+        dev_path = [os.path.join(path, 'dev') for path in list(args.data.path)] if not isinstance(
+            args.data.path, str) else os.path.join(args.data.path, 'dev')
+    else:
+        train_path = args.data.path
+        dev_path = args.data.dev_path
+        
     args_data_train = copy.deepcopy(args.data)
     args_data_train.path = train_path
     args_data_dev = copy.deepcopy(args.data)
@@ -121,37 +128,38 @@ def main(args: config.JIDENNConfig) -> None:
             args.general.logdir, args.general.backup))) > 0
     except FileNotFoundError:
         restoring_from_backup = False
-        
+    
     # draw input data distribution
     if args.preprocess.draw_distribution is not None and args.preprocess.draw_distribution > 0 and not restoring_from_backup:
         log.info(
             f"Drawing data distribution with {args.preprocess.draw_distribution} samples")
         dir = os.path.join(args.general.logdir, 'dist')
         os.makedirs(dir, exist_ok=True)
-        named_labels = {0: args.data.labels[0], 1: args.data.labels[1]}
+        # named_labels = {0: args.data.labels[0], 1: args.data.labels[1]}
+        named_labels = {i: args.data.labels[i] for i in range(len(args.data.labels))}
         train.take(args.preprocess.draw_distribution).plot_data_distributions(hue_variable='label', fillna=-999,
                                                                               folder=dir, named_labels=named_labels)
         
     # get proper dataset size based on the config
-    if args.dataset.take is not None:
-        train_size = 1 - args.dataset.dev_size
-        train_size = int(train_size * args.dataset.take)
-        dev_size = int(args.dataset.dev_size * args.dataset.take)
-    else:
-        train_size, dev_size = None, None
 
     # get fully prepared (batched, shuffled, prefetched) dataset
     train = train.get_prepared_dataset(batch_size=args.dataset.batch_size,
                                        shuffle_buffer_size=args.dataset.shuffle_buffer,
-                                       take=train_size,
-                                       ragged=False if args.general.model == 'particlenet' else True,
+                                       take=args.dataset.take,
+                                       ragged=False,
+                                       pad_value=PADDING_VALUE,
+                                       max_constituents=args.data.max_constituents,
                                        assert_length=True)
     dev = dev.get_prepared_dataset(batch_size=args.dataset.batch_size,
-                                   ragged=False if args.general.model == 'particlenet' else True,
-                                   take=dev_size)
+                                   ragged=False,
+                                   pad_value=PADDING_VALUE,
+                                   max_constituents=args.data.max_constituents,
+                                   take=args.dataset.dev_take)
 
     test = test.get_prepared_dataset(batch_size=args.dataset.batch_size,
-                                     ragged=False if args.general.model == 'particlenet' else True,
+                                     ragged=False,
+                                     max_constituents=args.data.max_constituents,
+                                     pad_value=PADDING_VALUE,
                                      take=args.dataset.test_take) if test is not None else None
 
     # this is only to get rid of some warnings
@@ -160,10 +168,16 @@ def main(args: config.JIDENNConfig) -> None:
     train = train.with_options(options)
     dev = dev.with_options(options)
     test = test.with_options(options) if test is not None else None
+    
+    # for i, dato in enumerate(train.take(100)):
+    #     tf.print(dato[0][0][0,:,0], summarize=-1)
+    #     tf.print(dato[0][1][0,:], summarize=-1)
+        
+        
 
     # build model, gpu_strategy is based on the number of gpus available
     @gpu_strategy
-    def build_model() -> tf.keras.Model:
+    def build_model() -> keras.Model:
 
         # create and adapt a nomralization layer
         # this helps with faster convergence of the models
@@ -174,6 +188,7 @@ def main(args: config.JIDENNConfig) -> None:
                                            adapt=True,
                                            input_shape=input_shape,
                                            normalization_steps=args.preprocess.normalization_size,
+                                           min_max_normalization=args.preprocess.min_max_normalization,
                                            log=log)
         else:
             normalizer = None
@@ -203,7 +218,7 @@ def main(args: config.JIDENNConfig) -> None:
     
     if args.general.load_checkpoint_path is not None:
         log.info(f'Loading weights from {args.general.load_checkpoint_path}')
-        saved_model = tf.keras.models.load_model(args.general.load_checkpoint_path, custom_objects=CUSTOM_OBJECTS)
+        saved_model = keras.models.load_model(args.general.load_checkpoint_path, custom_objects=CUSTOM_OBJECTS)
         # model.load_weights(args.general.load_checkpoint_path)
         model.set_weights(saved_model.get_weights())
         log.info(f'Done loading weights')
@@ -234,21 +249,12 @@ def main(args: config.JIDENNConfig) -> None:
                               backup=args.general.backup,
                               backup_freq=args.general.backup_freq,
                               checkpoint=os.path.join(
-                                  args.general.logdir, 'checkpoint', '{epoch}'),
-                              additional_val_dataset=test,
-                              additional_val_name='test')
+                                  args.general.logdir, 'checkpoint', '{epoch}.keras'))
     
     # running training
     train = train.apply(tf.data.experimental.assert_cardinality(
         args.dataset.steps_per_epoch)) if args.dataset.steps_per_epoch is not None else train
     
-    
-    # for i, dat in enumerate(train.take(10)):
-    #     print(f'Index: {i}')
-    #     print(dat[0][0].to_tensor().shape)
-    #     print(dat[0][1].to_tensor().shape)
-    #     print(dat[1].shape)
-    #     print('')
     
     history = model.fit(train,
                         epochs=args.dataset.epochs,
@@ -257,39 +263,24 @@ def main(args: config.JIDENNConfig) -> None:
                         steps_per_epoch=args.dataset.steps_per_epoch if args.dataset.steps_per_epoch is not None else None,
                         verbose=2 if args.general.model == 'bdt' else 1)
 
-    model.load_weights(os.path.join(args.general.logdir, 'checkpoint'))
-
     # saving the model
-    model_dir = os.path.join(args.general.logdir, 'model')
-    log.info(f"Saving model to {model_dir}")
-    model.save(model_dir, save_format='tf')
     
+    tf_dir = os.path.join(args.general.logdir, 'model.tf')
+    model.export(tf_dir)
+    onnx_dir = os.path.join(args.general.logdir, 'model.onnx')
+    model.export(onnx_dir, format='onnx')
 
-
-    log.info(f"Saving history")
-    history_dir = os.path.join(args.general.logdir, 'history')
-    os.makedirs(history_dir, exist_ok=True)
-    for metric in model.metrics_names:
-        metric_dict = {
-            f'{metric}': history.history[metric], f'validation {metric}': history.history[f'val_{metric}']}
-        if f'test_{metric}' in history.history.keys():
-            metric_dict[f'test {metric}'] = history.history[f'test_{metric}']
-        plot_train_history(metric_dict, history_dir,
-                            METRIC_NAMING_SCHEMA[metric] if metric in METRIC_NAMING_SCHEMA else metric, args.dataset.epochs)
-
+    
+    keras_dir = os.path.join(args.general.logdir, 'model.keras')
+    model.save(keras_dir)
+    model = keras.models.load_model(keras_dir, custom_objects=CUSTOM_OBJECTS)
+    
     # run simple evaluation
     log.info("Evaluating on dev set:")
     log.info(model.evaluate(dev, return_dict=True))
     if args.test_data is not None:
         log.info("Evaluating on test set:")
         log.info(model.evaluate(test, return_dict=True))
-        
-        
-    # try:
-    #     onnx_model, _ = tf2onnx.convert.from_keras(model, opset=13)
-    #     onnx.save(onnx_model, os.path.join(args.general.logdir, 'model.onnx'))
-    # except Exception as e:
-    #     log.warning(f"Could not save onnx model: {e}")
         
     if args.dataset.cache == 'disk':
         os.system(f'rm -rf {args.general.logdir}/cache')
