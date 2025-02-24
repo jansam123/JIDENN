@@ -78,8 +78,6 @@ def main(args: config.JIDENNConfig) -> None:
         args.optimizer.decay_steps = int(args.dataset.epochs * args.dataset.take /
                                          args.dataset.batch_size) - args.optimizer.warmup_steps
         log.info(f"Setting decay steps to {args.optimizer.decay_steps}")
-    elif args.optimizer.decay_steps is None and args.dataset.take is None:
-        raise ValueError("Cannot set decay steps if dataset.take is None")
     else:
         log.info(f"Decay steps set to {args.optimizer.decay_steps}")
 
@@ -267,8 +265,11 @@ def main(args: config.JIDENNConfig) -> None:
     
     tf_dir = os.path.join(args.general.logdir, 'model.tf')
     model.export(tf_dir)
-    onnx_dir = os.path.join(args.general.logdir, 'model.onnx')
-    model.export(onnx_dir, format='onnx')
+    try:
+        onnx_dir = os.path.join(args.general.logdir, 'model.onnx')
+        model.export(onnx_dir, format='onnx')
+    except:
+        logging.warning("ONNX export failed")
 
     
     keras_dir = os.path.join(args.general.logdir, 'model.keras')

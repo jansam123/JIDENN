@@ -1148,7 +1148,7 @@ class JIDENNDataset:
                     tf.data.experimental.dense_to_ragged_batch(batch_size))
 
         elif batch_size is not None:
-            dataset = dataset.batch(batch_size, drop_remainder=True)
+            dataset = dataset.batch(batch_size)
 
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         return dataset

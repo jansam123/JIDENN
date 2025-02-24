@@ -4,10 +4,11 @@ The corresponding config dataclass is defined in `jidenn.config.config.Optimizer
 """
 import tensorflow as tf
 import keras
+import logging
 # import tensorflow_addons as tfa
 
 from jidenn.config import config
-from .LearningRateSchedulers import LinearWarmup
+# from .LearningRateSchedulers import LinearWarmup
 
 def get_optimizer(args_optimizer: config.Optimizer) -> keras.optimizers.Optimizer:
     """Initializes the optimizer from the config file.
@@ -36,11 +37,21 @@ def get_optimizer(args_optimizer: config.Optimizer) -> keras.optimizers.Optimize
     min_lr = 0.0 if args_optimizer.min_learning_rate is None else args_optimizer.min_learning_rate
     clipvalue = None if args_optimizer.clipvalue is None or args_optimizer.clipvalue == 0.0 else args_optimizer.clipvalue
     
-    l_r = keras.optimizers.schedules.CosineDecay(
-        learning_rate, decay_steps, alpha=min_lr) if decay_steps is not None else learning_rate
+    if decay_steps is not None:
+        l_r = keras.optimizers.schedules.CosineDecay(
+            initial_learning_rate=learning_rate if warmup_steps is None else 1e-8,
+            decay_steps=decay_steps,  
+            alpha=min_lr,
+            warmup_target=learning_rate if warmup_steps is not None else None,
+            warmup_steps=warmup_steps if warmup_steps is not None else 0, 
+            )
+        # print the config
+        logging.info(f'Cosine Decay Optimizer config: {l_r.get_config()}')
+    else:
+        l_r = learning_rate
+    
+    
 
-    if warmup_steps is not None:
-        l_r = LinearWarmup(warmup_steps, l_r)
     
 
     if optimizer == 'Lamb':

@@ -27,8 +27,8 @@ general:
   load_checkpoint_path:
 
 data:
-  path: /Users/samueljankovych/Projects/Tagging/jetclass/tf_dataset/train_100M
-  dev_path: /Users/samueljankovych/Projects/Tagging/jetclass/tf_dataset/val_5M
+  path: ../jetclass/JetClass_tf/train_100M
+  dev_path: ../jetclass/JetClass_tf/val_5M
   dataset_weigths:
   dataset_norm: 
   target: [label_Tbl, label_Tbqq, label_Hgg, label_Hbb, label_H4q, label_Wqq, label_Hcc, label_QCD, label_Zqq, label_Hqql]
@@ -61,7 +61,7 @@ data:
   weight: 
 
 test_data: 
-  path: /Users/samueljankovych/Projects/Tagging/jetclass/tf_dataset/test_20M
+  path: ../jetclass/JetClass_tf/test_20M
   dataset_weigths:
   dataset_norm: 
   target: [label_Tbl, label_Tbqq, label_Hgg, label_Hbb, label_H4q, label_Wqq, label_Hcc, label_QCD, label_Zqq, label_Hqql]
@@ -96,9 +96,9 @@ test_data:
 optimizer:
   name: Lamb # Optimizer to use, options: Adam, RAdam, AdamW, NAdam, Lion, Lamb.
   warmup_steps: 2_000  # Number of steps, when learning rate is increased linearly.
-  learning_rate: 0.001 #0.001 #0.000025 #0.0001 # Learning rate.
+  learning_rate: 0.001 #0.001 #0.001 #0.000025 #0.0001 # Learning rate.
   min_learning_rate: 0.01 # Minimal learning rate as a fraction of the initial learning rate.
-  decay_steps: 976_560 #1263000 #315_500 # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
+  decay_steps: #976_560 #244_140 #976_560 #1263000 #315_500 # If None autocomputes as: int(epochs * take / batch_size) - warmup_steps. Automatic computation is supported only if take is set.
   clipnorm:  # Gradient clipping (maximal norm of the gradient).
   clipvalue: 100. #100. 
   weight_decay:   # Weight decay (L2 regularization).
@@ -108,14 +108,14 @@ optimizer:
   epsilon:  #part : 0.0001
 
 dataset:
-  epochs: 1 # Number of epochs.
-  steps_per_epoch: #195_312 # Number of steps per epoch. If None, autocomputes as: int(take * (1 - dev_size) / batch_size).
-  take: 2000 # Length of data to use.
-  batch_size: 512 #512 #2048 #1024 # Batch size.
-  dev_take: 512  # Size of dev dataset.
+  epochs: 5 # Number of epochs.
+  steps_per_epoch:  #195_312 # Number of steps per epoch. If None, autocomputes as: int(take * (1 - dev_size) / batch_size).
+  take: # Length of data to use.
+  batch_size: 512 #2048 #1024 # Batch size.
+  dev_take:  # Size of dev dataset.
   test_take: 100_000 # Size of test dataset.
   shuffle_buffer: 1_000 # Size of shuffler buffer.
-  cache: disk # Cache dataset in memory (`mem`) or on disk (`disk`).
+  cache:  # Cache dataset in memory (`mem`) or on disk (`disk`).
 
 preprocess:
   normalization_size: 100 # Size of normalization dataset (if normalize is True).

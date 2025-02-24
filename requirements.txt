@@ -1,4 +1,5 @@
-tensorflow==2.18.0
+numpy==1.26.4
+tensorflow[and-cuda]==2.18.0
 # tensorflow-metal==1.2.0 #! Only for Apple Silicon
 Jinja2==3.1.5 
 scikit-learn==1.6.1
