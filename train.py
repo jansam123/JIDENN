@@ -19,12 +19,11 @@ from jidenn.data.TrainInput import input_classes_lookup
 from jidenn.model_builders.multi_gpu_strategies import choose_strategy
 from jidenn.data.augmentations import construct_augmentation
 from jidenn.const import METRIC_NAMING_SCHEMA
-from jidenn.model_builders.LearningRateSchedulers import LinearWarmup
+from jidenn.evaluation.evaluation_metrics import calculate_jetclass_metrics
 
 # TF_GPU_ALLOCATOR=cuda_malloc_async
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
 
-CUSTOM_OBJECTS = {'LinearWarmup': LinearWarmup,}
 PADDING_VALUE = 0.
 
 cs = ConfigStore.instance()
@@ -74,12 +73,12 @@ def main(args: config.JIDENNConfig) -> None:
             args.general.threads)
 
     # set decay steps based on the total number of iterations
-    if args.optimizer.decay_steps is None and args.dataset.take is not None:
-        args.optimizer.decay_steps = int(args.dataset.epochs * args.dataset.take /
-                                         args.dataset.batch_size) - args.optimizer.warmup_steps
-        log.info(f"Setting decay steps to {args.optimizer.decay_steps}")
-    else:
-        log.info(f"Decay steps set to {args.optimizer.decay_steps}")
+    # if args.optimizer.decay_steps is None and args.dataset.take is not None:
+    #     args.optimizer.decay_steps = int(args.dataset.epochs * args.dataset.take /
+    #                                      args.dataset.batch_size) - args.optimizer.warmup_steps
+    #     log.info(f"Setting decay steps to {args.optimizer.decay_steps}")
+    # else:
+    log.info(f"Decay steps set to {args.optimizer.decay_steps}")
 
     # pick input variables according to model
     # if you want to choose your own input, implement a subclass of `TrainInput` in  `jidenn.data.TrainInput` and put it into the dict in the function `input_classes_lookup`
@@ -216,7 +215,7 @@ def main(args: config.JIDENNConfig) -> None:
     
     if args.general.load_checkpoint_path is not None:
         log.info(f'Loading weights from {args.general.load_checkpoint_path}')
-        saved_model = keras.models.load_model(args.general.load_checkpoint_path, custom_objects=CUSTOM_OBJECTS)
+        saved_model = keras.models.load_model(args.general.load_checkpoint_path)
         # model.load_weights(args.general.load_checkpoint_path)
         model.set_weights(saved_model.get_weights())
         log.info(f'Done loading weights')
@@ -245,9 +244,9 @@ def main(args: config.JIDENNConfig) -> None:
                               epochs=args.dataset.epochs,
                               log=log,
                               backup=args.general.backup,
-                              backup_freq=args.general.backup_freq,
-                              checkpoint=os.path.join(
-                                  args.general.logdir, 'checkpoint', '{epoch}.keras'))
+                              backup_freq=args.general.backup_freq,)
+                            #   checkpoint=os.path.join(
+                            #       args.general.logdir, 'checkpoint', '{epoch}.keras'))
     
     # running training
     train = train.apply(tf.data.experimental.assert_cardinality(
@@ -274,7 +273,7 @@ def main(args: config.JIDENNConfig) -> None:
     
     keras_dir = os.path.join(args.general.logdir, 'model.keras')
     model.save(keras_dir)
-    model = keras.models.load_model(keras_dir, custom_objects=CUSTOM_OBJECTS)
+    model = keras.models.load_model(keras_dir)
     
     # run simple evaluation
     log.info("Evaluating on dev set:")
@@ -282,6 +281,14 @@ def main(args: config.JIDENNConfig) -> None:
     if args.test_data is not None:
         log.info("Evaluating on test set:")
         log.info(model.evaluate(test, return_dict=True))
+        if len(args.test_data.labels) > 2:
+            results = calculate_jetclass_metrics(test, model, 
+                                                 bkg_label=args.test_data.background_label,
+                                                 wp_mapping=args.test_data.class_working_points,
+                                                 label_mapping={label: idx for idx, label in enumerate(args.test_data.labels)})
+        logging.info(results)
+
+        
         
     if args.dataset.cache == 'disk':
         os.system(f'rm -rf {args.general.logdir}/cache')

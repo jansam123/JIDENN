@@ -15,7 +15,7 @@ hydra:
   output_subdir: config
 
 general:
-  model: part # Model to use, options:  transformer, basic_fc, BDT, highway.
+  model: fc # Model to use, options:  transformer, basic_fc, BDT, highway.
   base_logdir: logs # Base log directory for all runs.
   seed: 42 # Random seed.
   threads: # Maximum number of threads to use. 0 means all available.
@@ -64,18 +64,18 @@ test_data:
   path: ../jetclass/JetClass_tf/test_20M
   dataset_weigths:
   dataset_norm: 
-  target: [label_Tbl, label_Tbqq, label_Hgg, label_Hbb, label_H4q, label_Wqq, label_Hcc, label_QCD, label_Zqq, label_Hqql]
+  target: [label_QCD, label_Hbb, label_Hcc, label_Hgg, label_H4q, label_Hqql, label_Tbqq, label_Tbl, label_Wqq, label_Zqq]
   labels: # list of labels to use.
-    - t->b+l
-    - t->b+qq
-    - H->gg
-    - H->bb
-    - H->4q
-    - W->qq
-    - H->cc
     - QCD
-    - Z->qq
+    - H->bb
+    - H->cc
+    - H->gg
+    - H->4q
     - H->qq+l
+    - t->b+qq
+    - t->b+l
+    - W->qq
+    - Z->qq
   target_labels:
     - [0]
     - [1]
@@ -87,6 +87,18 @@ test_data:
     - [7]
     - [8]
     - [9]
+  class_working_points:
+    - 0.0
+    - 0.5
+    - 0.5
+    - 0.5
+    - 0.5
+    - 0.99
+    - 0.5
+    - 0.995
+    - 0.5
+    - 0.5
+  background_label: QCD
   variable_unknown_labels: 
   max_constituents: 100
   label_weights:
@@ -113,7 +125,7 @@ dataset:
   take: # Length of data to use.
   batch_size: 512 #2048 #1024 # Batch size.
   dev_take:  # Size of dev dataset.
-  test_take: 100_000 # Size of test dataset.
+  test_take:  # Size of test dataset.
   shuffle_buffer: 1_000 # Size of shuffler buffer.
   cache:  # Cache dataset in memory (`mem`) or on disk (`disk`).
 

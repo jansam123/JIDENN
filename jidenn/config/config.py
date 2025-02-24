@@ -103,6 +103,8 @@ class Data:
     max_constituents: int
     weight: Optional[str]
     cut: Optional[str]
+    class_working_points: Optional[List[float]]
+    background_label: Optional[str]
 
 
 @dataclass

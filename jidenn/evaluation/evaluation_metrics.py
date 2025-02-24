@@ -8,6 +8,9 @@ import keras
 import numpy as np
 
 
+def calculate_binary_from_multilabel(score: tf.Tensor, sig: int, bkg: int):
+    return score[..., sig] / (score[..., sig] + score[..., bkg])
+
 class BinaryEfficiency(keras.metrics.Metric):
     r"""Binary Efficiency metric.
     It is defined as
@@ -240,10 +243,14 @@ class FixedWorkingPointBase(keras.metrics.Metric):
 
     def __init__(self, working_point: float = 0.5,
                  num_thresholds: int = 200, name: Optional[str] = None,
-                 dtype: Optional[tf.dtypes.DType] = None):
+                 dtype: Optional[tf.dtypes.DType] = None,
+                 sig: int | None = None,
+                 bkg: int | None = None):
         super().__init__(name=name, dtype=dtype)
         self.working_point = working_point
         self.num_thresholds = num_thresholds
+        self.bkg = bkg
+        self.sig = sig
 
         self.true_positives = self.add_weight(name='true_positives', initializer='zeros', shape=(num_thresholds,))
         self.total_positives = self.add_weight(name='total_positives', initializer='zeros', shape=(1,))
@@ -265,6 +272,10 @@ class FixedWorkingPointBase(keras.metrics.Metric):
             y_pred (Union[tf.Tensor, np.ndarray]): Predicted scores, i.e. the output of the model.
             sample_weight (Optional[Union[tf.Tensor, np.ndarray]], optional): Sample weights. Defaults to None.
         """
+        if self.bkg is not None and self.sig is not None:
+            y_pred = calculate_binary_from_multilabel(y_pred, sig=self.sig, bkg=self.bkg)
+            y_true = calculate_binary_from_multilabel(y_true, sig=self.sig, bkg=self.bkg)
+        
         y_pred = tf.cast(tf.expand_dims(y_pred, axis=1) > self.thresholds, tf.bool)
         y_true = tf.expand_dims(y_true, axis=1)
         positive_equals = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
@@ -358,9 +369,9 @@ class EfficiencyAtFixedWorkingPoint(FixedWorkingPointBase):
     """
 
     def __init__(self, working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0,
-                 num_thresholds: int = 200, name: Optional[str] = 'efficiency_at_fixed_wp', dtype: Optional[tf.dtypes.DType] = None):
+                 num_thresholds: int = 200, name: Optional[str] = 'efficiency_at_fixed_wp', dtype: Optional[tf.dtypes.DType] = None, **kwargs):
 
-        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype)
+        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype, **kwargs)
         self.fixed_label_id = fixed_label_id
         self.returned_label_id = returned_label_id
 
@@ -406,9 +417,9 @@ class RejectionAtFixedWorkingPoint(EfficiencyAtFixedWorkingPoint):
     """
 
     def __init__(self, working_point: float = 0.5, fixed_label_id: Literal[0, 1] = 1, returned_label_id: Literal[0, 1] = 0,
-                 num_thresholds: int = 200, name: Optional[str] = 'rejection_at_fixed_wp', dtype: Optional[tf.dtypes.DType] = None):
+                 num_thresholds: int = 200, name: Optional[str] = 'rejection_at_fixed_wp', dtype: Optional[tf.dtypes.DType] = None, **kwargs):
         super().__init__(working_point=working_point, fixed_label_id=fixed_label_id, returned_label_id=returned_label_id,
-                         num_thresholds=num_thresholds, name=name, dtype=dtype)
+                         num_thresholds=num_thresholds, name=name, dtype=dtype, **kwargs)
 
     def result(self) -> tf.Tensor:
         """Calculates the rejection at the working point.
@@ -431,8 +442,8 @@ class ThresholdAtFixedWorkingPoint(FixedWorkingPointBase):
         dtype (Optional[tf.dtypes.DType], optional): The data type of the metric. Defaults to None.
     """
 
-    def __init__(self, working_point: float = 0.5, num_thresholds: int = 200, fixed_label_id: Literal[0, 1] = 1, name: Optional[str] = 'threshold_at_fixed_efficiency', dtype: Optional[tf.dtypes.DType] = None):
-        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype)
+    def __init__(self, working_point: float = 0.5, num_thresholds: int = 200, fixed_label_id: Literal[0, 1] = 1, name: Optional[str] = 'threshold_at_fixed_efficiency', dtype: Optional[tf.dtypes.DType] = None, **kwargs):
+        super().__init__(working_point=working_point, num_thresholds=num_thresholds, name=name, dtype=dtype, **kwargs)
         self.fixed_label_id = fixed_label_id
 
     def result(self) -> tf.Tensor:
@@ -455,7 +466,10 @@ class ThresholdAtFixedWorkingPoint(FixedWorkingPointBase):
         closest_index = self._find_index_of_threshold(efficiencies, self.working_point)
 
         return tf.gather(self.thresholds, closest_index)
+    
 
+    
+    
 
 def get_metrics(threshold: float = 0.5) -> List[keras.metrics.Metric]:
     """Returns a list of metrics.
@@ -485,6 +499,24 @@ def get_metrics(threshold: float = 0.5) -> List[keras.metrics.Metric]:
         ]
     return metrics
 
+def get_jetclass_metrics(label_mapping: dict[str, int], wp_mapping: list[float], bkg_label: str) -> List[keras.metrics.Metric]:
+    metrics = [
+        keras.metrics.CategoricalAccuracy(
+            name='Accuracy'), # fix the threshold to 0.5, other thresholds are useless for this metric
+        keras.metrics.AUC(name='AUC', multi_label=True, num_labels=len(label_mapping.keys())),
+        ]
+    for sig_label_name, sig_label_idx in label_mapping.items():
+        if sig_label_name == bkg_label:
+            continue
+        wp = wp_mapping[sig_label_idx]
+        if wp<=0:
+            continue
+        wp_str = f'{wp*100:.1f}%'.replace('.0', '')
+        metrics.append(RejectionAtFixedWorkingPoint(name=f'Rej_{sig_label_name}_{wp_str}',
+                                    fixed_label_id=1, working_point=wp, returned_label_id=0, bkg=label_mapping[bkg_label], sig=sig_label_idx))
+    
+    return metrics
+
 
 def calculate_metrics(y_true: np.ndarray, score: np.ndarray, threshold: float = 0.5, weights: Optional[np.ndarray] = None) -> Dict[str, float]:
     """Calculates the metrics.
@@ -501,6 +533,23 @@ def calculate_metrics(y_true: np.ndarray, score: np.ndarray, threshold: float = 
     for metric in metrics:
         metric.reset_state()
         metric.update_state(y_true, score, sample_weight=weights)
+        result = metric.result().numpy()
+        results[metric.name] = result
+    return results
+
+def calculate_jetclass_metrics(test_dataset: tf.data.Dataset, 
+                               model: keras.Model,
+                               bkg_label: str,
+                               label_mapping: dict[str, int],
+                               wp_mapping: list[float]):
+                               
+    metrics = get_jetclass_metrics(label_mapping, wp_mapping, bkg_label=bkg_label)
+    for data, label in test_dataset:
+        score = model(data)
+        for metric in metrics:
+            metric.update_state(label, score)
+    results = {}
+    for metric in metrics:
         result = metric.result().numpy()
         results[metric.name] = result
     return results
